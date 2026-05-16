@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+@theme {
+  --color-nhs-blue: #005eb8;
+  --color-nhs-blue-dark: #003087;
+  --color-nhs-blue-light: #4c9fd5;
+  --color-nhs-green: #007f3b;
+  --color-nhs-red: #d5281b;
+  --color-nhs-yellow: #ffb81c;
+  --color-nhs-grey-1: #212b32;
+  --color-nhs-grey-2: #425563;
+  --color-nhs-grey-3: #768692;
+  --color-nhs-grey-4: #aeb7bd;
+  --color-nhs-grey-5: #e8edee;
+  --color-nhs-white: #ffffff;
+  --font-sans: Arial, sans-serif;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background-color: #f0f4f5;
+  color: #212b32;
+}
+
+#root {
+  min-height: 100svh;
+}
