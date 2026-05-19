@@ -96,11 +96,14 @@ function Detail({ label, value, mono = false }: { label: string; value: string; 
   )
 }
 
-function MedicationsTable({ medications, title }: { medications: GpConnectMedication[]; title: string }) {
+function MedicationsTable({ medications, title, subtitle }: { medications: GpConnectMedication[]; title: string; subtitle?: string }) {
   if (medications.length === 0) return null
   return (
     <div>
-      <h3 className="text-sm font-semibold text-nhs-grey-2 uppercase tracking-wide mb-2 px-3">{title}</h3>
+      <div className="flex items-baseline gap-2 mb-2 px-3">
+        <h3 className="text-sm font-semibold text-nhs-grey-2 uppercase tracking-wide">{title}</h3>
+        {subtitle && <span className="text-xs text-nhs-grey-3">{subtitle}</span>}
+      </div>
       <div className="border border-nhs-grey-5 rounded-lg overflow-hidden">
         <table className="w-full text-left">
           <thead>
@@ -125,13 +128,35 @@ function MedicationsTable({ medications, title }: { medications: GpConnectMedica
   )
 }
 
+type PrescriptionCategory = 'acute' | 'repeat' | 'repeat-dispensing' | 'prescribed-elsewhere' | 'other'
+
+function getPrescriptionCategory(med: GpConnectMedication): PrescriptionCategory {
+  const pt = med.prescriptionType?.toLowerCase() ?? ''
+  if (pt.includes('elsewhere')) return 'prescribed-elsewhere'
+  if (pt.includes('dispensing')) return 'repeat-dispensing'
+  if (pt === 'repeat') return 'repeat'
+  if (pt === 'acute') return 'acute'
+  return 'other'
+}
+
+const categoryConfig: Record<PrescriptionCategory, { label: string; description: string }> = {
+  'acute':                { label: 'Acute',                description: 'One-off prescriptions' },
+  'repeat':               { label: 'Repeat',               description: 'Regular repeat prescriptions' },
+  'repeat-dispensing':    { label: 'Repeat Dispensing',    description: 'Dispensed multiple times without reauthorisation' },
+  'prescribed-elsewhere': { label: 'Prescribed Elsewhere', description: 'Prescribed outside this GP practice' },
+  'other':                { label: 'Other / Unclassified', description: 'Prescription type not specified' },
+}
+
 export function MedicationsView({ record }: Props) {
-  const active = record.medications.filter(m =>
-    ['active', 'on-hold', 'intended'].includes(m.status)
-  )
-  const past = record.medications.filter(m =>
-    !['active', 'on-hold', 'intended'].includes(m.status)
-  )
+  const isPast = (m: GpConnectMedication) => ['completed', 'stopped', 'entered-in-error'].includes(m.status)
+  const isCurrent = (m: GpConnectMedication) => !isPast(m)
+
+  const currentByCategory = (cat: PrescriptionCategory) =>
+    record.medications.filter(m => isCurrent(m) && getPrescriptionCategory(m) === cat)
+
+  const past = record.medications.filter(isPast)
+
+  const currentCategories: PrescriptionCategory[] = ['acute', 'repeat', 'repeat-dispensing', 'prescribed-elsewhere', 'other']
 
   return (
     <div className="space-y-5">
@@ -167,7 +192,20 @@ export function MedicationsView({ record }: Props) {
         <span className="px-2 py-1 bg-nhs-blue text-white text-xs font-semibold rounded">GP Connect STU3</span>
       </div>
 
-      <MedicationsTable medications={active} title={`Current medications (${active.length})`} />
+      {currentCategories.map(cat => {
+        const meds = currentByCategory(cat)
+        if (meds.length === 0) return null
+        const cfg = categoryConfig[cat]
+        return (
+          <MedicationsTable
+            key={cat}
+            medications={meds}
+            title={`${cfg.label} (${meds.length})`}
+            subtitle={cfg.description}
+          />
+        )
+      })}
+
       <MedicationsTable medications={past} title={`Past medications (${past.length})`} />
 
       {record.medications.length === 0 && (

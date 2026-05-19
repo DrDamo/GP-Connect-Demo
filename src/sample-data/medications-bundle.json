@@ -85,6 +85,7 @@
           { "item": { "reference": "MedicationStatement/791ceb40-db0f-11e9-8a34-2a2ae2dbcce4" } },
           { "item": { "reference": "MedicationStatement/8e078d04-8312-433a-b6b4-46bf52542b3c" } },
           { "item": { "reference": "MedicationStatement/5c9a3c74-2bcf-11e7-b228-9e6e3ab6c5a3" } },
+          { "item": { "reference": "MedicationStatement/b1f2e3d4-4c5a-6b7d-8e9f-0a1b2c3d4e5f" } },
           { "item": { "reference": "MedicationStatement/a6e72cde-3b12-11e7-b228-9e6e3ab6c5a3" } }
         ]
       }
@@ -167,6 +168,12 @@
             "valueCodeableConcept": {
               "coding": [{ "system": "https://fhir.nhs.uk/STU3/CodeSystem/CareConnect-PrescribingAgency-1", "code": "prescribed-at-gp-practice", "display": "Prescribed at GP practice" }]
             }
+          },
+          {
+            "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-PrescriptionType-1",
+            "valueCodeableConcept": {
+              "coding": [{ "system": "https://fhir.nhs.uk/STU3/CodeSystem/CareConnect-GPC-PrescriptionType-1", "code": "repeat", "display": "Repeat" }]
+            }
           }
         ],
         "basedOn": [{ "reference": "MedicationRequest/b32e43d4-b4b9-11e9-a2a3-2a2ae2dbcce4" }],
@@ -235,6 +242,12 @@
             "valueCodeableConcept": {
               "coding": [{ "system": "https://fhir.nhs.uk/STU3/CodeSystem/CareConnect-PrescribingAgency-1", "code": "prescribed-at-gp-practice", "display": "Prescribed at GP practice" }]
             }
+          },
+          {
+            "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-PrescriptionType-1",
+            "valueCodeableConcept": {
+              "coding": [{ "system": "https://fhir.nhs.uk/STU3/CodeSystem/CareConnect-GPC-PrescriptionType-1", "code": "repeat-dispensing", "display": "Repeat Dispensing" }]
+            }
           }
         ],
         "basedOn": [{ "reference": "MedicationRequest/d1b8a441-e7e0-4a89-b891-11ace3fda52b" }],
@@ -298,6 +311,12 @@
           {
             "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-MedicationStatementLastIssueDate-1",
             "valueDateTime": "2019-07-20"
+          },
+          {
+            "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-PrescriptionType-1",
+            "valueCodeableConcept": {
+              "coding": [{ "system": "https://fhir.nhs.uk/STU3/CodeSystem/CareConnect-GPC-PrescriptionType-1", "code": "prescribed-elsewhere", "display": "Prescribed Elsewhere" }]
+            }
           }
         ],
         "basedOn": [{ "reference": "MedicationRequest/f2b34b3c-3bf0-11e7-b228-9e6e3ab6c5a3" }],
@@ -339,6 +358,79 @@
     },
     {
       "resource": {
+        "resourceType": "Medication",
+        "id": "med-prednisolone-5mg",
+        "meta": {
+          "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-Medication-1"]
+        },
+        "code": {
+          "coding": [
+            { "system": "https://dmd.nhs.uk", "code": "372554009", "display": "Prednisolone 5mg tablets" }
+          ],
+          "text": "Prednisolone 5mg tablets"
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "b1f2e3d4-4c5a-6b7d-8e9f-0a1b2c3d4e5f",
+        "meta": {
+          "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-MedicationStatement-1"]
+        },
+        "extension": [
+          {
+            "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-MedicationStatementLastIssueDate-1",
+            "valueDateTime": "2019-09-05"
+          },
+          {
+            "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-PrescriptionType-1",
+            "valueCodeableConcept": {
+              "coding": [{ "system": "https://fhir.nhs.uk/STU3/CodeSystem/CareConnect-GPC-PrescriptionType-1", "code": "acute", "display": "Acute" }]
+            }
+          }
+        ],
+        "basedOn": [{ "reference": "MedicationRequest/mr-prednisolone-acute" }],
+        "status": "active",
+        "medicationReference": { "reference": "Medication/med-prednisolone-5mg" },
+        "taken": "unk",
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "effectivePeriod": { "start": "2019-09-05" },
+        "dateAsserted": "2019-09-05",
+        "note": [{ "text": "Reducing course for inflammatory flare. Review in 2 weeks." }],
+        "dosage": [
+          {
+            "text": "4 tablets once daily for 5 days then reduce as directed",
+            "timing": { "code": { "text": "Once daily" } },
+            "route": { "coding": [{ "system": "http://snomed.info/sct", "code": "26643006", "display": "Oral route" }] },
+            "doseQuantity": { "value": 4, "unit": "tablet" }
+          }
+        ]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "mr-prednisolone-acute",
+        "meta": {
+          "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-MedicationRequest-1"]
+        },
+        "status": "active",
+        "intent": "order",
+        "medicationReference": { "reference": "Medication/med-prednisolone-5mg" },
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "authoredOn": "2019-09-05",
+        "requester": {
+          "agent": { "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" },
+          "onBehalfOf": { "reference": "Organization/db67f447-b30d-442a-8e31-6918d1367eeb" }
+        },
+        "dispenseRequest": {
+          "quantity": { "value": 28, "unit": "tablet" }
+        }
+      }
+    },
+    {
+      "resource": {
         "resourceType": "MedicationStatement",
         "id": "a6e72cde-3b12-11e7-b228-9e6e3ab6c5a3",
         "meta": {
@@ -348,6 +440,12 @@
           {
             "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-MedicationStatementLastIssueDate-1",
             "valueDateTime": "2019-02-01"
+          },
+          {
+            "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-PrescriptionType-1",
+            "valueCodeableConcept": {
+              "coding": [{ "system": "https://fhir.nhs.uk/STU3/CodeSystem/CareConnect-GPC-PrescriptionType-1", "code": "acute", "display": "Acute" }]
+            }
           }
         ],
         "basedOn": [{ "reference": "MedicationRequest/c9e1c1b6-3b12-11e7-b228-9e6e3ab6c5a3" }],

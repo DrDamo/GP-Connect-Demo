@@ -52,24 +52,13 @@ function getExtensionValue(extensions: fhir3.Extension[] | undefined, url: strin
 }
 
 function extractPrescriptionType(stmt: fhir3.MedicationStatement): string | undefined {
-  const ext = getExtensionValue(
-    stmt.extension,
-    'prescribingAgency' // GP Connect extension
-  ) ?? getExtensionValue(stmt.extension, 'medicationStatementLastIssueDate')
-
-  // Look for the prescription type extension
-  const ptExt = getExtensionValue(
-    stmt.extension,
-    'MedicationStatement-lastIssueDate'
-  ) ?? getExtensionValue(stmt.extension, 'prescriptionType')
-
-  if (ptExt) {
-    return (ptExt.valueCodeableConcept as fhir3.CodeableConcept | undefined)?.coding?.[0]?.display
-      ?? (ptExt.valueCodeableConcept as fhir3.CodeableConcept | undefined)?.text
-      ?? ptExt.valueString
-  }
-  // Try to get from basedOn MedicationRequest
-  return ext ? String(ext.valueString ?? '') : undefined
+  // GP Connect extension URL: Extension-CareConnect-GPC-PrescriptionType-1
+  const ptExt = getExtensionValue(stmt.extension, 'Extension-CareConnect-GPC-PrescriptionType-1')
+    ?? getExtensionValue(stmt.extension, 'PrescriptionType-1')
+  if (!ptExt) return undefined
+  const cc = ptExt.valueCodeableConcept as fhir3.CodeableConcept | undefined
+  // Prefer code (e.g. "repeat-dispensing") over display for reliable categorisation
+  return cc?.coding?.[0]?.code ?? cc?.text
 }
 
 function extractMedicationRequestIds(stmt: fhir3.MedicationStatement): string[] {
@@ -168,11 +157,7 @@ export function extractMedications(bundle: fhir3.Bundle): GpConnectMedicationsRe
       ? `${qty.value ?? ''} ${qty.unit ?? ''}`.trim() || undefined
       : undefined
 
-    // Prescription type from extensions
-    const prescriptionTypeExt = getExtensionValue(stmt.extension, 'prescriptionType')
-    const prescriptionType = (prescriptionTypeExt?.valueCodeableConcept as fhir3.CodeableConcept | undefined)?.coding?.[0]?.display
-      ?? (prescriptionTypeExt?.valueCodeableConcept as fhir3.CodeableConcept | undefined)?.text
-      ?? extractPrescriptionType(stmt)
+    const prescriptionType = extractPrescriptionType(stmt)
 
     const prescriber = getPrescriber(bundle, linkedRequest)
 
