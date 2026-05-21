@@ -1,6 +1,6 @@
 import type { GpConnectBundle, GpConnectInvestigation } from '../../fhir/types'
 import { PatientBanner } from './PatientBanner'
-import { DomainTable } from './DomainTable'
+import { DomainTable, StatusBadge } from './DomainTable'
 import type { DomainColumn } from './DomainTable'
 
 interface Props {
@@ -10,10 +10,7 @@ interface Props {
 }
 
 const COLUMNS: DomainColumn<GpConnectInvestigation>[] = [
-  {
-    label: 'Date',
-    render: item => item.date ?? '—',
-  },
+  { label: 'Date', render: item => item.date ?? '—' },
   {
     label: 'Investigation',
     render: item => (
@@ -32,19 +29,64 @@ const COLUMNS: DomainColumn<GpConnectInvestigation>[] = [
       return parts.length > 0 ? parts.join(' ') : '—'
     },
   },
-  {
-    label: 'Reference range',
-    render: item => item.referenceRange ?? '—',
-  },
-  {
-    label: 'Interpretation',
-    render: item => item.interpretation ?? '—',
-  },
-  {
-    label: 'Performer',
-    render: item => item.performer ?? '—',
-  },
+  { label: 'Reference range', render: item => item.referenceRange ?? '—' },
+  { label: 'Interpretation',  render: item => item.interpretation ?? '—' },
+  { label: 'Performer',       render: item => item.performer ?? '—' },
 ]
+
+function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
+  if (!value) return null
+  return (
+    <div className="flex gap-2 min-w-0">
+      <span className="text-xs text-nhs-grey-3 shrink-0 w-36">{label}</span>
+      <span className="text-xs text-nhs-grey-1 min-w-0">{value}</span>
+    </div>
+  )
+}
+
+function interpretationClass(value?: string): string {
+  if (!value) return ''
+  const v = value.toLowerCase()
+  if (v === 'high' || v === 'h' || v === 'hh' || v === 'critically high') return 'text-red-700 font-semibold'
+  if (v === 'low' || v === 'l' || v === 'll' || v === 'critically low') return 'text-blue-700 font-semibold'
+  if (v === 'normal' || v === 'n') return 'text-green-700'
+  return ''
+}
+
+function InvestigationDetail({ investigation }: { investigation: GpConnectInvestigation }) {
+  const resultText = [investigation.result, investigation.unit].filter(Boolean).join(' ') || undefined
+  const intClass = interpretationClass(investigation.interpretation)
+  return (
+    <div className="border border-nhs-blue/20 rounded-lg bg-blue-50/50 p-4 space-y-3">
+      <div className="flex items-start justify-between gap-3">
+        <h3 className="text-sm font-semibold text-nhs-grey-1">{investigation.name}</h3>
+        {investigation.interpretation && (
+          <StatusBadge value={investigation.interpretation} />
+        )}
+      </div>
+      <div className="grid grid-cols-2 gap-x-8 gap-y-1.5">
+        {investigation.snomedCode && (
+          <DetailRow label="SNOMED code" value={<span className="font-mono">{investigation.snomedCode}</span>} />
+        )}
+        <DetailRow label="Date"            value={investigation.date} />
+        {resultText && (
+          <DetailRow label="Result" value={
+            <span className={intClass || undefined}>{resultText}</span>
+          } />
+        )}
+        {investigation.referenceRange && (
+          <DetailRow label="Reference range" value={investigation.referenceRange} />
+        )}
+        {investigation.interpretation && (
+          <DetailRow label="Interpretation" value={
+            <span className={intClass || undefined}>{investigation.interpretation}</span>
+          } />
+        )}
+        <DetailRow label="Performer" value={investigation.performer} />
+      </div>
+    </div>
+  )
+}
 
 export function InvestigationsView({ bundle, selectedId, onSelect }: Props) {
   const count = bundle.investigations.length
@@ -55,7 +97,8 @@ export function InvestigationsView({ bundle, selectedId, onSelect }: Props) {
         <div>
           <h2 className="text-base font-semibold text-nhs-grey-1">Investigations</h2>
           <p className="text-xs text-nhs-grey-3 mt-0.5">
-            {count} record{count !== 1 ? 's' : ''}{onSelect ? ' · click a row to highlight FHIR source' : ''}
+            {count} record{count !== 1 ? 's' : ''}
+            {onSelect ? ' · click a row to expand' : ''}
           </p>
         </div>
         <span className="px-2 py-1 bg-nhs-blue text-white text-xs font-semibold rounded">GP Connect STU3</span>
@@ -66,6 +109,7 @@ export function InvestigationsView({ bundle, selectedId, onSelect }: Props) {
         selectedId={selectedId}
         onSelect={onSelect}
         emptyMessage="No investigation records found in this bundle"
+        expandedContent={investigation => <InvestigationDetail investigation={investigation} />}
       />
     </div>
   )
