@@ -1,13 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
-import { Light as SyntaxHighlighter } from 'react-syntax-highlighter'
-import json from 'react-syntax-highlighter/dist/esm/languages/hljs/json'
-import xml from 'react-syntax-highlighter/dist/esm/languages/hljs/xml'
-import { githubGist } from 'react-syntax-highlighter/dist/esm/styles/hljs'
-
-SyntaxHighlighter.registerLanguage('json', json)
-SyntaxHighlighter.registerLanguage('xml', xml)
-
-const MAX_DISPLAY_LINES = 3000
+import { CodeMirrorView } from './CodeMirrorView'
+import type { CodeMirrorViewHandle } from './CodeMirrorView'
 
 interface Props {
   source: string
@@ -17,11 +10,10 @@ interface Props {
 
 export function RawSourceViewer({ source, format, filename }: Props) {
   const [copied, setCopied] = useState(false)
-  const [showAll, setShowAll] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchMatchIdx, setSearchMatchIdx] = useState(0)
 
-  const codeRef = useRef<HTMLDivElement>(null)
+  const codeViewRef = useRef<CodeMirrorViewHandle>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
 
   const handleCopy = () => {
@@ -30,18 +22,8 @@ export function RawSourceViewer({ source, format, filename }: Props) {
     setTimeout(() => setCopied(false), 2000)
   }
 
-  const allLines = source.split('\n')
-  const lineCount = allLines.length
+  const lineCount = source.split('\n').length
 
-  // When search is active we always show the full file (with wrapLines for
-  // per-line highlighting). Otherwise respect the showAll / truncation setting.
-  const searchActive = !!searchQuery.trim()
-  const isTruncated = !searchActive && !showAll && lineCount > MAX_DISPLAY_LINES
-  const displaySource = isTruncated
-    ? allLines.slice(0, MAX_DISPLAY_LINES).join('\n')
-    : source
-
-  // Search across the full source regardless of truncation.
   const searchMatchLines = useMemo(() => {
     const q = searchQuery.trim().toLowerCase()
     if (!q) return []
@@ -51,40 +33,24 @@ export function RawSourceViewer({ source, format, filename }: Props) {
     }, [])
   }, [source, searchQuery])
 
-  const searchMatchSet = useMemo(() => new Set(searchMatchLines), [searchMatchLines])
-
-  const scrollToLine = useCallback((lineNumber: number) => {
-    const container = codeRef.current
-    if (!container) return
-    const lineEls = container.querySelectorAll('code > span')
-    const target = lineEls[lineNumber - 1] as HTMLElement | undefined
-    if (!target) return
-    const containerRect = container.getBoundingClientRect()
-    const targetRect = target.getBoundingClientRect()
-    container.scrollTo({
-      top: Math.max(0, container.scrollTop + targetRect.top - containerRect.top - 40),
-      behavior: 'smooth',
-    })
-  }, [])
-
   useEffect(() => {
     setSearchMatchIdx(0)
-    if (searchMatchLines.length > 0) scrollToLine(searchMatchLines[0])
+    if (searchMatchLines.length > 0) codeViewRef.current?.scrollToLine(searchMatchLines[0])
   }, [searchMatchLines]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSearchPrev = useCallback(() => {
     if (searchMatchLines.length === 0) return
     const newIdx = searchMatchIdx > 0 ? searchMatchIdx - 1 : searchMatchLines.length - 1
     setSearchMatchIdx(newIdx)
-    scrollToLine(searchMatchLines[newIdx])
-  }, [searchMatchLines, searchMatchIdx, scrollToLine])
+    codeViewRef.current?.scrollToLine(searchMatchLines[newIdx])
+  }, [searchMatchLines, searchMatchIdx])
 
   const handleSearchNext = useCallback(() => {
     if (searchMatchLines.length === 0) return
     const newIdx = searchMatchIdx < searchMatchLines.length - 1 ? searchMatchIdx + 1 : 0
     setSearchMatchIdx(newIdx)
-    scrollToLine(searchMatchLines[newIdx])
-  }, [searchMatchLines, searchMatchIdx, scrollToLine])
+    codeViewRef.current?.scrollToLine(searchMatchLines[newIdx])
+  }, [searchMatchLines, searchMatchIdx])
 
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
@@ -113,21 +79,6 @@ export function RawSourceViewer({ source, format, filename }: Props) {
           {copied ? '✓ Copied' : 'Copy'}
         </button>
       </div>
-
-      {/* Truncation notice */}
-      {isTruncated && (
-        <div className="px-3 py-1.5 bg-amber-50 border-b border-amber-200 shrink-0 flex items-center justify-between gap-3">
-          <p className="text-xs text-amber-700">
-            Showing first {MAX_DISPLAY_LINES.toLocaleString()} of {lineCount.toLocaleString()} lines.
-          </p>
-          <button
-            onClick={() => setShowAll(true)}
-            className="text-xs text-amber-800 font-medium underline whitespace-nowrap hover:no-underline"
-          >
-            Show all {lineCount.toLocaleString()} lines
-          </button>
-        </div>
-      )}
 
       {/* Search bar */}
       <div className="px-3 py-1.5 bg-nhs-grey-5 border-b border-nhs-grey-4 shrink-0 flex items-center gap-2">
@@ -169,33 +120,16 @@ export function RawSourceViewer({ source, format, filename }: Props) {
         )}
       </div>
 
-      {/* Source viewer */}
-      <div ref={codeRef} className="flex-1 overflow-auto rounded-b-lg">
-        {showAll && !searchActive ? (
-          /* Plain <pre> avoids per-token span cost for very large files */
-          <pre className="text-xs font-mono leading-relaxed p-3 m-0 whitespace-pre bg-white min-h-full text-nhs-grey-1">
-            {source}
-          </pre>
-        ) : (
-          <SyntaxHighlighter
-            language={format}
-            style={githubGist}
-            showLineNumbers
-            wrapLines={searchActive}
-            {...(searchActive && {
-              lineProps: (lineNumber: number) => {
-                const isCurrent = searchMatchLines.length > 0 && searchMatchLines[searchMatchIdx] === lineNumber
-                const isOther = !isCurrent && searchMatchSet.has(lineNumber)
-                const bg = isCurrent ? '#86efac' : isOther ? '#dcfce7' : undefined
-                return { style: bg ? { backgroundColor: bg, display: 'block' } : { display: 'block' } }
-              },
-            })}
-            lineNumberStyle={{ color: '#aeb7bd', fontSize: '0.75rem', minWidth: '2.5rem' }}
-            customStyle={{ margin: 0, fontSize: '0.75rem', lineHeight: '1.5', background: '#fff', height: '100%' }}
-          >
-            {displaySource}
-          </SyntaxHighlighter>
-        )}
+      {/* Source viewer — virtualised, renders only visible lines regardless of file size */}
+      <div className="flex-1 overflow-hidden rounded-b-lg">
+        <CodeMirrorView
+          ref={codeViewRef}
+          source={source}
+          language={format}
+          highlightedLines={new Set()}
+          searchMatchLines={searchMatchLines}
+          currentSearchMatch={searchMatchLines[searchMatchIdx] ?? -1}
+        />
       </div>
     </div>
   )

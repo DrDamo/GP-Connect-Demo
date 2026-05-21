@@ -1,9 +1,7 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
-import { Light as SyntaxHighlighter } from 'react-syntax-highlighter'
-import json from 'react-syntax-highlighter/dist/esm/languages/hljs/json'
-import xml from 'react-syntax-highlighter/dist/esm/languages/hljs/xml'
-import { githubGist } from 'react-syntax-highlighter/dist/esm/styles/hljs'
 import type { GpConnectBundle } from '../fhir/types'
+import { CodeMirrorView } from './CodeMirrorView'
+import type { CodeMirrorViewHandle } from './CodeMirrorView'
 import { buildResourceLineIndex, getHighlightedLines } from '../fhir/lineIndex'
 import { MedicationsView } from './clinical/MedicationsView'
 import { AllergiesView } from './clinical/AllergiesView'
@@ -17,9 +15,6 @@ import { CodedDataView } from './clinical/CodedDataView'
 import { DocumentsView } from './clinical/DocumentsView'
 import { DomainNav } from './clinical/DomainNav'
 import { type DomainId } from './clinical/domains'
-
-SyntaxHighlighter.registerLanguage('json', json)
-SyntaxHighlighter.registerLanguage('xml', xml)
 
 interface Props {
   record: GpConnectBundle
@@ -45,12 +40,13 @@ export function InspectorView({ record, source, format }: Props) {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchMatchIdx, setSearchMatchIdx] = useState(0)
 
-  const jsonPaneRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const codeViewRef = useRef<CodeMirrorViewHandle>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
 
   // Populate search from text selection inside the FHIR pane.
   useEffect(() => {
-    const container = jsonPaneRef.current
+    const container = containerRef.current
     if (!container) return
     const handler = () => {
       const selection = window.getSelection()
@@ -136,20 +132,10 @@ export function InspectorView({ record, source, format }: Props) {
     }, [])
   }, [source, searchQuery])
 
-  const searchMatchSet = useMemo(() => new Set(searchMatchLines), [searchMatchLines])
-
   // --- Scroll helper ---
 
   const scrollToLine = useCallback((lineNumber: number) => {
-    const container = jsonPaneRef.current
-    if (!container) return
-    const lineEls = container.querySelectorAll('code > span')
-    const target = lineEls[lineNumber - 1] as HTMLElement | undefined
-    if (!target) return
-    const containerRect = container.getBoundingClientRect()
-    const targetRect = target.getBoundingClientRect()
-    const newScrollTop = container.scrollTop + (targetRect.top - containerRect.top) - 40
-    container.scrollTo({ top: Math.max(0, newScrollTop), behavior: 'smooth' })
+    codeViewRef.current?.scrollToLine(lineNumber)
   }, [])
 
   useEffect(() => {
@@ -371,28 +357,16 @@ export function InspectorView({ record, source, format }: Props) {
           )}
         </div>
 
-        {/* FHIR source viewer — always shows the full bundle */}
-        <div ref={jsonPaneRef} className="flex-1 overflow-auto">
-          <SyntaxHighlighter
-            language={format === 'xml' ? 'xml' : 'json'}
-            style={githubGist}
-            showLineNumbers
-            wrapLines
-            lineProps={(lineNumber: number) => {
-              const isCurrentSearchMatch = searchMatchLines.length > 0 && searchMatchLines[searchMatchIdx] === lineNumber
-              const isOtherSearchMatch = !isCurrentSearchMatch && searchMatchSet.has(lineNumber)
-              const isHighlighted = highlightedLines.has(lineNumber)
-              const bg = isCurrentSearchMatch ? '#86efac'
-                : isOtherSearchMatch       ? '#dcfce7'
-                : isHighlighted            ? '#fffbcc'
-                : undefined
-              return { style: bg ? { backgroundColor: bg, display: 'block' } : { display: 'block' } }
-            }}
-            lineNumberStyle={{ color: '#aeb7bd', fontSize: '0.75rem', minWidth: '2.5rem', userSelect: 'none' }}
-            customStyle={{ margin: 0, fontSize: '0.75rem', lineHeight: '1.5', background: '#fff', minHeight: '100%' }}
-          >
-            {source}
-          </SyntaxHighlighter>
+        {/* FHIR source viewer — virtualised, renders only visible lines */}
+        <div ref={containerRef} className="flex-1 overflow-hidden">
+          <CodeMirrorView
+            ref={codeViewRef}
+            source={source}
+            language={format}
+            highlightedLines={highlightedLines}
+            searchMatchLines={searchMatchLines}
+            currentSearchMatch={searchMatchLines[searchMatchIdx] ?? -1}
+          />
         </div>
       </div>
     </div>
