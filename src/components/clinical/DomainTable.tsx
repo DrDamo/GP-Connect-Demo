@@ -1,3 +1,4 @@
+import { Fragment } from 'react'
 import type React from 'react'
 
 export interface DomainColumn<T> {
@@ -42,12 +43,14 @@ export function DomainTable<T extends { id: string }>({
   selectedId,
   onSelect,
   emptyMessage = 'No records found',
+  expandedContent,
 }: {
   columns: DomainColumn<T>[]
   items: T[]
   selectedId?: string
   onSelect?: (id: string) => void
   emptyMessage?: string
+  expandedContent?: (item: T) => React.ReactNode
 }) {
   if (items.length === 0) {
     return (
@@ -73,25 +76,35 @@ export function DomainTable<T extends { id: string }>({
           {items.map(item => {
             const isSelected = item.id === selectedId
             return (
-              <tr
-                key={item.id}
-                onClick={() => onSelect?.(item.id)}
-                className={`border-b border-nhs-grey-5 transition-colors ${
-                  onSelect ? 'cursor-pointer' : ''
-                } ${
-                  isSelected
-                    ? 'bg-blue-100'
-                    : onSelect
-                      ? 'hover:bg-blue-50'
-                      : ''
-                }`}
-              >
-                {columns.map(col => (
-                  <td key={col.label} className={`py-2.5 px-3 text-sm text-nhs-grey-2 ${col.className ?? ''}`}>
-                    {col.render(item)}
-                  </td>
-                ))}
-              </tr>
+              <Fragment key={item.id}>
+                <tr
+                  onClick={() => onSelect?.(item.id)}
+                  className={`transition-colors ${
+                    isSelected && expandedContent ? '' : 'border-b border-nhs-grey-5'
+                  } ${
+                    onSelect ? 'cursor-pointer' : ''
+                  } ${
+                    isSelected
+                      ? 'bg-blue-50'
+                      : onSelect
+                        ? 'hover:bg-blue-50'
+                        : ''
+                  }`}
+                >
+                  {columns.map(col => (
+                    <td key={col.label} className={`py-2.5 px-3 text-sm text-nhs-grey-2 ${col.className ?? ''}`}>
+                      {col.render(item)}
+                    </td>
+                  ))}
+                </tr>
+                {isSelected && expandedContent && (
+                  <tr className="border-b border-nhs-grey-5">
+                    <td colSpan={columns.length} className="px-3 pb-3 pt-0">
+                      {expandedContent(item)}
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
             )
           })}
         </tbody>

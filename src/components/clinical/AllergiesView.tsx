@@ -112,7 +112,6 @@ function AllergyDetail({ allergy }: { allergy: GpConnectAllergy }) {
 
 export function AllergiesView({ bundle, selectedId, onSelect }: Props) {
   const count = bundle.allergies.length
-  const selected = selectedId ? bundle.allergies.find(a => a.id === selectedId) : undefined
 
   return (
     <div className="space-y-4">
@@ -133,8 +132,8 @@ export function AllergiesView({ bundle, selectedId, onSelect }: Props) {
         selectedId={selectedId}
         onSelect={onSelect}
         emptyMessage="No allergy records found in this bundle"
+        expandedContent={allergy => <AllergyDetail allergy={allergy} />}
       />
-      {selected && <AllergyDetail allergy={selected} />}
     </div>
   )
 }
