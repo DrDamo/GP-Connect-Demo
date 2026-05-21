@@ -484,6 +484,375 @@
           "quantity": { "value": 30, "unit": "capsule" }
         }
       }
+    },
+    {
+      "resource": {
+        "resourceType": "AllergyIntolerance",
+        "id": "allergy-amoxicillin-001",
+        "meta": { "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-AllergyIntolerance-1"] },
+        "clinicalStatus": "active",
+        "verificationStatus": "confirmed",
+        "category": ["medication"],
+        "criticality": "high",
+        "code": {
+          "coding": [{ "system": "http://snomed.info/sct", "code": "372687004", "display": "Amoxicillin" }],
+          "text": "Amoxicillin"
+        },
+        "patient": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "assertedDate": "2015-03-14",
+        "recorder": { "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" },
+        "reaction": [{
+          "manifestation": [{ "coding": [{ "system": "http://snomed.info/sct", "code": "271807003", "display": "Skin rash" }] }],
+          "severity": "moderate",
+          "description": "Widespread urticarial rash within 2 hours of first dose"
+        }]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "AllergyIntolerance",
+        "id": "allergy-penicillin-002",
+        "meta": { "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-AllergyIntolerance-1"] },
+        "clinicalStatus": "active",
+        "verificationStatus": "confirmed",
+        "category": ["medication"],
+        "criticality": "high",
+        "code": {
+          "coding": [{ "system": "http://snomed.info/sct", "code": "764146007", "display": "Penicillin" }],
+          "text": "Penicillin"
+        },
+        "patient": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "assertedDate": "2018-09-22",
+        "reaction": [{
+          "manifestation": [{ "coding": [{ "system": "http://snomed.info/sct", "code": "39579001", "display": "Anaphylaxis" }] }],
+          "severity": "severe"
+        }]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "AllergyIntolerance",
+        "id": "allergy-peanut-003",
+        "meta": { "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-AllergyIntolerance-1"] },
+        "clinicalStatus": "active",
+        "verificationStatus": "confirmed",
+        "category": ["food"],
+        "criticality": "high",
+        "code": {
+          "coding": [{ "system": "http://snomed.info/sct", "code": "256349002", "display": "Peanut" }],
+          "text": "Peanut"
+        },
+        "patient": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "assertedDate": "2010-05-01",
+        "reaction": [{
+          "manifestation": [{ "coding": [{ "system": "http://snomed.info/sct", "code": "126485001", "display": "Urticaria" }] }],
+          "severity": "severe"
+        }]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "id": "problem-diabetes-001",
+        "meta": { "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-ProblemHeader-Condition-1"] },
+        "extension": [{
+          "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-ProblemSignificance-1",
+          "valueCodeableConcept": {
+            "coding": [{ "system": "https://fhir.nhs.uk/STU3/CodeSystem/CareConnect-GPC-ProblemSignificance-1", "code": "major", "display": "Major" }]
+          }
+        }],
+        "clinicalStatus": "active",
+        "code": {
+          "coding": [{ "system": "http://snomed.info/sct", "code": "44054006", "display": "Type 2 diabetes mellitus" }],
+          "text": "Type 2 diabetes mellitus"
+        },
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "onsetDateTime": "2012-06-15",
+        "assertedDate": "2012-06-20",
+        "asserter": { "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "id": "problem-hypertension-002",
+        "meta": { "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-ProblemHeader-Condition-1"] },
+        "extension": [{
+          "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-ProblemSignificance-1",
+          "valueCodeableConcept": {
+            "coding": [{ "system": "https://fhir.nhs.uk/STU3/CodeSystem/CareConnect-GPC-ProblemSignificance-1", "code": "major", "display": "Major" }]
+          }
+        }],
+        "clinicalStatus": "active",
+        "code": {
+          "coding": [{ "system": "http://snomed.info/sct", "code": "38341003", "display": "Essential hypertension" }],
+          "text": "Essential hypertension"
+        },
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "onsetDateTime": "2010-03-20"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "id": "problem-asthma-003",
+        "meta": { "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-ProblemHeader-Condition-1"] },
+        "extension": [{
+          "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-ProblemSignificance-1",
+          "valueCodeableConcept": {
+            "coding": [{ "system": "https://fhir.nhs.uk/STU3/CodeSystem/CareConnect-GPC-ProblemSignificance-1", "code": "minor", "display": "Minor" }]
+          }
+        }],
+        "clinicalStatus": "active",
+        "code": {
+          "coding": [{ "system": "http://snomed.info/sct", "code": "195967001", "display": "Asthma" }],
+          "text": "Asthma"
+        },
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "onsetDateTime": "2008-01-10"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Encounter",
+        "id": "encounter-surgery-001",
+        "meta": { "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-Encounter-1"] },
+        "status": "finished",
+        "type": [{ "coding": [{ "system": "http://snomed.info/sct", "code": "11429006", "display": "Consultation" }], "text": "GP Surgery Consultation" }],
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "participant": [{ "type": [{ "coding": [{ "system": "http://hl7.org/fhir/v3/ParticipationType", "code": "PPRF" }] }], "individual": { "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" } }],
+        "period": { "start": "2024-01-15T09:30:00+00:00", "end": "2024-01-15T09:50:00+00:00" },
+        "serviceProvider": { "reference": "Organization/db67f447-b30d-442a-8e31-6918d1367eeb" }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Encounter",
+        "id": "encounter-telephone-002",
+        "meta": { "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-Encounter-1"] },
+        "status": "finished",
+        "type": [{ "coding": [{ "system": "http://snomed.info/sct", "code": "401267002", "display": "Telephone triage encounter" }], "text": "Telephone Triage" }],
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "participant": [{ "individual": { "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" } }],
+        "period": { "start": "2024-03-20T14:15:00+00:00", "end": "2024-03-20T14:25:00+00:00" },
+        "serviceProvider": { "reference": "Organization/db67f447-b30d-442a-8e31-6918d1367eeb" }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Encounter",
+        "id": "encounter-home-003",
+        "meta": { "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-Encounter-1"] },
+        "status": "finished",
+        "type": [{ "coding": [{ "system": "http://snomed.info/sct", "code": "439708006", "display": "Home visit" }], "text": "Home Visit" }],
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "participant": [{ "individual": { "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" } }],
+        "period": { "start": "2023-11-05T11:00:00+00:00" },
+        "serviceProvider": { "reference": "Organization/db67f447-b30d-442a-8e31-6918d1367eeb" }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Immunization",
+        "id": "imm-covid-001",
+        "meta": { "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-Immunization-1"] },
+        "status": "completed",
+        "notGiven": false,
+        "vaccineCode": {
+          "coding": [{ "system": "http://snomed.info/sct", "code": "39114911000001105", "display": "COVID-19 mRNA vaccine" }],
+          "text": "COVID-19 mRNA Vaccine (Pfizer-BioNTech)"
+        },
+        "patient": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "date": "2021-04-12",
+        "primarySource": true,
+        "lotNumber": "EJ6796",
+        "site": { "coding": [{ "system": "http://snomed.info/sct", "code": "368209003", "display": "Right arm" }] },
+        "practitioner": [{ "role": { "coding": [{ "system": "http://hl7.org/fhir/v2/0443", "code": "AP" }] }, "actor": { "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" } }]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Immunization",
+        "id": "imm-flu-002",
+        "meta": { "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-Immunization-1"] },
+        "status": "completed",
+        "notGiven": false,
+        "vaccineCode": {
+          "coding": [{ "system": "http://snomed.info/sct", "code": "13762002", "display": "Influenza virus vaccine" }],
+          "text": "Seasonal Influenza Vaccine 2023/24"
+        },
+        "patient": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "date": "2023-10-25",
+        "primarySource": true,
+        "lotNumber": "FLU2324A",
+        "site": { "coding": [{ "system": "http://snomed.info/sct", "code": "368209003", "display": "Right arm" }] },
+        "practitioner": [{ "actor": { "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" } }]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-hba1c-001",
+        "meta": { "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-Observation-1"] },
+        "status": "final",
+        "code": {
+          "coding": [{ "system": "http://snomed.info/sct", "code": "1019431000000105", "display": "HbA1c (haemoglobin A1c) level - IFCC standardised" }],
+          "text": "HbA1c level"
+        },
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "effectiveDateTime": "2024-01-10",
+        "valueQuantity": { "value": 58, "unit": "mmol/mol", "system": "http://unitsofmeasure.org", "code": "mmol/mol" },
+        "interpretation": { "coding": [{ "system": "http://hl7.org/fhir/v2/0078", "code": "H", "display": "Above high normal" }] },
+        "referenceRange": [{ "low": { "value": 20, "unit": "mmol/mol" }, "high": { "value": 48, "unit": "mmol/mol" }, "text": "20–48 mmol/mol" }]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-haemoglobin-002",
+        "meta": { "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-Observation-1"] },
+        "status": "final",
+        "code": {
+          "coding": [{ "system": "http://snomed.info/sct", "code": "1022431000000105", "display": "Haemoglobin concentration" }],
+          "text": "Haemoglobin"
+        },
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "effectiveDateTime": "2024-01-10",
+        "valueQuantity": { "value": 14.2, "unit": "g/dL", "system": "http://unitsofmeasure.org", "code": "g/dL" },
+        "interpretation": { "coding": [{ "system": "http://hl7.org/fhir/v2/0078", "code": "N", "display": "Normal" }] },
+        "referenceRange": [{ "low": { "value": 13.5, "unit": "g/dL" }, "high": { "value": 17.5, "unit": "g/dL" } }]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "DiagnosticReport",
+        "id": "report-hba1c-001",
+        "meta": { "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-DiagnosticReport-1"] },
+        "status": "final",
+        "code": {
+          "coding": [{ "system": "http://snomed.info/sct", "code": "1019431000000105", "display": "HbA1c level - IFCC standardised" }],
+          "text": "HbA1c"
+        },
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "issued": "2024-01-10T09:00:00+00:00",
+        "performer": [{ "actor": { "reference": "Organization/db67f447-b30d-442a-8e31-6918d1367eeb" } }],
+        "result": [{ "reference": "Observation/obs-hba1c-001" }]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "DiagnosticReport",
+        "id": "report-fbc-002",
+        "meta": { "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-DiagnosticReport-1"] },
+        "status": "final",
+        "code": {
+          "coding": [{ "system": "http://snomed.info/sct", "code": "26604007", "display": "Full blood count" }],
+          "text": "Full blood count"
+        },
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "issued": "2024-01-10T09:00:00+00:00",
+        "performer": [{ "actor": { "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" } }],
+        "result": [{ "reference": "Observation/obs-haemoglobin-002" }]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "ReferralRequest",
+        "id": "referral-cardiology-001",
+        "meta": { "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-ReferralRequest-1"] },
+        "status": "active",
+        "intent": "order",
+        "priority": "routine",
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "authoredOn": "2024-02-01",
+        "requester": { "agent": { "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" } },
+        "specialty": { "coding": [{ "system": "http://snomed.info/sct", "code": "394579002", "display": "Cardiology" }] },
+        "reasonCode": [{ "coding": [{ "system": "http://snomed.info/sct", "code": "29857009", "display": "Chest pain" }], "text": "Chest pain investigation" }]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "ReferralRequest",
+        "id": "referral-ophthalmology-002",
+        "meta": { "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-ReferralRequest-1"] },
+        "status": "completed",
+        "intent": "order",
+        "priority": "routine",
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "authoredOn": "2023-07-15",
+        "requester": { "agent": { "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" } },
+        "specialty": { "coding": [{ "system": "http://snomed.info/sct", "code": "394594003", "display": "Ophthalmology" }] },
+        "reasonCode": [{ "text": "Diabetic eye review" }]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "ProcedureRequest",
+        "id": "diary-bp-review-001",
+        "meta": { "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-ProcedureRequest-1"] },
+        "status": "active",
+        "intent": "plan",
+        "priority": "routine",
+        "code": {
+          "coding": [{ "system": "http://snomed.info/sct", "code": "413473000", "display": "Counselling about hypertension" }],
+          "text": "Blood pressure monitoring review"
+        },
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "authoredOn": "2024-03-01",
+        "requester": { "agent": { "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" } },
+        "occurrenceDateTime": "2024-06-01"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "ProcedureRequest",
+        "id": "diary-diabetes-review-002",
+        "meta": { "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-ProcedureRequest-1"] },
+        "status": "active",
+        "intent": "plan",
+        "priority": "routine",
+        "code": {
+          "coding": [{ "system": "http://snomed.info/sct", "code": "413183008", "display": "Diabetes mellitus annual review" }],
+          "text": "Diabetes annual review"
+        },
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "authoredOn": "2024-03-01",
+        "requester": { "agent": { "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" } },
+        "occurrenceDateTime": "2024-09-15"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "coded-bmi-001",
+        "meta": { "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-Observation-1"] },
+        "status": "final",
+        "code": {
+          "coding": [{ "system": "http://snomed.info/sct", "code": "60621009", "display": "Body mass index" }],
+          "text": "BMI"
+        },
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "effectiveDateTime": "2024-01-15",
+        "valueQuantity": { "value": 28.5, "unit": "kg/m2", "system": "http://unitsofmeasure.org", "code": "kg/m2" }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "coded-smoking-002",
+        "meta": { "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-Observation-1"] },
+        "status": "final",
+        "code": {
+          "coding": [{ "system": "http://snomed.info/sct", "code": "365981007", "display": "Tobacco smoking behaviour - finding" }],
+          "text": "Smoking status"
+        },
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "effectiveDateTime": "2024-01-15",
+        "valueCodeableConcept": {
+          "coding": [{ "system": "http://snomed.info/sct", "code": "266919005", "display": "Never smoked tobacco" }],
+          "text": "Never smoked"
+        }
+      }
     }
   ]
 }

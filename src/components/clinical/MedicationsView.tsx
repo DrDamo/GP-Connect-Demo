@@ -1,18 +1,22 @@
-import { useState } from 'react'
-import type { GpConnectMedication, GpConnectMedicationsRecord } from '../../fhir/types'
+import { useState, Fragment } from 'react'
+import type { GpConnectMedication, GpConnectMedicationIssue, GpConnectMedicationsRecord } from '../../fhir/types'
 
 interface Props {
   record: GpConnectMedicationsRecord
+  selectedId?: string
+  selectedIssueId?: string
+  onSelect?: (id: string) => void
+  onSelectIssue?: (medId: string, issueId: string) => void
 }
 
 const statusConfig: Record<string, { label: string; className: string }> = {
-  active: { label: 'Active', className: 'bg-green-100 text-green-800 border-green-300' },
-  completed: { label: 'Completed', className: 'bg-nhs-grey-5 text-nhs-grey-2 border-nhs-grey-4' },
-  stopped: { label: 'Stopped', className: 'bg-red-100 text-red-800 border-red-300' },
-  'on-hold': { label: 'On Hold', className: 'bg-yellow-100 text-yellow-800 border-yellow-300' },
-  intended: { label: 'Intended', className: 'bg-blue-100 text-blue-800 border-blue-300' },
-  'entered-in-error': { label: 'Entered in Error', className: 'bg-red-100 text-red-800 border-red-300' },
-  unknown: { label: 'Unknown', className: 'bg-nhs-grey-5 text-nhs-grey-3 border-nhs-grey-4' },
+  active:             { label: 'Active',           className: 'bg-green-100 text-green-800 border-green-300' },
+  completed:          { label: 'Completed',         className: 'bg-nhs-grey-5 text-nhs-grey-2 border-nhs-grey-4' },
+  stopped:            { label: 'Stopped',           className: 'bg-red-100 text-red-800 border-red-300' },
+  'on-hold':          { label: 'On Hold',           className: 'bg-yellow-100 text-yellow-800 border-yellow-300' },
+  intended:           { label: 'Intended',          className: 'bg-blue-100 text-blue-800 border-blue-300' },
+  'entered-in-error': { label: 'Entered in Error',  className: 'bg-red-100 text-red-800 border-red-300' },
+  unknown:            { label: 'Unknown',           className: 'bg-nhs-grey-5 text-nhs-grey-3 border-nhs-grey-4' },
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -24,14 +28,33 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
-function MedicationRow({ med }: { med: GpConnectMedication }) {
+function issueChanges(issue: GpConnectMedicationIssue, med: GpConnectMedication): { label: string; value: string }[] {
+  const out: { label: string; value: string }[] = []
+  const check = (label: string, issueVal: string | undefined, medVal: string | undefined) => {
+    if (issueVal !== undefined && issueVal !== medVal) out.push({ label, value: issueVal })
+  }
+  check('Dosage instruction', issue.dosageInstruction, med.dosageInstruction)
+  check('Quantity', issue.quantity, med.prescribedQuantity)
+  check('Patient instructions', issue.patientInstructions, med.patientInstructions)
+  check('Pharmacy / prescriber note', issue.pharmacyInstructions, med.pharmacyInstructions)
+  return out
+}
+
+function MedicationRow({ med, selected, selectedIssueId, onSelect, onSelectIssue }: {
+  med: GpConnectMedication
+  selected?: boolean
+  selectedIssueId?: string
+  onSelect?: (id: string) => void
+  onSelectIssue?: (medId: string, issueId: string) => void
+}) {
   const [expanded, setExpanded] = useState(false)
+  const [detailIssueId, setDetailIssueId] = useState<string | null>(null)
 
   return (
     <>
       <tr
-        className="border-b border-nhs-grey-5 hover:bg-blue-50 cursor-pointer transition-colors"
-        onClick={() => setExpanded(e => !e)}
+        className={`border-b border-nhs-grey-5 cursor-pointer transition-colors ${selected ? 'bg-blue-100 hover:bg-blue-100' : 'hover:bg-blue-50'}`}
+        onClick={() => { setExpanded(e => !e); onSelect?.(med.id) }}
       >
         <td className="py-2.5 px-3">
           <div className="font-medium text-nhs-grey-1 text-sm">{med.drugName}</div>
@@ -57,29 +80,99 @@ function MedicationRow({ med }: { med: GpConnectMedication }) {
           <td colSpan={7} className="px-4 py-3">
             <div className="grid grid-cols-2 gap-x-8 gap-y-1.5 text-sm">
               <Detail label="Drug name" value={med.drugName} />
-              {med.snomedCode && <Detail label="DM+D / SNOMED code" value={med.snomedCode} mono />}
-              {med.dosageInstruction && <Detail label="Dosage instruction" value={med.dosageInstruction} />}
-              {med.dose && <Detail label="Dose" value={med.dose} />}
-              {med.frequency && <Detail label="Frequency" value={med.frequency} />}
-              {med.route && <Detail label="Route" value={med.route} />}
-              {med.prescribedQuantity && <Detail label="Quantity" value={med.prescribedQuantity} />}
-              {med.numberOfRepeatsAllowed !== undefined && (
-                <Detail label="Repeats allowed" value={String(med.numberOfRepeatsAllowed)} />
-              )}
-              {med.prescriptionType && <Detail label="Prescription type" value={med.prescriptionType} />}
-              {med.startDate && <Detail label="Start date" value={med.startDate} />}
-              {med.endDate && <Detail label="End date" value={med.endDate} />}
-              {med.lastIssuedDate && <Detail label="Last issued" value={med.lastIssuedDate} />}
-              {med.prescriber && <Detail label="Prescriber" value={med.prescriber} />}
-              {med.prescriberOrganisation && <Detail label="Practice" value={med.prescriberOrganisation} />}
+              <Detail label="DM+D / SNOMED code" value={med.snomedCode} mono />
+              <Detail label="Dosage instruction" value={med.dosageInstruction} />
+              <Detail label="Route" value={med.route} />
+              <Detail label="Dose" value={med.dose} />
+              <Detail label="Frequency" value={med.frequency} />
+              <Detail label="Quantity" value={med.prescribedQuantity} />
+              <Detail label="Repeats allowed" value={med.numberOfRepeatsAllowed !== undefined ? String(med.numberOfRepeatsAllowed) : undefined} />
+              <Detail label="Prescription type" value={med.prescriptionType} />
+              <Detail label="Start date" value={med.startDate} />
+              <Detail label="End date" value={med.endDate} />
+              <Detail label="Last issued" value={med.lastIssuedDate} />
+              <Detail label="Prescriber" value={med.prescriber} />
+              <Detail label="Practice" value={med.prescriberOrganisation} />
+              <Detail label="Patient instructions" value={med.patientInstructions} />
+              <Detail label="Pharmacy / prescriber note" value={med.pharmacyInstructions} />
               {med.additionalInformation && (
-                <div className="col-span-2 mt-1">
+                <div className="col-span-2 mt-1 pt-1 border-t border-nhs-grey-5">
                   <span className="text-nhs-grey-3 text-xs uppercase tracking-wide">Additional information</span>
                   <p className="mt-0.5 text-nhs-grey-1 italic">{med.additionalInformation}</p>
                 </div>
               )}
               <Detail label="FHIR ID" value={med.medicationStatementId} mono />
             </div>
+            {med.issues.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-nhs-grey-4">
+                <p className="text-xs font-semibold text-nhs-grey-2 uppercase tracking-wide mb-2">
+                  Issues ({med.issues.length})
+                  {onSelectIssue && <span className="normal-case font-normal text-nhs-grey-3 ml-1">· click row to inspect FHIR source</span>}
+                </p>
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="text-nhs-grey-3 uppercase tracking-wide text-left">
+                      <th className="pb-1 pr-4 font-semibold">Issue date</th>
+                      <th className="pb-1 pr-4 font-semibold">End date</th>
+                      <th className="pb-1 pr-4 font-semibold">Quantity</th>
+                      <th className="pb-1 pr-4 font-semibold">Status</th>
+                      <th className="pb-1"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {med.issues.map(issue => {
+                      const changes = issueChanges(issue, med)
+                      const detailOpen = detailIssueId === issue.id
+                      return (
+                        <Fragment key={issue.id}>
+                          <tr
+                            onClick={onSelectIssue ? e => { e.stopPropagation(); onSelectIssue(med.id, issue.id) } : undefined}
+                            className={`transition-colors ${onSelectIssue ? 'cursor-pointer' : ''} ${selectedIssueId === issue.id ? 'bg-blue-200' : onSelectIssue ? 'hover:bg-blue-100' : ''}`}
+                          >
+                            <td className="py-0.5 pr-4">{issue.issueDate ?? '—'}</td>
+                            <td className="py-0.5 pr-4">{issue.endDate ?? '—'}</td>
+                            <td className="py-0.5 pr-4">{issue.quantity ?? '—'}</td>
+                            <td className="py-0.5 pr-4"><StatusBadge status={issue.status ?? 'unknown'} /></td>
+                            <td className="py-0.5">
+                              <button
+                                onClick={e => { e.stopPropagation(); setDetailIssueId(prev => prev === issue.id ? null : issue.id) }}
+                                className={`px-1.5 py-0.5 rounded border text-xs transition-colors whitespace-nowrap ${
+                                  detailOpen
+                                    ? 'bg-nhs-blue text-white border-nhs-blue'
+                                    : 'bg-white border-nhs-grey-4 text-nhs-grey-2 hover:border-nhs-blue hover:text-nhs-blue'
+                                }`}
+                              >
+                                {changes.length > 0 ? `${changes.length} change${changes.length > 1 ? 's' : ''}` : 'Detail'}
+                              </button>
+                            </td>
+                          </tr>
+                          {detailOpen && (
+                            <tr>
+                              <td colSpan={5} className="pb-2 pt-0.5 px-1">
+                                <div className="bg-white border border-nhs-grey-4 rounded p-2.5">
+                                  {changes.length === 0 ? (
+                                    <p className="text-nhs-grey-3 italic text-xs">No changes from the authorised prescription</p>
+                                  ) : (
+                                    <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
+                                      {changes.map(c => (
+                                        <div key={c.label}>
+                                          <span className="text-nhs-grey-3 text-xs uppercase tracking-wide">{c.label}</span>
+                                          <p className="text-nhs-grey-1 text-xs mt-0.5">{c.value}</p>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </td>
         </tr>
       )}
@@ -87,50 +180,70 @@ function MedicationRow({ med }: { med: GpConnectMedication }) {
   )
 }
 
-function Detail({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
+function Detail({ label, value, mono = false }: { label: string; value?: string; mono?: boolean }) {
   return (
     <div>
       <span className="text-nhs-grey-3 text-xs uppercase tracking-wide">{label}</span>
-      <p className={`mt-0.5 text-nhs-grey-1 ${mono ? 'font-mono text-xs' : ''}`}>{value}</p>
+      <p className={`mt-0.5 ${value ? `text-nhs-grey-1 ${mono ? 'font-mono text-xs' : ''}` : 'text-nhs-grey-3 italic'}`}>
+        {value ?? '—'}
+      </p>
     </div>
   )
 }
 
-function MedicationsTable({ medications, title, subtitle }: { medications: GpConnectMedication[]; title: string; subtitle?: string }) {
+function MedicationsTable({ medications, selectedId, selectedIssueId, onSelect, onSelectIssue }: {
+  medications: GpConnectMedication[]
+  selectedId?: string
+  selectedIssueId?: string
+  onSelect?: (id: string) => void
+  onSelectIssue?: (medId: string, issueId: string) => void
+}) {
   if (medications.length === 0) return null
   return (
-    <div>
-      <div className="flex items-baseline gap-2 mb-2 px-3">
-        <h3 className="text-sm font-semibold text-nhs-grey-2 uppercase tracking-wide">{title}</h3>
-        {subtitle && <span className="text-xs text-nhs-grey-3">{subtitle}</span>}
-      </div>
-      <div className="border border-nhs-grey-5 rounded-lg overflow-hidden">
-        <table className="w-full text-left">
-          <thead>
-            <tr className="bg-nhs-grey-5 text-xs font-semibold text-nhs-grey-2 uppercase tracking-wide">
-              <th className="py-2 px-3">Drug</th>
-              <th className="py-2 px-3">Dose / Frequency</th>
-              <th className="py-2 px-3">Route</th>
-              <th className="py-2 px-3">Start date</th>
-              <th className="py-2 px-3">Last issued</th>
-              <th className="py-2 px-3">Status</th>
-              <th className="py-2 px-3 w-6"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {medications.map(med => (
-              <MedicationRow key={med.id} med={med} />
-            ))}
-          </tbody>
-        </table>
-      </div>
+    <div className="border border-nhs-grey-5 rounded-lg overflow-hidden">
+      <table className="w-full text-left">
+        <thead>
+          <tr className="bg-nhs-grey-5 text-xs font-semibold text-nhs-grey-2 uppercase tracking-wide">
+            <th className="py-2 px-3">Drug</th>
+            <th className="py-2 px-3">Dose / Frequency</th>
+            <th className="py-2 px-3">Route</th>
+            <th className="py-2 px-3">Start date</th>
+            <th className="py-2 px-3">Last issued</th>
+            <th className="py-2 px-3">Status</th>
+            <th className="py-2 px-3 w-6"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {medications.map(med => (
+            <MedicationRow
+              key={med.id}
+              med={med}
+              selected={med.id === selectedId}
+              selectedIssueId={med.id === selectedId ? selectedIssueId : undefined}
+              onSelect={onSelect}
+              onSelectIssue={onSelectIssue}
+            />
+          ))}
+        </tbody>
+      </table>
     </div>
   )
 }
 
-type PrescriptionCategory = 'acute' | 'repeat' | 'repeat-dispensing' | 'prescribed-elsewhere' | 'other'
+type MedTab = 'acute' | 'repeat' | 'repeat-dispensing' | 'prescribed-elsewhere' | 'past' | 'other'
 
-function getPrescriptionCategory(med: GpConnectMedication): PrescriptionCategory {
+const TAB_DEFS: { id: MedTab; label: string; description: string }[] = [
+  { id: 'acute',                label: 'Acute',                description: 'One-off prescriptions' },
+  { id: 'repeat',               label: 'Repeat',               description: 'Regular repeat prescriptions' },
+  { id: 'repeat-dispensing',    label: 'Repeat Dispensing',    description: 'Dispensed multiple times without reauthorisation' },
+  { id: 'prescribed-elsewhere', label: 'Prescribed Elsewhere', description: 'Prescribed outside this GP practice' },
+  { id: 'past',                 label: 'Past',                 description: 'Completed or stopped medications' },
+  { id: 'other',                label: 'Other',                description: 'Prescription type not specified' },
+]
+
+function getPrescriptionTab(med: GpConnectMedication): MedTab {
+  // prescribingAgency 'prescribed-at-gp-practice' = this practice; anything else = elsewhere
+  if (med.prescribingAgency && med.prescribingAgency !== 'prescribed-at-gp-practice') return 'prescribed-elsewhere'
   const pt = med.prescriptionType?.toLowerCase() ?? ''
   if (pt.includes('elsewhere')) return 'prescribed-elsewhere'
   if (pt.includes('dispensing')) return 'repeat-dispensing'
@@ -139,27 +252,35 @@ function getPrescriptionCategory(med: GpConnectMedication): PrescriptionCategory
   return 'other'
 }
 
-const categoryConfig: Record<PrescriptionCategory, { label: string; description: string }> = {
-  'acute':                { label: 'Acute',                description: 'One-off prescriptions' },
-  'repeat':               { label: 'Repeat',               description: 'Regular repeat prescriptions' },
-  'repeat-dispensing':    { label: 'Repeat Dispensing',    description: 'Dispensed multiple times without reauthorisation' },
-  'prescribed-elsewhere': { label: 'Prescribed Elsewhere', description: 'Prescribed outside this GP practice' },
-  'other':                { label: 'Other / Unclassified', description: 'Prescription type not specified' },
-}
-
-export function MedicationsView({ record }: Props) {
+export function MedicationsView({ record, selectedId, selectedIssueId, onSelect, onSelectIssue }: Props) {
   const isPast = (m: GpConnectMedication) => ['completed', 'stopped', 'entered-in-error'].includes(m.status)
-  const isCurrent = (m: GpConnectMedication) => !isPast(m)
 
-  const currentByCategory = (cat: PrescriptionCategory) =>
-    record.medications.filter(m => isCurrent(m) && getPrescriptionCategory(m) === cat)
+  // Build counts per tab
+  const counts: Record<MedTab, GpConnectMedication[]> = {
+    acute:                  [],
+    repeat:                 [],
+    'repeat-dispensing':    [],
+    'prescribed-elsewhere': [],
+    past:                   [],
+    other:                  [],
+  }
+  for (const med of record.medications) {
+    if (isPast(med)) counts.past.push(med)
+    else counts[getPrescriptionTab(med)].push(med)
+  }
 
-  const past = record.medications.filter(isPast)
+  // Only show the 'other' tab if it has any entries
+  const visibleTabs = TAB_DEFS.filter(t => t.id !== 'other' || counts.other.length > 0)
 
-  const currentCategories: PrescriptionCategory[] = ['acute', 'repeat', 'repeat-dispensing', 'prescribed-elsewhere', 'other']
+  // Default to the first tab that has items, fallback to 'acute'
+  const defaultTab = visibleTabs.find(t => counts[t.id].length > 0)?.id ?? 'acute'
+  const [activeTab, setActiveTab] = useState<MedTab>(defaultTab)
+
+  const activeMeds = counts[activeTab]
+  const activeTabDef = TAB_DEFS.find(t => t.id === activeTab)!
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* Patient header */}
       {record.patient && (
         <div className="bg-nhs-blue rounded-lg px-4 py-3 text-white">
@@ -192,21 +313,49 @@ export function MedicationsView({ record }: Props) {
         <span className="px-2 py-1 bg-nhs-blue text-white text-xs font-semibold rounded">GP Connect STU3</span>
       </div>
 
-      {currentCategories.map(cat => {
-        const meds = currentByCategory(cat)
-        if (meds.length === 0) return null
-        const cfg = categoryConfig[cat]
-        return (
-          <MedicationsTable
-            key={cat}
-            medications={meds}
-            title={`${cfg.label} (${meds.length})`}
-            subtitle={cfg.description}
-          />
-        )
-      })}
+      {/* Category tabs */}
+      <div className="border-b border-nhs-grey-4">
+        <div className="flex gap-0 -mb-px">
+          {visibleTabs.map(tab => {
+            const count = counts[tab.id].length
+            const isActive = tab.id === activeTab
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                  isActive
+                    ? 'border-nhs-blue text-nhs-blue'
+                    : 'border-transparent text-nhs-grey-2 hover:text-nhs-grey-1 hover:border-nhs-grey-4'
+                }`}
+              >
+                {tab.label}
+                <span className={`ml-1.5 px-1.5 py-0.5 text-xs rounded-full font-semibold ${
+                  isActive
+                    ? 'bg-nhs-blue text-white'
+                    : count > 0
+                      ? 'bg-nhs-grey-4 text-nhs-grey-2'
+                      : 'bg-nhs-grey-5 text-nhs-grey-3'
+                }`}>
+                  {count}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
 
-      <MedicationsTable medications={past} title={`Past medications (${past.length})`} />
+      {/* Tab content */}
+      {activeMeds.length > 0 ? (
+        <div>
+          <p className="text-xs text-nhs-grey-3 mb-3">{activeTabDef.description}</p>
+          <MedicationsTable medications={activeMeds} selectedId={selectedId} selectedIssueId={selectedIssueId} onSelect={onSelect} onSelectIssue={onSelectIssue} />
+        </div>
+      ) : (
+        <div className="text-center py-10 text-nhs-grey-3">
+          <p className="text-sm">No {activeTabDef.label.toLowerCase()} medications in this record</p>
+        </div>
+      )}
 
       {record.medications.length === 0 && (
         <div className="text-center py-8 text-nhs-grey-3">
