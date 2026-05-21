@@ -495,16 +495,21 @@
         "category": ["medication"],
         "criticality": "high",
         "code": {
-          "coding": [{ "system": "http://snomed.info/sct", "code": "372687004", "display": "Amoxicillin" }],
+          "coding": [{ "system": "http://snomed.info/sct", "code": "372687004", "display": "Amoxicillin (substance)" }],
           "text": "Amoxicillin"
         },
         "patient": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
         "assertedDate": "2015-03-14",
+        "onsetDateTime": "2015-03-12",
         "recorder": { "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" },
+        "note": [{
+          "text": "Widespread urticarial rash within 2 hours of first dose. Patient reports similar reaction to co-amoxiclav — cross-reactivity suspected.",
+          "authorReference": { "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" },
+          "time": "2015-03-14T09:30:00Z"
+        }],
         "reaction": [{
           "manifestation": [{ "coding": [{ "system": "http://snomed.info/sct", "code": "271807003", "display": "Skin rash" }] }],
-          "severity": "moderate",
-          "description": "Widespread urticarial rash within 2 hours of first dose"
+          "severity": "moderate"
         }]
       }
     },
@@ -518,11 +523,18 @@
         "category": ["medication"],
         "criticality": "high",
         "code": {
-          "coding": [{ "system": "http://snomed.info/sct", "code": "764146007", "display": "Penicillin" }],
+          "coding": [{ "system": "http://snomed.info/sct", "code": "764146007", "display": "Penicillin (substance)" }],
           "text": "Penicillin"
         },
         "patient": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
         "assertedDate": "2018-09-22",
+        "onsetDateTime": "2018-09-20",
+        "recorder": { "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" },
+        "note": [{
+          "text": "Patient presented to A&E with anaphylaxis following penicillin V prescription. EpiPen administered. Ensure penicillin allergy prominently flagged — includes all beta-lactams.",
+          "authorReference": { "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" },
+          "time": "2018-09-22T14:15:00Z"
+        }],
         "reaction": [{
           "manifestation": [{ "coding": [{ "system": "http://snomed.info/sct", "code": "39579001", "display": "Anaphylaxis" }] }],
           "severity": "severe"
@@ -535,15 +547,22 @@
         "id": "allergy-peanut-003",
         "meta": { "profile": ["https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-AllergyIntolerance-1"] },
         "clinicalStatus": "active",
-        "verificationStatus": "confirmed",
+        "verificationStatus": "unconfirmed",
         "category": ["food"],
         "criticality": "high",
         "code": {
-          "coding": [{ "system": "http://snomed.info/sct", "code": "256349002", "display": "Peanut" }],
+          "coding": [{ "system": "http://snomed.info/sct", "code": "256349002", "display": "Peanut (substance)" }],
           "text": "Peanut"
         },
         "patient": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
         "assertedDate": "2010-05-01",
+        "onsetDateTime": "2010-04-28",
+        "recorder": { "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" },
+        "note": [{
+          "text": "Reported by patient — not formally tested. Symptoms include urticaria and lip swelling after eating peanut butter. Referred to allergy clinic for skin prick testing.",
+          "authorReference": { "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" },
+          "time": "2010-05-01T11:00:00Z"
+        }],
         "reaction": [{
           "manifestation": [{ "coding": [{ "system": "http://snomed.info/sct", "code": "126485001", "display": "Urticaria" }] }],
           "severity": "severe"
@@ -865,7 +884,7 @@
         },
         "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
         "created": "2024-02-14",
-        "author": [{ "reference": "Practitioner/6c41ebfd-a4a4-4d21-a9c0-6a36aa05beea" }],
+        "author": [{ "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" }],
         "description": "Cardiology discharge summary following elective angioplasty",
         "content": [{
           "attachment": {
@@ -887,7 +906,7 @@
         },
         "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
         "created": "2024-03-01",
-        "author": [{ "reference": "Practitioner/6c41ebfd-a4a4-4d21-a9c0-6a36aa05beea" }],
+        "author": [{ "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" }],
         "description": "Referral letter to ophthalmology for diabetic eye screening",
         "content": [{
           "attachment": {
@@ -909,7 +928,7 @@
         },
         "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
         "created": "2023-11-20",
-        "author": [{ "reference": "Practitioner/6c41ebfd-a4a4-4d21-a9c0-6a36aa05beea" }],
+        "author": [{ "reference": "Practitioner/6c41ebfd-57c3-4162-9d7b-208c171a2fd7" }],
         "description": "Outpatient clinic letter from diabetology",
         "content": [{
           "attachment": {

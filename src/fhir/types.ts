@@ -65,16 +65,28 @@ export interface GpConnectPatient {
   gender?: string
 }
 
+export interface GpConnectAllergyNote {
+  text: string
+  author?: string
+  time?: string
+}
+
 export interface GpConnectAllergy {
   id: string
   causativeAgent: string
   snomedCode?: string
+  snomedDisplay?: string
   category?: string
   criticality?: string
   reaction?: string
   dateRecorded?: string
+  onsetDate?: string
   status: string
   verificationStatus?: string
+  notes: GpConnectAllergyNote[]
+  recorder?: string
+  endDate?: string
+  endReason?: string
 }
 
 export interface GpConnectProblem {
