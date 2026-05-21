@@ -128,10 +128,39 @@ export function InspectorView({ record, source, format }: Props) {
     return getHighlightedLines(lineIndex, [selectedId])
   }, [activeDomain, selectedMed, selectedIssueId, selectedId, lineIndex])
 
-  // For large files, show only the focused section (50-200 lines) to avoid
-  // rendering thousands of DOM nodes through SyntaxHighlighter.
-  // For small files, show the full source as before.
+  // Decide what to render in the right-hand source panel.
+  //
+  // Priority order:
+  // 1. Active search → show full source (truncated for large files) so the
+  //    user can navigate matches anywhere in the file.
+  // 2. Medications with a selected record (not an issue) → concatenate all
+  //    sections (Statement + plan Request) so both are visible at once.
+  // 3. Any other domain with a selected section → focused single-resource view.
+  // 4. Large file with nothing selected → placeholder (no SyntaxHighlighter).
+  // 5. Small file with nothing selected → full source.
+  const isMedConcat =
+    activeDomain === 'medications' && !!selectedMed && !selectedIssueId && sections.length > 0
+
   const { displaySource, displayLineOffset } = useMemo(() => {
+    // 1. Search active: show full/truncated source so matches are navigable.
+    if (searchQuery.trim()) {
+      if (isLargeFile) {
+        return { displaySource: sourceLinesArr.slice(0, 3000).join('\n'), displayLineOffset: 0 }
+      }
+      return { displaySource: source, displayLineOffset: 0 }
+    }
+
+    // 2. Medications (no issue selected): concatenate Statement + plan Request.
+    if (isMedConcat) {
+      const labels = ['// ─── MedicationStatement', '// ─── MedicationRequest (intent: plan)']
+      const combined = sections
+        .map((sec, i) => (labels[i] ?? `// ─── Section ${i + 1}`) + '\n' +
+          sourceLinesArr.slice(sec.start - 1, sec.end).join('\n'))
+        .join('\n\n')
+      return { displaySource: combined, displayLineOffset: 0 }
+    }
+
+    // 3. Focused single-section view.
     const sec = sections[currentSectionIdx]
     if (sec) {
       return {
@@ -139,9 +168,11 @@ export function InspectorView({ record, source, format }: Props) {
         displayLineOffset: sec.start - 1,
       }
     }
+
+    // 4 & 5.
     if (isLargeFile) return { displaySource: '', displayLineOffset: 0 }
     return { displaySource: source, displayLineOffset: 0 }
-  }, [sections, currentSectionIdx, sourceLinesArr, isLargeFile, source])
+  }, [searchQuery, isMedConcat, sections, currentSectionIdx, sourceLinesArr, isLargeFile, source])
 
   // --- Search ---
 
@@ -259,11 +290,17 @@ export function InspectorView({ record, source, format }: Props) {
 
   // Right-panel subtitle text
   const sourceSubtitle = (() => {
+    if (searchQuery.trim()) return `Searching whole file · ${searchMatchLines.length} match${searchMatchLines.length !== 1 ? 'es' : ''}`
     if (activeDomain === 'medications') {
       if (selectedIssueId) {
         return currentSection
           ? `${currentSection.label} · lines ${currentSection.start}–${currentSection.end}`
           : 'Issue not found in source'
+      }
+      if (isMedConcat) {
+        return sections.length === 1
+          ? `MedicationStatement · lines ${sections[0].start}–${sections[0].end}`
+          : `Statement + plan Request · ${sections.length} resources`
       }
       if (selectedMed) {
         return currentSection
@@ -339,7 +376,7 @@ export function InspectorView({ record, source, format }: Props) {
             <h3 className="text-xs font-semibold text-nhs-grey-2 uppercase tracking-wide">FHIR Source</h3>
             <p className="text-xs text-nhs-grey-3 mt-0.5 truncate">{sourceSubtitle}</p>
           </div>
-          {sections.length > 0 && (
+          {sections.length > 1 && !isMedConcat && (
             <div className="flex items-center gap-1 shrink-0">
               <button
                 onClick={handleSectionPrev}
