@@ -14,6 +14,7 @@ import { InvestigationsView } from './clinical/InvestigationsView'
 import { ReferralsView } from './clinical/ReferralsView'
 import { DiaryEntriesView } from './clinical/DiaryEntriesView'
 import { CodedDataView } from './clinical/CodedDataView'
+import { DocumentsView } from './clinical/DocumentsView'
 import { DomainNav } from './clinical/DomainNav'
 import { type DomainId } from './clinical/domains'
 
@@ -225,6 +226,7 @@ export function InspectorView({ record, source, format }: Props) {
     referrals:       record.referrals.length,
     'diary-entries': record.diaryEntries.length,
     'coded-data':    record.codedData.length,
+    documents:       record.documents.length,
   }
 
   // Right-panel subtitle text
@@ -292,6 +294,9 @@ export function InspectorView({ record, source, format }: Props) {
             )}
             {activeDomain === 'coded-data' && (
               <CodedDataView bundle={record} selectedId={selectedId ?? undefined} onSelect={handleSelect} />
+            )}
+            {activeDomain === 'documents' && (
+              <DocumentsView bundle={record} selectedId={selectedId ?? undefined} onSelect={handleSelect} />
             )}
           </div>
         </div>

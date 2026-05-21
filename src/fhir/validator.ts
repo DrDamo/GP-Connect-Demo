@@ -158,6 +158,15 @@ export function validateBundle(bundle: fhir3.Bundle): ValidationResult {
     req(issues, !!r.intent, 'error', 'ReferralRequest.intent is required', path, r.id)
   }
 
+  // DocumentReference (Documents)
+  const docRefs = getEntries<fhir3.DocumentReference>(bundle, 'DocumentReference')
+  for (const d of docRefs) {
+    const path = `DocumentReference/${d.id}`
+    req(issues, !!d.status, 'error', 'DocumentReference.status is required', path, d.id)
+    req(issues, !!d.type, 'warning', 'DocumentReference.type (document category) is missing', path, d.id)
+    req(issues, (d.content?.length ?? 0) > 0, 'warning', 'DocumentReference.content is empty — no attachment', path, d.id)
+  }
+
   // ProcedureRequest (Diary Entries)
   const procedureRequests = getEntries<fhir3.ProcedureRequest>(bundle, 'ProcedureRequest')
   for (const p of procedureRequests) {

@@ -9,6 +9,7 @@ import { InvestigationsView } from './InvestigationsView'
 import { ReferralsView } from './ReferralsView'
 import { DiaryEntriesView } from './DiaryEntriesView'
 import { CodedDataView } from './CodedDataView'
+import { DocumentsView } from './DocumentsView'
 import { type DomainId } from './domains'
 import type { GpConnectBundle } from '../../fhir/types'
 
@@ -34,6 +35,7 @@ export function ClinicalView({ record }: Props) {
     referrals:      record.referrals.length,
     'diary-entries': record.diaryEntries.length,
     'coded-data':   record.codedData.length,
+    documents:      record.documents.length,
   }
 
   const handleDomainSelect = (domain: DomainId) => {
@@ -71,6 +73,9 @@ export function ClinicalView({ record }: Props) {
         )}
         {activeDomain === 'coded-data' && (
           <CodedDataView bundle={record} selectedId={selectedId} onSelect={handleSelect} />
+        )}
+        {activeDomain === 'documents' && (
+          <DocumentsView bundle={record} selectedId={selectedId} onSelect={handleSelect} />
         )}
       </div>
     </div>

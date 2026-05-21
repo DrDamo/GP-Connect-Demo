@@ -15,6 +15,7 @@ import { extractInvestigations } from './fhir/investigations'
 import { extractReferrals } from './fhir/referrals'
 import { extractDiaryEntries } from './fhir/diaryEntries'
 import { extractCodedData } from './fhir/codedData'
+import { extractDocuments } from './fhir/documents'
 import { extractPatientInfo, getOrganisationName } from './fhir/utils'
 import type { ValidationResult, GpConnectMedicationsRecord } from './fhir/types'
 import sampleBundle from './sample-data/medications-bundle.json'
@@ -54,6 +55,7 @@ export default function App() {
       referrals: extractReferrals(parsed.data),
       diaryEntries: extractDiaryEntries(parsed.data),
       codedData: extractCodedData(parsed.data),
+      documents: extractDocuments(parsed.data),
     }
     setLoaded({ source: text, filename, format: parsed.format, validation, record })
     setTab('clinical')

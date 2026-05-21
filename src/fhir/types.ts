@@ -16,6 +16,7 @@ export type FhirEncounter = fhir3.Encounter
 export type FhirImmunization = fhir3.Immunization
 export type FhirDiagnosticReport = fhir3.DiagnosticReport
 export type FhirObservation = fhir3.Observation
+export type FhirDocumentReference = fhir3.DocumentReference
 
 export interface GpConnectMedicationIssue {
   id: string
@@ -145,6 +146,17 @@ export interface GpConnectCodedDataItem {
   unit?: string
 }
 
+export interface GpConnectDocument {
+  id: string
+  date?: string
+  type: string
+  description?: string
+  mimeType?: string
+  url?: string
+  author?: string
+  status: string
+}
+
 export interface GpConnectBundle {
   patient?: GpConnectPatient
   practiceOrganisation?: string
@@ -158,6 +170,7 @@ export interface GpConnectBundle {
   referrals: GpConnectReferral[]
   diaryEntries: GpConnectDiaryEntry[]
   codedData: GpConnectCodedDataItem[]
+  documents: GpConnectDocument[]
 }
 
 // Backward-compat alias — components importing this type still work unchanged

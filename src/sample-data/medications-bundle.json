@@ -853,6 +853,72 @@
           "text": "Never smoked"
         }
       }
+    },
+    {
+      "resource": {
+        "resourceType": "DocumentReference",
+        "id": "doc-discharge-001",
+        "status": "current",
+        "type": {
+          "coding": [{ "system": "http://snomed.info/sct", "code": "373942005", "display": "Discharge summary" }],
+          "text": "Discharge summary"
+        },
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "created": "2024-02-14",
+        "author": [{ "reference": "Practitioner/6c41ebfd-a4a4-4d21-a9c0-6a36aa05beea" }],
+        "description": "Cardiology discharge summary following elective angioplasty",
+        "content": [{
+          "attachment": {
+            "contentType": "application/pdf",
+            "title": "Discharge Summary - Cardiology 14 Feb 2024",
+            "url": "https://spine.example.nhs.uk/documents/doc-discharge-001"
+          }
+        }]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "DocumentReference",
+        "id": "doc-referral-letter-001",
+        "status": "current",
+        "type": {
+          "coding": [{ "system": "http://snomed.info/sct", "code": "306206005", "display": "Referral to service" }],
+          "text": "Referral letter"
+        },
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "created": "2024-03-01",
+        "author": [{ "reference": "Practitioner/6c41ebfd-a4a4-4d21-a9c0-6a36aa05beea" }],
+        "description": "Referral letter to ophthalmology for diabetic eye screening",
+        "content": [{
+          "attachment": {
+            "contentType": "application/pdf",
+            "title": "Referral Letter - Ophthalmology 01 Mar 2024",
+            "url": "https://spine.example.nhs.uk/documents/doc-referral-letter-001"
+          }
+        }]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "DocumentReference",
+        "id": "doc-outpatient-001",
+        "status": "current",
+        "type": {
+          "coding": [{ "system": "http://snomed.info/sct", "code": "419891008", "display": "Record artifact" }],
+          "text": "Outpatient letter"
+        },
+        "subject": { "reference": "Patient/04603d77-1a4e-4d63-b246-d7504f8bd833" },
+        "created": "2023-11-20",
+        "author": [{ "reference": "Practitioner/6c41ebfd-a4a4-4d21-a9c0-6a36aa05beea" }],
+        "description": "Outpatient clinic letter from diabetology",
+        "content": [{
+          "attachment": {
+            "contentType": "application/pdf",
+            "title": "Outpatient Letter - Diabetology 20 Nov 2023",
+            "url": "https://spine.example.nhs.uk/documents/doc-outpatient-001"
+          }
+        }]
+      }
     }
   ]
 }

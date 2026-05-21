@@ -2,6 +2,7 @@ export type DomainId =
   | 'allergies'
   | 'consultations'
   | 'diary-entries'
+  | 'documents'
   | 'immunisations'
   | 'medications'
   | 'investigations'
@@ -33,6 +34,14 @@ export const DOMAINS: DomainDef[] = [
     description: 'GP consultations and clinical encounter records',
     fhirResources: ['Encounter', 'Composition', 'List'],
     tableColumns: ['Date', 'Type', 'Clinician', 'Practice', 'Details'],
+    implemented: true,
+  },
+  {
+    id: 'documents',
+    label: 'Documents',
+    description: 'Clinical documents including letters, discharge summaries and reports',
+    fhirResources: ['DocumentReference'],
+    tableColumns: ['Date', 'Type', 'Description', 'Author', 'Format', 'Status'],
     implemented: true,
   },
   {
