@@ -67,6 +67,9 @@ export function InspectorView({ record, source, format }: Props) {
   }, [])
 
   const lineIndex = useMemo(() => buildResourceLineIndex(source), [source])
+  const sourceLinesArr = useMemo(() => source.split('\n'), [source])
+  const isLargeFile = sourceLinesArr.length > 3000
+
   const selectedMed = record.medications.find(m => m.id === selectedId) ?? null
 
   // Reset selection when switching domains.
@@ -125,6 +128,21 @@ export function InspectorView({ record, source, format }: Props) {
     return getHighlightedLines(lineIndex, [selectedId])
   }, [activeDomain, selectedMed, selectedIssueId, selectedId, lineIndex])
 
+  // For large files, show only the focused section (50-200 lines) to avoid
+  // rendering thousands of DOM nodes through SyntaxHighlighter.
+  // For small files, show the full source as before.
+  const { displaySource, displayLineOffset } = useMemo(() => {
+    const sec = sections[currentSectionIdx]
+    if (sec) {
+      return {
+        displaySource: sourceLinesArr.slice(sec.start - 1, sec.end).join('\n'),
+        displayLineOffset: sec.start - 1,
+      }
+    }
+    if (isLargeFile) return { displaySource: '', displayLineOffset: 0 }
+    return { displaySource: source, displayLineOffset: 0 }
+  }, [sections, currentSectionIdx, sourceLinesArr, isLargeFile, source])
+
   // --- Search ---
 
   const searchMatchLines = useMemo(() => {
@@ -144,19 +162,29 @@ export function InspectorView({ record, source, format }: Props) {
     const container = jsonPaneRef.current
     if (!container) return
     const lineEls = container.querySelectorAll('code > span')
-    const target = lineEls[lineNumber - 1] as HTMLElement | undefined
-    if (target) {
-      const containerRect = container.getBoundingClientRect()
-      const targetRect = target.getBoundingClientRect()
-      const newScrollTop = container.scrollTop + (targetRect.top - containerRect.top) - 40
-      container.scrollTo({ top: Math.max(0, newScrollTop), behavior: 'smooth' })
-    }
-  }, [])
+    // In focused-section mode displayLineOffset > 0; convert absolute line to
+    // a 0-based index into the rendered lines.
+    const idx = Math.max(0, lineNumber - displayLineOffset - 1)
+    const target = lineEls[idx] as HTMLElement | undefined
+    if (!target) return
+    const containerRect = container.getBoundingClientRect()
+    const targetRect = target.getBoundingClientRect()
+    const newScrollTop = container.scrollTop + (targetRect.top - containerRect.top) - 40
+    container.scrollTo({ top: Math.max(0, newScrollTop), behavior: 'smooth' })
+  }, [displayLineOffset])
 
+  // Reset selection index when the active record changes; the displaySource
+  // effect below handles scrolling to the top of the new section.
   useEffect(() => {
     setCurrentSectionIdx(0)
-    if (sections.length > 0) scrollToLine(sections[0].start)
-  }, [selectedMed, selectedIssueId, selectedId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedMed, selectedIssueId, selectedId])
+
+  // Scroll to top whenever the displayed source changes (new section selected
+  // or section navigation via prev/next buttons).
+  useEffect(() => {
+    const container = jsonPaneRef.current
+    if (container) container.scrollTop = 0
+  }, [displaySource])
 
   useEffect(() => {
     setSearchMatchIdx(0)
@@ -374,26 +402,35 @@ export function InspectorView({ record, source, format }: Props) {
 
         {/* FHIR source viewer */}
         <div ref={jsonPaneRef} className="flex-1 overflow-auto">
-          <SyntaxHighlighter
-            language={format === 'xml' ? 'xml' : 'json'}
-            style={githubGist}
-            showLineNumbers
-            wrapLines
-            lineProps={(lineNumber: number) => {
-              const isCurrentSearchMatch = searchMatchLines.length > 0 && searchMatchLines[searchMatchIdx] === lineNumber
-              const isOtherSearchMatch = !isCurrentSearchMatch && searchMatchSet.has(lineNumber)
-              const isHighlighted = highlightedLines.has(lineNumber)
-              const bg = isCurrentSearchMatch ? '#86efac'
-                : isOtherSearchMatch       ? '#dcfce7'
-                : isHighlighted            ? '#fffbcc'
-                : undefined
-              return { style: bg ? { backgroundColor: bg, display: 'block' } : { display: 'block' } }
-            }}
-            lineNumberStyle={{ color: '#aeb7bd', fontSize: '0.75rem', minWidth: '2.5rem', userSelect: 'none' }}
-            customStyle={{ margin: 0, fontSize: '0.75rem', lineHeight: '1.5', background: '#fff', minHeight: '100%' }}
-          >
-            {source}
-          </SyntaxHighlighter>
+          {displaySource ? (
+            <SyntaxHighlighter
+              language={format === 'xml' ? 'xml' : 'json'}
+              style={githubGist}
+              showLineNumbers
+              wrapLines
+              startingLineNumber={displayLineOffset + 1}
+              lineProps={(lineNumber: number) => {
+                // lineNumber is already the absolute line (startingLineNumber shifts it)
+                const isCurrentSearchMatch = searchMatchLines.length > 0 && searchMatchLines[searchMatchIdx] === lineNumber
+                const isOtherSearchMatch = !isCurrentSearchMatch && searchMatchSet.has(lineNumber)
+                const isHighlighted = highlightedLines.has(lineNumber)
+                const bg = isCurrentSearchMatch ? '#86efac'
+                  : isOtherSearchMatch       ? '#dcfce7'
+                  : isHighlighted            ? '#fffbcc'
+                  : undefined
+                return { style: bg ? { backgroundColor: bg, display: 'block' } : { display: 'block' } }
+              }}
+              lineNumberStyle={{ color: '#aeb7bd', fontSize: '0.75rem', minWidth: '2.5rem', userSelect: 'none' }}
+              customStyle={{ margin: 0, fontSize: '0.75rem', lineHeight: '1.5', background: '#fff', minHeight: '100%' }}
+            >
+              {displaySource}
+            </SyntaxHighlighter>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full gap-2 text-nhs-grey-3 p-6 text-center">
+              <p className="text-sm">Select a record to view its FHIR source</p>
+              <p className="text-xs">Large file ({sourceLinesArr.length.toLocaleString()} lines) — source is shown per-resource to keep the inspector responsive</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

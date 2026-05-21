@@ -44,12 +44,32 @@ function findMatchingBraceEnd(lines: string[], fromLine: number): number {
 export function buildResourceLineIndex(source: string): Map<string, LineRange> {
   const index = new Map<string, LineRange>()
   const lines = source.split('\n')
+
+  // Pre-compute the character offset of each line's start so we can
+  // convert a regex match index to a line number in O(log n) instead of
+  // rebuilding a substring + split for every match (which is O(n²)).
+  const lineStarts = new Uint32Array(lines.length)
+  let pos = 0
+  for (let i = 0; i < lines.length; i++) {
+    lineStarts[i] = pos
+    pos += lines[i].length + 1
+  }
+  function lineOf(charOffset: number): number {
+    let lo = 0, hi = lineStarts.length - 1
+    while (lo < hi) {
+      const mid = (lo + hi + 1) >> 1
+      if (lineStarts[mid] <= charOffset) lo = mid
+      else hi = mid - 1
+    }
+    return lo
+  }
+
   const idPattern = /"id"\s*:\s*"([^"]+)"/g
   let match: RegExpExecArray | null
 
   while ((match = idPattern.exec(source)) !== null) {
     const resourceId = match[1]
-    const lineIdx = source.substring(0, match.index).split('\n').length - 1
+    const lineIdx = lineOf(match.index)
 
     const startLine = findEnclosingBraceStart(lines, lineIdx)
     if (startLine === -1) continue
