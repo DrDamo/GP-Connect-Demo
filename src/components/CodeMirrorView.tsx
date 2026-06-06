@@ -1,6 +1,6 @@
 import { useEffect, useRef, useImperativeHandle, forwardRef, memo } from 'react'
-import { EditorView, Decoration, lineNumbers } from '@codemirror/view'
-import type { DecorationSet } from '@codemirror/view'
+import { EditorView, Decoration, lineNumbers, ViewPlugin } from '@codemirror/view'
+import type { DecorationSet, ViewUpdate } from '@codemirror/view'
 import { EditorState, StateEffect, StateField, RangeSetBuilder, Compartment } from '@codemirror/state'
 import type { Text } from '@codemirror/state'
 import { syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language'
@@ -17,6 +17,7 @@ interface Props {
   highlightedLines: Set<number>
   searchMatchLines: number[]
   currentSearchMatch: number // 1-based line number, or -1 if none
+  indentGuides?: boolean
 }
 
 interface HighlightSpec {
@@ -26,6 +27,49 @@ interface HighlightSpec {
 }
 
 const setHighlightsEffect = StateEffect.define<HighlightSpec>()
+
+const INDENT_SIZE = 2
+
+function buildIndentDecorations(view: EditorView): DecorationSet {
+  const builder = new RangeSetBuilder<Decoration>()
+  for (const { from, to } of view.visibleRanges) {
+    let pos = from
+    while (pos <= to) {
+      const line = view.state.doc.lineAt(pos)
+      const text = line.text
+      let spaces = 0
+      while (spaces < text.length && text[spaces] === ' ') spaces++
+      let level = 0
+      for (let i = 0; i < spaces; i += INDENT_SIZE) {
+        const end = Math.min(i + INDENT_SIZE, spaces)
+        builder.add(
+          line.from + i,
+          line.from + end,
+          Decoration.mark({ class: `cm-indent-level-${level % 5}` })
+        )
+        level++
+      }
+      if (line.to >= to) break
+      pos = line.to + 1
+    }
+  }
+  return builder.finish()
+}
+
+const indentGuidePlugin = ViewPlugin.fromClass(
+  class {
+    decorations: DecorationSet
+    constructor(view: EditorView) {
+      this.decorations = buildIndentDecorations(view)
+    }
+    update(update: ViewUpdate) {
+      if (update.docChanged || update.viewportChanged) {
+        this.decorations = buildIndentDecorations(update.view)
+      }
+    }
+  },
+  { decorations: (v: { decorations: DecorationSet }) => v.decorations }
+)
 
 function buildDecorations(doc: Text, spec: HighlightSpec): DecorationSet {
   const { highlighted, searchMatches, currentMatch } = spec
@@ -41,7 +85,7 @@ function buildDecorations(doc: Text, spec: HighlightSpec): DecorationSet {
     if (lineNum < 1 || lineNum > doc.lines) continue
     const isCurrent = lineNum === currentMatch
     const isSearch = searchMatches.has(lineNum)
-    const bg = isCurrent ? '#86efac' : isSearch ? '#dcfce7' : '#fffbcc'
+    const bg = isCurrent ? 'var(--cm-current-match)' : isSearch ? 'var(--cm-search-match)' : 'var(--cm-highlight)'
     const line = doc.line(lineNum)
     builder.add(line.from, line.from, Decoration.line({ attributes: { style: `background-color:${bg}` } }))
   }
@@ -89,12 +133,13 @@ const editorTheme = EditorView.theme({
 })
 
 export const CodeMirrorView = memo(forwardRef<CodeMirrorViewHandle, Props>(function CodeMirrorView(
-  { source, language, highlightedLines, searchMatchLines, currentSearchMatch },
+  { source, language, highlightedLines, searchMatchLines, currentSearchMatch, indentGuides },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
   const langCompartmentRef = useRef<Compartment | null>(null)
+  const indentCompartmentRef = useRef<Compartment | null>(null)
   const skipFirstSourceRef = useRef(true)
 
   // Create editor on mount.
@@ -106,6 +151,9 @@ export const CodeMirrorView = memo(forwardRef<CodeMirrorViewHandle, Props>(funct
     langCompartmentRef.current = compartment
     const langExt = language === 'xml' ? xmlLang() : jsonLang()
 
+    const indentCompartment = new Compartment()
+    indentCompartmentRef.current = indentCompartment
+
     const state = EditorState.create({
       doc: source,
       extensions: [
@@ -114,6 +162,7 @@ export const CodeMirrorView = memo(forwardRef<CodeMirrorViewHandle, Props>(funct
         compartment.of(langExt),
         EditorView.editable.of(false),
         highlightField,
+        indentCompartment.of([]),
         editorTheme,
       ],
     })
@@ -125,6 +174,7 @@ export const CodeMirrorView = memo(forwardRef<CodeMirrorViewHandle, Props>(funct
       view.destroy()
       viewRef.current = null
       langCompartmentRef.current = null
+      indentCompartmentRef.current = null
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -144,6 +194,14 @@ export const CodeMirrorView = memo(forwardRef<CodeMirrorViewHandle, Props>(funct
     const langExt = language === 'xml' ? xmlLang() : jsonLang()
     view.dispatch({ effects: compartment.reconfigure(langExt) })
   }, [language])
+
+  // Toggle indent guide plugin.
+  useEffect(() => {
+    const view = viewRef.current
+    const comp = indentCompartmentRef.current
+    if (!view || !comp) return
+    view.dispatch({ effects: comp.reconfigure(indentGuides ? indentGuidePlugin : []) })
+  }, [indentGuides])
 
   // Push highlight decorations.
   useEffect(() => {

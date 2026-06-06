@@ -12,9 +12,57 @@ export function RawSourceViewer({ source, format, filename }: Props) {
   const [copied, setCopied] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchMatchIdx, setSearchMatchIdx] = useState(0)
+  const [showIndentGuides, setShowIndentGuides] = useState(false)
+  const [selectionPopup, setSelectionPopup] = useState<{ text: string; x: number; y: number } | null>(null)
 
   const codeViewRef = useRef<CodeMirrorViewHandle>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const popupRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+    const handler = (e: MouseEvent) => {
+      const selection = window.getSelection()
+      if (!selection || selection.rangeCount === 0) { setSelectionPopup(null); return }
+      const range = selection.getRangeAt(0)
+      if (!container.contains(range.commonAncestorContainer)) return
+      const text = selection.toString().trim()
+      if (text.length >= 1) {
+        setSelectionPopup({ text, x: e.clientX, y: e.clientY })
+      } else {
+        setSelectionPopup(null)
+      }
+    }
+    container.addEventListener('mouseup', handler)
+    return () => container.removeEventListener('mouseup', handler)
+  }, [])
+
+  useEffect(() => {
+    if (!selectionPopup) return
+    const handler = (e: MouseEvent) => {
+      if (popupRef.current && !popupRef.current.contains(e.target as Node)) {
+        setSelectionPopup(null)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [selectionPopup])
+
+  const handlePopupCopy = useCallback(() => {
+    if (selectionPopup) {
+      navigator.clipboard.writeText(selectionPopup.text)
+      setSelectionPopup(null)
+    }
+  }, [selectionPopup])
+
+  const handlePopupSearch = useCallback(() => {
+    if (selectionPopup) {
+      setSearchQuery(selectionPopup.text.replace(/\n/g, ' ').slice(0, 100))
+      setSelectionPopup(null)
+    }
+  }, [selectionPopup])
 
   const handleCopy = () => {
     navigator.clipboard.writeText(source)
@@ -64,6 +112,29 @@ export function RawSourceViewer({ source, format, filename }: Props) {
   }
 
   return (
+    <>
+    {selectionPopup && (
+      <div
+        ref={popupRef}
+        style={{ position: 'fixed', left: selectionPopup.x, top: selectionPopup.y - 44, zIndex: 50 }}
+        className="flex overflow-hidden rounded border border-nhs-grey-4 bg-white shadow-lg text-xs"
+      >
+        <button
+          onMouseDown={e => e.preventDefault()}
+          onClick={handlePopupCopy}
+          className="px-2.5 py-1.5 text-nhs-grey-1 hover:bg-nhs-grey-5 border-r border-nhs-grey-4 transition-colors whitespace-nowrap"
+        >
+          Copy
+        </button>
+        <button
+          onMouseDown={e => e.preventDefault()}
+          onClick={handlePopupSearch}
+          className="px-2.5 py-1.5 text-nhs-blue hover:bg-nhs-grey-5 transition-colors whitespace-nowrap"
+        >
+          Search this text
+        </button>
+      </div>
+    )}
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2 bg-nhs-grey-5 border-b border-nhs-grey-4 rounded-t-lg shrink-0">
@@ -72,12 +143,25 @@ export function RawSourceViewer({ source, format, filename }: Props) {
           <span className="px-1.5 py-0.5 rounded text-xs font-semibold bg-nhs-grey-4 text-nhs-grey-1 uppercase">{format}</span>
           <span className="text-xs text-nhs-grey-3">{lineCount.toLocaleString()} lines</span>
         </div>
-        <button
-          onClick={handleCopy}
-          className="text-xs text-nhs-grey-2 hover:text-nhs-blue transition-colors px-2 py-1 rounded hover:bg-white"
-        >
-          {copied ? '✓ Copied' : 'Copy'}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowIndentGuides(v => !v)}
+            title="Toggle indent guides"
+            className={`text-xs border rounded px-2 py-1 transition-colors whitespace-nowrap ${
+              showIndentGuides
+                ? 'border-nhs-blue bg-nhs-blue text-white'
+                : 'border-nhs-grey-4 bg-white text-nhs-grey-2 hover:bg-nhs-grey-5'
+            }`}
+          >
+            Indent
+          </button>
+          <button
+            onClick={handleCopy}
+            className="text-xs text-nhs-grey-2 hover:text-nhs-blue transition-colors px-2 py-1 rounded hover:bg-white"
+          >
+            {copied ? '✓ Copied' : 'Copy'}
+          </button>
+        </div>
       </div>
 
       {/* Search bar */}
@@ -121,7 +205,7 @@ export function RawSourceViewer({ source, format, filename }: Props) {
       </div>
 
       {/* Source viewer — virtualised, renders only visible lines regardless of file size */}
-      <div className="flex-1 overflow-hidden rounded-b-lg">
+      <div ref={containerRef} className="flex-1 overflow-hidden rounded-b-lg">
         <CodeMirrorView
           ref={codeViewRef}
           source={source}
@@ -129,8 +213,10 @@ export function RawSourceViewer({ source, format, filename }: Props) {
           highlightedLines={new Set()}
           searchMatchLines={searchMatchLines}
           currentSearchMatch={searchMatchLines[searchMatchIdx] ?? -1}
+          indentGuides={showIndentGuides}
         />
       </div>
     </div>
+    </>
   )
 }

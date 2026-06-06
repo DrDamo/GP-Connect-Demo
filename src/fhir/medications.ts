@@ -1,55 +1,35 @@
 import type { GpConnectMedication, GpConnectMedicationIssue } from './types'
+import {
+  getEntries, resolveReference, formatDate, getExtensionValue, extractSnomedCode,
+  getOrganisationName, resolvePractitionerRef, extractId, fhirDateKey,
+} from './utils'
 
-type AnyResource = fhir3.Resource & { resourceType: string }
-
-function getEntries<T extends fhir3.Resource>(bundle: fhir3.Bundle, resourceType: string): T[] {
-  return (bundle.entry ?? [])
-    .map(e => e.resource as AnyResource | undefined)
-    .filter((r): r is T & AnyResource => r?.resourceType === resourceType)
-}
-
-function resolveReference(bundle: fhir3.Bundle, ref: string | undefined): AnyResource | undefined {
-  if (!ref) return undefined
-  return (bundle.entry ?? [])
-    .map(e => e.resource as AnyResource | undefined)
-    .find(r => {
-      if (!r) return false
-      const relRef = `${r.resourceType}/${r.id}`
-      return ref === relRef || ref.endsWith(`/${relRef}`) || ref.endsWith(`/${r.id}`)
-    })
-}
-
-function getMedicationName(bundle: fhir3.Bundle, stmt: fhir3.MedicationStatement): { name: string; code?: string } {
-  if (stmt.medicationCodeableConcept) {
-    const cc = stmt.medicationCodeableConcept
-    const coding = cc.coding?.[0]
-    return { name: cc.text ?? coding?.display ?? 'Unknown', code: coding?.code }
+function getMedRef(bundle: fhir3.Bundle, med: fhir3.MedicationStatement | fhir3.MedicationRequest): { name: string; code?: string; resourceId?: string } {
+  const cc = (med as fhir3.MedicationStatement).medicationCodeableConcept
+    ?? (med as fhir3.MedicationRequest).medicationCodeableConcept
+  if (cc) {
+    return { name: cc.text ?? cc.coding?.[0]?.display ?? 'Unknown', code: extractSnomedCode(cc.coding) }
   }
-
-  if (stmt.medicationReference) {
-    const refStr = (stmt.medicationReference as fhir3.Reference).reference
-    const med = resolveReference(bundle, refStr) as fhir3.Medication | undefined
-    if (med?.code) {
-      const coding = med.code.coding?.[0]
-      return { name: med.code.text ?? coding?.display ?? 'Unknown', code: coding?.code }
+  const ref = ((med as fhir3.MedicationStatement).medicationReference
+    ?? (med as fhir3.MedicationRequest).medicationReference) as fhir3.Reference | undefined
+  if (ref?.reference) {
+    const resolved = resolveReference(bundle, ref.reference) as fhir3.Medication | undefined
+    if (resolved?.code) {
+      return {
+        name: resolved.code.text ?? resolved.code.coding?.[0]?.display ?? 'Unknown',
+        code: extractSnomedCode(resolved.code.coding),
+        resourceId: extractId(ref.reference),
+      }
     }
+    return { name: 'Unknown', resourceId: extractId(ref.reference) }
   }
-
   return { name: 'Unknown' }
 }
 
-function formatDate(dateStr: string | undefined): string | undefined {
-  if (!dateStr) return undefined
-  try {
-    return new Date(dateStr).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-  } catch {
-    return dateStr
-  }
+function getMedicationName(bundle: fhir3.Bundle, stmt: fhir3.MedicationStatement): { name: string; code?: string } {
+  return getMedRef(bundle, stmt)
 }
 
-function getExtensionValue(extensions: fhir3.Extension[] | undefined, url: string): fhir3.Extension | undefined {
-  return extensions?.find(e => e.url === url || e.url?.endsWith(url))
-}
 
 function extractPrescriptionType(resource: { extension?: fhir3.Extension[] }): string | undefined {
   const ptExt = getExtensionValue(resource.extension, 'Extension-CareConnect-GPC-PrescriptionType-1')
@@ -70,28 +50,15 @@ function extractMedicationRequestIds(stmt: fhir3.MedicationStatement): string[] 
     .filter((r): r is string => Boolean(r))
 }
 
-function getPrescriber(bundle: fhir3.Bundle, request: fhir3.MedicationRequest | undefined): string | undefined {
-  if (!request) return undefined
+function getPrescriberInfo(bundle: fhir3.Bundle, request: fhir3.MedicationRequest | undefined): { name?: string; id?: string } {
+  if (!request) return {}
   const reqRef = (request as unknown as Record<string, unknown>)['requester'] as { agent?: fhir3.Reference } | undefined
-  const agentRef = reqRef?.agent?.reference
-  if (!agentRef) return undefined
-  const practitioner = resolveReference(bundle, agentRef) as fhir3.Practitioner | undefined
-  if (!practitioner) return undefined
-  const name = practitioner.name?.[0]
-  if (!name) return undefined
-  const given = (name.given ?? []).join(' ')
-  const family = name.family ?? ''
-  const prefix = (name.prefix ?? []).join(' ')
-  return [prefix, given, family].filter(Boolean).join(' ')
-}
-
-function getOrganisation(bundle: fhir3.Bundle): string | undefined {
-  const org = getEntries<fhir3.Organization>(bundle, 'Organization')[0]
-  return org?.name
+  return resolvePractitionerRef(bundle, reqRef?.agent?.reference)
 }
 
 export function extractMedications(bundle: fhir3.Bundle): GpConnectMedication[] {
   const statements = getEntries<fhir3.MedicationStatement>(bundle, 'MedicationStatement')
+    .sort((a, b) => fhirDateKey(b.dateAsserted).localeCompare(fhirDateKey(a.dateAsserted)))
   const requests = getEntries<fhir3.MedicationRequest>(bundle, 'MedicationRequest')
 
   const medications: GpConnectMedication[] = statements.map(stmt => {
@@ -131,8 +98,22 @@ export function extractMedications(bundle: fhir3.Bundle): GpConnectMedication[] 
     const numberOfRepeatsExt = repeatsExt
       ? getExtensionValue(repeatsExt.extension, 'numberOfRepeatPrescriptionsAllowed')
       : undefined
-    const numberOfRepeatsAllowed = numberOfRepeatsExt?.valueUnsignedInt
+    const numberOfRepeatsAllowed =
+      (numberOfRepeatsExt as unknown as { valuePositiveInt?: number })?.valuePositiveInt
+      ?? numberOfRepeatsExt?.valueUnsignedInt
       ?? linkedRequest?.dispenseRequest?.numberOfRepeatsAllowed
+
+    const numberOfIssuedExt = repeatsExt
+      ? getExtensionValue(repeatsExt.extension, 'numberOfRepeatPrescriptionsIssued')
+      : undefined
+    const numberOfIssued = numberOfIssuedExt?.valueUnsignedInt
+
+    const authExpiryExt = repeatsExt
+      ? getExtensionValue(repeatsExt.extension, 'authorisationExpiryDate')
+      : undefined
+    const authorisationExpiryDate = formatDate(
+      (authExpiryExt?.valueDateTime ?? authExpiryExt?.valueDate) as string | undefined
+    )
 
     // Quantity — unit may be in MedicationQuantityText-1 extension rather than qty.unit
     const qty = linkedRequest?.dispenseRequest?.quantity
@@ -148,6 +129,18 @@ export function extractMedications(bundle: fhir3.Bundle): GpConnectMedication[] 
 
     // prescriptionType is on the plan MedicationRequest, not the statement
     const prescriptionType = extractPrescriptionType(stmt) ?? extractPrescriptionType(planRequest ?? {})
+
+    // Why/when a medication was stopped
+    const statusReasonExt = getExtensionValue(planRequest?.extension, 'Extension-CareConnect-GPC-MedicationStatusReason-1')
+    const statusReasonSubs = (statusReasonExt as unknown as { extension?: fhir3.Extension[] } | undefined)?.extension
+    const statusReasonVal = statusReasonSubs?.find(e => e.url === 'statusReason')
+    const statusReason = (statusReasonVal?.valueString
+      ?? (statusReasonVal?.valueCodeableConcept as fhir3.CodeableConcept | undefined)?.text
+      ?? (statusReasonVal?.valueCodeableConcept as fhir3.CodeableConcept | undefined)?.coding?.[0]?.display
+    ) || undefined
+    const statusChangeDate = formatDate(
+      statusReasonSubs?.find(e => e.url === 'statusChangeDate')?.valueDateTime as string | undefined
+    )
 
     const prescribingAgency = extractPrescribingAgency(stmt)
 
@@ -175,19 +168,45 @@ export function extractMedications(bundle: fhir3.Bundle): GpConnectMedication[] 
         : undefined
       const oQuantity = oqty ? `${oqty.value ?? ''} ${oqtyUnit ?? ''}`.trim() || undefined : undefined
       const oDosage = req.dosageInstruction?.[0]
+      const oEsd = req.dispenseRequest?.expectedSupplyDuration as fhir3.Duration | undefined
+      const supplyDuration = oEsd?.value !== undefined
+        ? `${oEsd.value} ${oEsd.unit ?? oEsd.code ?? ''}`.trim()
+        : undefined
+      const oRecorderRef = (req.recorder as fhir3.Reference | undefined)?.reference
+      const { name: recorder, id: recorderId } = resolvePractitionerRef(bundle, oRecorderRef)
       return {
         id: req.id ?? '',
         issueDate: formatDate(req.authoredOn ?? req.dispenseRequest?.validityPeriod?.start),
+        startDate: formatDate(req.dispenseRequest?.validityPeriod?.start),
         endDate: formatDate(req.dispenseRequest?.validityPeriod?.end),
         quantity: oQuantity,
         status: req.status,
+        supplyDuration,
         dosageInstruction: oDosage?.text || undefined,
         patientInstructions: oDosage?.patientInstruction || undefined,
         pharmacyInstructions: req.note?.map(n => n.text).filter(Boolean).join('\n') || undefined,
+        recorder,
+        recorderId,
       }
     })
 
-    const prescriber = getPrescriber(bundle, linkedRequest)
+    const contextRef = (stmt as unknown as { context?: { reference?: string } }).context?.reference
+    const encounterId = contextRef ? extractId(contextRef) : undefined
+
+    const { resourceId: medicationResourceId } = getMedRef(bundle, stmt)
+
+    const dateAsserted = formatDate(stmt.dateAsserted)
+
+    const { name: prescriber, id: prescriberId } = getPrescriberInfo(bundle, linkedRequest)
+    const recorderRef = (planRequest?.recorder as fhir3.Reference | undefined)?.reference
+    const { name: recorder, id: recorderId } = resolvePractitionerRef(bundle, recorderRef)
+    const prescriberOrg = getEntries<fhir3.Organization>(bundle, 'Organization')[0]
+    const prescriberOrganisationId = prescriberOrg?.id
+
+    const esd = linkedRequest?.dispenseRequest?.expectedSupplyDuration as fhir3.Duration | undefined
+    const expectedSupplyDuration = esd?.value !== undefined
+      ? `${esd.value} ${esd.unit ?? esd.code ?? ''}`.trim()
+      : undefined
 
     const noteText = stmt.note?.[0]?.text
 
@@ -208,13 +227,25 @@ export function extractMedications(bundle: fhir3.Bundle): GpConnectMedication[] 
       endDate,
       lastIssuedDate,
       numberOfRepeatsAllowed,
+      numberOfIssued,
+      authorisationExpiryDate,
       prescribedQuantity,
+      expectedSupplyDuration,
+      encounterId,
+      medicationResourceId,
+      dateAsserted,
       prescriber,
-      prescriberOrganisation: getOrganisation(bundle),
+      prescriberId,
+      recorder,
+      recorderId,
+      prescriberOrganisation: getOrganisationName(bundle),
+      prescriberOrganisationId,
       dosageInstruction: dosage?.text,
       additionalInformation: noteText,
       patientInstructions,
       pharmacyInstructions,
+      statusReason,
+      statusChangeDate,
       medicationStatementId: stmt.id ?? '',
       medicationRequestIds: requestIds,
       issues,
@@ -222,7 +253,7 @@ export function extractMedications(bundle: fhir3.Bundle): GpConnectMedication[] 
   })
 
   // Sort: active first, then by drug name
-  medications.sort((a, b) => {
+  const sortMeds = (list: GpConnectMedication[]) => list.sort((a, b) => {
     const statusOrder: Record<string, number> = { active: 0, 'on-hold': 1, intended: 2, completed: 3, stopped: 4, 'entered-in-error': 5, unknown: 6 }
     const sa = statusOrder[a.status] ?? 6
     const sb = statusOrder[b.status] ?? 6
@@ -230,5 +261,158 @@ export function extractMedications(bundle: fhir3.Bundle): GpConnectMedication[] 
     return a.drugName.localeCompare(b.drugName)
   })
 
-  return medications
+  if (medications.length > 0) return sortMeds(medications)
+
+  // Fallback: no MedicationStatements — build from intent=plan MedicationRequests
+  const planRequests = requests
+    .filter(r => r.intent === 'plan')
+    .sort((a, b) => (b.authoredOn ?? '').localeCompare(a.authoredOn ?? ''))
+
+  const fallback: GpConnectMedication[] = planRequests.map(planReq => {
+    const { name, code, resourceId: medicationResourceId } = getMedRef(bundle, planReq)
+
+    const dosage = planReq.dosageInstruction?.[0]
+    const dose = dosage?.doseQuantity
+      ? `${dosage.doseQuantity.value ?? ''} ${dosage.doseQuantity.unit ?? ''}`.trim()
+      : dosage?.doseRange
+        ? `${dosage.doseRange.low?.value ?? ''} – ${dosage.doseRange.high?.value ?? ''} ${dosage.doseRange.high?.unit ?? ''}`.trim()
+        : undefined
+    const frequency = dosage?.timing?.code?.text ?? dosage?.timing?.code?.coding?.[0]?.display
+    const route = dosage?.route?.coding?.[0]?.display ?? dosage?.route?.text
+
+    const vp = planReq.dispenseRequest?.validityPeriod
+    const startDate = formatDate(vp?.start ?? planReq.authoredOn)
+    const endDate = formatDate(vp?.end)
+
+    const qty = planReq.dispenseRequest?.quantity
+    const qtyUnit = qty
+      ? getExtensionValue(
+          (qty as fhir3.Quantity & { extension?: fhir3.Extension[] }).extension,
+          'Extension-CareConnect-GPC-MedicationQuantityText-1'
+        )?.valueString ?? qty.unit
+      : undefined
+    const prescribedQuantity = qty ? `${qty.value ?? ''} ${qtyUnit ?? ''}`.trim() || undefined : undefined
+
+    const repeatsExt = getExtensionValue(planReq.extension, 'Extension-CareConnect-GPC-MedicationRepeatInformation-1')
+    const numberOfRepeatsAllowed =
+      (getExtensionValue(repeatsExt?.extension, 'numberOfRepeatPrescriptionsAllowed') as unknown as { valuePositiveInt?: number } | undefined)?.valuePositiveInt
+      ?? getExtensionValue(repeatsExt?.extension, 'numberOfRepeatPrescriptionsAllowed')?.valueUnsignedInt
+      ?? planReq.dispenseRequest?.numberOfRepeatsAllowed
+    const numberOfIssued = getExtensionValue(repeatsExt?.extension, 'numberOfRepeatPrescriptionsIssued')?.valueUnsignedInt
+    const authorisationExpiryDate = formatDate(
+      (getExtensionValue(repeatsExt?.extension, 'authorisationExpiryDate')?.valueDateTime
+        ?? getExtensionValue(repeatsExt?.extension, 'authorisationExpiryDate')?.valueDate) as string | undefined
+    )
+
+    const prescriptionType = extractPrescriptionType(planReq)
+
+    const statusReasonExt = getExtensionValue(planReq.extension, 'Extension-CareConnect-GPC-MedicationStatusReason-1')
+    const statusReasonSubs = (statusReasonExt as unknown as { extension?: fhir3.Extension[] } | undefined)?.extension
+    const statusReasonVal = statusReasonSubs?.find(e => e.url === 'statusReason')
+    const statusReason = (statusReasonVal?.valueString
+      ?? (statusReasonVal?.valueCodeableConcept as fhir3.CodeableConcept | undefined)?.text
+      ?? (statusReasonVal?.valueCodeableConcept as fhir3.CodeableConcept | undefined)?.coding?.[0]?.display
+    ) || undefined
+    const statusChangeDate = formatDate(
+      statusReasonSubs?.find(e => e.url === 'statusChangeDate')?.valueDateTime as string | undefined
+    )
+
+    const esd = planReq.dispenseRequest?.expectedSupplyDuration as fhir3.Duration | undefined
+    const expectedSupplyDuration = esd?.value !== undefined
+      ? `${esd.value} ${esd.unit ?? esd.code ?? ''}`.trim()
+      : undefined
+
+    const reqRef = (planReq as unknown as Record<string, unknown>)['requester'] as { agent?: fhir3.Reference } | undefined
+    const { name: prescriber, id: prescriberId } = resolvePractitionerRef(bundle, reqRef?.agent?.reference)
+    const recorderRef = (planReq.recorder as fhir3.Reference | undefined)?.reference
+    const { name: recorder, id: recorderId } = resolvePractitionerRef(bundle, recorderRef)
+
+    const ctxRef = (planReq as unknown as { context?: { reference?: string } }).context?.reference
+    const encounterId = ctxRef ? extractId(ctxRef) : undefined
+
+    const prescriberOrg = getEntries<fhir3.Organization>(bundle, 'Organization')[0]
+
+    // Order requests that are issues against this plan
+    const orderRequests = requests
+      .filter(r => {
+        if (r.intent !== 'order') return false
+        const basedOn = r.basedOn ? (Array.isArray(r.basedOn) ? r.basedOn : [r.basedOn]) : []
+        return basedOn.some((b: fhir3.Reference) =>
+          b.reference?.endsWith(`/${planReq.id}`) || b.reference === `MedicationRequest/${planReq.id}`
+        )
+      })
+      .sort((a, b) => (a.authoredOn ?? '').localeCompare(b.authoredOn ?? ''))
+
+    const issues: GpConnectMedicationIssue[] = orderRequests.map(req => {
+      const oqty = req.dispenseRequest?.quantity
+      const oqtyUnit = oqty
+        ? getExtensionValue(
+            (oqty as fhir3.Quantity & { extension?: fhir3.Extension[] }).extension,
+            'Extension-CareConnect-GPC-MedicationQuantityText-1'
+          )?.valueString ?? oqty.unit
+        : undefined
+      const oQuantity = oqty ? `${oqty.value ?? ''} ${oqtyUnit ?? ''}`.trim() || undefined : undefined
+      const oDosage = req.dosageInstruction?.[0]
+      const oEsd = req.dispenseRequest?.expectedSupplyDuration as fhir3.Duration | undefined
+      const supplyDuration = oEsd?.value !== undefined
+        ? `${oEsd.value} ${oEsd.unit ?? oEsd.code ?? ''}`.trim()
+        : undefined
+      const oRecorderRef = (req.recorder as fhir3.Reference | undefined)?.reference
+      const { name: issueRecorder, id: issueRecorderId } = resolvePractitionerRef(bundle, oRecorderRef)
+      return {
+        id: req.id ?? '',
+        issueDate: formatDate(req.authoredOn ?? req.dispenseRequest?.validityPeriod?.start),
+        startDate: formatDate(req.dispenseRequest?.validityPeriod?.start),
+        endDate: formatDate(req.dispenseRequest?.validityPeriod?.end),
+        quantity: oQuantity,
+        status: req.status,
+        supplyDuration,
+        dosageInstruction: oDosage?.text || undefined,
+        patientInstructions: oDosage?.patientInstruction || undefined,
+        pharmacyInstructions: req.note?.map(n => n.text).filter(Boolean).join('\n') || undefined,
+        recorder: issueRecorder,
+        recorderId: issueRecorderId,
+      }
+    })
+
+    return {
+      id: planReq.id ?? crypto.randomUUID(),
+      drugName: name,
+      snomedCode: code,
+      dose,
+      frequency,
+      route,
+      status: planReq.status ?? 'unknown',
+      prescriptionType,
+      prescribingAgency: undefined,
+      startDate,
+      endDate,
+      lastIssuedDate: undefined,
+      numberOfRepeatsAllowed,
+      numberOfIssued,
+      authorisationExpiryDate,
+      prescribedQuantity,
+      expectedSupplyDuration,
+      encounterId,
+      medicationResourceId,
+      dateAsserted: formatDate(planReq.authoredOn),
+      prescriber,
+      prescriberId,
+      recorder,
+      recorderId,
+      prescriberOrganisation: getOrganisationName(bundle),
+      prescriberOrganisationId: prescriberOrg?.id,
+      dosageInstruction: dosage?.text,
+      additionalInformation: planReq.note?.[0]?.text,
+      patientInstructions: dosage?.patientInstruction || undefined,
+      pharmacyInstructions: planReq.note?.map(n => n.text).filter(Boolean).join('\n') || undefined,
+      statusReason,
+      statusChangeDate,
+      medicationStatementId: '',
+      medicationRequestIds: [planReq.id ?? ''],
+      issues,
+    }
+  })
+
+  return sortMeds(fallback)
 }

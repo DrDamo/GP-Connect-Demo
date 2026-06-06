@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
   --color-nhs-blue: #005eb8;
@@ -16,13 +17,136 @@
   --font-sans: Arial, sans-serif;
 }
 
+/* CodeMirror highlight colours — overridden in dark mode */
+:root {
+  --cm-highlight: #fffbcc;
+  --cm-search-match: #dcfce7;
+  --cm-current-match: #86efac;
+  --cm-indent-0: rgba(255,  85,  85, 0.09);
+  --cm-indent-1: rgba(255, 170,   0, 0.09);
+  --cm-indent-2: rgba(  0, 170,  85, 0.09);
+  --cm-indent-3: rgba( 51, 153, 255, 0.09);
+  --cm-indent-4: rgba(170,  85, 255, 0.09);
+}
+
 body {
   margin: 0;
   font-family: Arial, sans-serif;
   background-color: #f0f4f5;
   color: #212b32;
+  transition: background-color 0.15s, color 0.15s;
 }
 
 #root {
   min-height: 100svh;
 }
+
+/* ── Dark mode ───────────────────────────────────────────────────── */
+
+.dark {
+  /* Invert the NHS grey scale for dark surfaces */
+  --color-nhs-grey-1: #e8edee;
+  --color-nhs-grey-2: #b0c0cc;
+  --color-nhs-grey-3: #7a8f9a;
+  --color-nhs-grey-4: #2d4256;
+  --color-nhs-grey-5: #162032;
+
+  /* CodeMirror highlight colours */
+  --cm-highlight: #6b5500;
+  --cm-search-match: #1f5c30;
+  --cm-current-match: #2a7a45;
+}
+
+html.dark body {
+  background-color: #0e1621;
+  color: #e8edee;
+}
+
+/*
+ * Tailwind utility overrides for dark mode.
+ * Two-class selectors have specificity (0,2,0) which beats the
+ * single-class utility (0,1,0), so no !important needed.
+ */
+
+/* Main card / panel surfaces */
+.dark .bg-white {
+  background-color: #162032;
+}
+
+/* Table row selected / hover */
+.dark .bg-blue-50 {
+  background-color: #1a2838;
+}
+.dark .hover\:bg-blue-50:hover {
+  background-color: #1a2838;
+}
+.dark .bg-blue-100,
+.dark .hover\:bg-blue-100:hover {
+  background-color: #1e3048;
+}
+.dark .bg-blue-200 {
+  background-color: #1e3a5f;
+}
+
+/* Blue badge text/border (draft, intended status pills) */
+.dark .text-blue-800 {
+  color: #a8d8ff;
+}
+.dark .border-blue-300 {
+  border-color: #2d5a8e;
+}
+
+/* Expanded detail panel backgrounds (bg-blue-50/50) */
+.dark .bg-blue-50\/50 {
+  background-color: rgb(26 40 56 / 0.9);
+}
+
+/* Nav item hover (hover:bg-white) */
+.dark .hover\:bg-white:hover {
+  background-color: #1c2a3e;
+}
+
+/* ── CodeMirror dark theme ───────────────────────────────────────── */
+
+.dark .cm-editor {
+  background-color: #162032;
+  color: #e0e8ed;
+}
+.dark .cm-scroller {
+  background-color: #162032;
+}
+.dark .cm-gutters {
+  background-color: #0e1621;
+  border-right-color: #2d4256;
+  color: #5a7a94;
+}
+/* Keep selection visible */
+.dark .cm-selectionBackground,
+.dark .cm-focused .cm-selectionBackground {
+  background-color: #1e3a5f;
+}
+/* Syntax token colours for dark backgrounds */
+.dark .cm-content { color: #cdd5de; }
+/* JSON/XML strings */
+.dark .ͼ1 .ͼb { color: #a8d8ff; }
+/* JSON property names */
+.dark .ͼ1 .ͼc { color: #7ee787; }
+/* Numbers / booleans */
+.dark .ͼ1 .ͼd { color: #f8c555; }
+/* Punctuation */
+.dark .ͼ1 .ͼe { color: #8b9eb8; }
+
+/* ── Indent rainbow ─────────────────────────────────────────────── */
+
+.dark {
+  --cm-indent-0: rgba(255,  85,  85, 0.18);
+  --cm-indent-1: rgba(255, 170,   0, 0.18);
+  --cm-indent-2: rgba(  0, 170,  85, 0.18);
+  --cm-indent-3: rgba( 51, 153, 255, 0.18);
+  --cm-indent-4: rgba(170,  85, 255, 0.18);
+}
+.cm-indent-level-0 { background-color: var(--cm-indent-0); }
+.cm-indent-level-1 { background-color: var(--cm-indent-1); }
+.cm-indent-level-2 { background-color: var(--cm-indent-2); }
+.cm-indent-level-3 { background-color: var(--cm-indent-3); }
+.cm-indent-level-4 { background-color: var(--cm-indent-4); }

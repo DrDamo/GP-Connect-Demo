@@ -1,16 +1,21 @@
+import { useState } from 'react'
 import type { GpConnectBundle, GpConnectDiaryEntry } from '../../fhir/types'
-import { PatientBanner } from './PatientBanner'
 import { DomainTable, StatusBadge } from './DomainTable'
 import type { DomainColumn } from './DomainTable'
+import { ReferencedResources } from './ReferencedResources'
+import { ReferenceChip } from './ResourceCard'
+import { type DomainId } from './domains'
 
 interface Props {
   bundle: GpConnectBundle
   selectedId?: string
   onSelect?: (id: string) => void
+  onJumpToSource?: (id: string) => void
+  onJumpToRecord?: (domain: DomainId, id: string) => void
 }
 
 const COLUMNS: DomainColumn<GpConnectDiaryEntry>[] = [
-  { label: 'Date', render: item => item.date ?? '—' },
+  { label: 'Date', render: item => item.date ?? 'Unknown' },
   {
     label: 'Description',
     render: item => (
@@ -42,7 +47,18 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
   )
 }
 
-function DiaryEntryDetail({ entry }: { entry: GpConnectDiaryEntry }) {
+function DiaryEntryDetail({ entry, bundle, onJumpToSource, onJumpToRecord }: { entry: GpConnectDiaryEntry; bundle: GpConnectBundle; onJumpToSource?: (id: string) => void; onJumpToRecord?: (domain: DomainId, id: string) => void }) {
+  const [openResourceId, setOpenResourceId] = useState<string | null>(null)
+  const toggle = (id: string) => setOpenResourceId(prev => prev === id ? null : id)
+
+  const noteAuthorIds = entry.notes.map(n => n.authorId).filter((id): id is string => Boolean(id))
+
+  const refs = [
+    entry.clinicianId  ? { type: 'Practitioner' as const, id: entry.clinicianId,  label: 'Clinician' } : null,
+    entry.encounterId  ? { type: 'Encounter'    as const, id: entry.encounterId,  label: 'Encounter' } : null,
+    ...noteAuthorIds.map(id => ({ type: 'Practitioner' as const, id, label: 'Note author' })),
+  ].filter((r): r is NonNullable<typeof r> => r !== null)
+
   return (
     <div className="border border-nhs-blue/20 rounded-lg bg-blue-50/50 p-4 space-y-3">
       <div className="flex items-center justify-between gap-3">
@@ -56,22 +72,64 @@ function DiaryEntryDetail({ entry }: { entry: GpConnectDiaryEntry }) {
         {entry.snomedCode && (
           <DetailRow label="SNOMED code" value={<span className="font-mono">{entry.snomedCode}</span>} />
         )}
-        <DetailRow label="Date"      value={entry.date} />
-        <DetailRow label="Clinician" value={entry.clinician} />
+        <DetailRow label="Date" value={entry.date} />
+        {entry.occurrenceStart && (
+          <DetailRow label="Occurrence start" value={entry.occurrenceStart} />
+        )}
+        {entry.occurrenceEnd && entry.occurrenceEnd !== entry.occurrenceStart && (
+          <DetailRow label="Occurrence end" value={entry.occurrenceEnd} />
+        )}
+        <DetailRow label="Clinician" value={
+          entry.clinician
+            ? entry.clinicianId
+              ? <ReferenceChip label={entry.clinician} onClick={() => toggle(entry.clinicianId!)} active={openResourceId === entry.clinicianId} />
+              : entry.clinician
+            : undefined
+        } />
+        {entry.intent && (
+          <DetailRow label="Intent" value={<StatusBadge value={entry.intent} />} />
+        )}
         {entry.priority && (
           <DetailRow label="Priority" value={<StatusBadge value={entry.priority} />} />
         )}
         <DetailRow label="Status" value={<StatusBadge value={entry.status} />} />
       </div>
+      {entry.notes.length > 0 && (
+        <div className="space-y-2 pt-1 border-t border-nhs-blue/20">
+          <span className="text-xs text-nhs-grey-3 uppercase tracking-wide">Notes</span>
+          {entry.notes.map((note, i) => (
+            <div key={i} className="space-y-0.5">
+              <p className="text-xs text-nhs-grey-1">{note.text}</p>
+              <div className="flex gap-3 text-[11px] text-nhs-grey-3">
+                {note.author && (
+                  note.authorId
+                    ? <ReferenceChip label={note.author} onClick={() => toggle(note.authorId!)} active={openResourceId === note.authorId} />
+                    : <span>{note.author}</span>
+                )}
+                {note.time && <span>{note.time}</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      <ReferencedResources
+        refs={refs}
+        practitioners={bundle.practitioners}
+        organisations={bundle.organisations}
+        healthcareServices={bundle.healthcareServices}
+        consultations={bundle.consultations}
+        highlightedId={openResourceId ?? undefined}
+        onJumpToSource={onJumpToSource}
+        onJumpToRecord={onJumpToRecord}
+      />
     </div>
   )
 }
 
-export function DiaryEntriesView({ bundle, selectedId, onSelect }: Props) {
+export function DiaryEntriesView({ bundle, selectedId, onSelect, onJumpToSource, onJumpToRecord }: Props) {
   const count = bundle.diaryEntries.length
   return (
     <div className="space-y-4">
-      <PatientBanner patient={bundle.patient} practiceOrganisation={bundle.practiceOrganisation} />
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-base font-semibold text-nhs-grey-1">Diary Entries</h2>
@@ -88,7 +146,7 @@ export function DiaryEntriesView({ bundle, selectedId, onSelect }: Props) {
         selectedId={selectedId}
         onSelect={onSelect}
         emptyMessage="No diary entries found in this bundle"
-        expandedContent={entry => <DiaryEntryDetail entry={entry} />}
+        expandedContent={entry => <DiaryEntryDetail entry={entry} bundle={bundle} onJumpToSource={onJumpToSource} onJumpToRecord={onJumpToRecord} />}
       />
     </div>
   )

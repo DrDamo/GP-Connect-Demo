@@ -103,6 +103,47 @@ function xmlBundleToFhir(raw: Record<string, unknown>): fhir3.Bundle {
   return bundle as unknown as fhir3.Bundle
 }
 
+export function normalizePastedJson(text: string):
+  | { ok: true; data: fhir3.Bundle }
+  | { ok: false; error: string } {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(text)
+  } catch (e) {
+    return { ok: false, error: `JSON parse error: ${(e as Error).message}` }
+  }
+
+  if (parsed === null || typeof parsed !== 'object') {
+    return { ok: false, error: 'Pasted content is not recognisable FHIR JSON' }
+  }
+
+  if (Array.isArray(parsed)) {
+    return {
+      ok: true,
+      data: { resourceType: 'Bundle', type: 'searchset', entry: parsed.map(r => ({ resource: r })) } as fhir3.Bundle,
+    }
+  }
+
+  const obj = parsed as Record<string, unknown>
+
+  if (obj['resourceType'] === 'Bundle') {
+    return { ok: true, data: obj as unknown as fhir3.Bundle }
+  }
+
+  if (Array.isArray(obj['entry']) && !obj['resourceType']) {
+    return { ok: true, data: { ...obj, resourceType: 'Bundle' } as unknown as fhir3.Bundle }
+  }
+
+  if (typeof obj === 'object') {
+    return {
+      ok: true,
+      data: { resourceType: 'Bundle', type: 'searchset', entry: [{ resource: obj }] } as fhir3.Bundle,
+    }
+  }
+
+  return { ok: false, error: 'Pasted content is not recognisable FHIR JSON' }
+}
+
 export function parseBundle(text: string): ParseResult {
   const format = detectFormat(text)
 

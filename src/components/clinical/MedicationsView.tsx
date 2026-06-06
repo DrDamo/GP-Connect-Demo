@@ -1,5 +1,8 @@
 import { useState, Fragment } from 'react'
-import type { GpConnectMedication, GpConnectMedicationIssue, GpConnectMedicationsRecord } from '../../fhir/types'
+import type { GpConnectMedication, GpConnectMedicationsRecord } from '../../fhir/types'
+import { ReferencedResources } from './ReferencedResources'
+import { ReferenceChip } from './ResourceCard'
+import { type DomainId } from './domains'
 
 interface Props {
   record: GpConnectMedicationsRecord
@@ -7,6 +10,8 @@ interface Props {
   selectedIssueId?: string
   onSelect?: (id: string) => void
   onSelectIssue?: (medId: string, issueId: string) => void
+  onJumpToSource?: (id: string) => void
+  onJumpToRecord?: (domain: DomainId, id: string) => void
 }
 
 const statusConfig: Record<string, { label: string; className: string }> = {
@@ -28,30 +33,44 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
-function issueChanges(issue: GpConnectMedicationIssue, med: GpConnectMedication): { label: string; value: string }[] {
-  const out: { label: string; value: string }[] = []
-  const check = (label: string, issueVal: string | undefined, medVal: string | undefined) => {
-    if (issueVal !== undefined && issueVal !== medVal) out.push({ label, value: issueVal })
-  }
-  check('Dosage instruction', issue.dosageInstruction, med.dosageInstruction)
-  check('Quantity', issue.quantity, med.prescribedQuantity)
-  check('Patient instructions', issue.patientInstructions, med.patientInstructions)
-  check('Pharmacy / prescriber note', issue.pharmacyInstructions, med.pharmacyInstructions)
-  return out
+function Detail({ label, value, mono = false }: { label: string; value?: string; mono?: boolean }) {
+  return (
+    <div>
+      <span className="text-nhs-grey-3 text-xs uppercase tracking-wide">{label}</span>
+      <p className={`mt-0.5 ${value ? `text-nhs-grey-1 ${mono ? 'font-mono text-xs' : ''}` : 'text-nhs-grey-3 italic'}`}>
+        {value ?? '—'}
+      </p>
+    </div>
+  )
 }
 
-function MedicationRow({ med, selected, selectedIssueId, onSelect, onSelectIssue }: {
+function MedicationRow({ med, record, selected, selectedIssueId, onSelect, onSelectIssue, onJumpToSource, onJumpToRecord }: {
   med: GpConnectMedication
+  record: GpConnectMedicationsRecord
   selected?: boolean
   selectedIssueId?: string
   onSelect?: (id: string) => void
   onSelectIssue?: (medId: string, issueId: string) => void
+  onJumpToSource?: (id: string) => void
+  onJumpToRecord?: (domain: DomainId, id: string) => void
 }) {
   const [expanded, setExpanded] = useState(false)
+  const [showDetail, setShowDetail] = useState(false)
   const [detailIssueId, setDetailIssueId] = useState<string | null>(null)
+  const [openResourceId, setOpenResourceId] = useState<string | null>(null)
+  const toggle = (id: string) => setOpenResourceId(prev => prev === id ? null : id)
+
+  const refs = [
+    med.prescriberId             ? { type: 'Practitioner' as const, id: med.prescriberId,             label: 'Prescriber' } : null,
+    med.recorderId               ? { type: 'Practitioner' as const, id: med.recorderId,               label: 'Recorder'   } : null,
+    med.prescriberOrganisationId ? { type: 'Organisation' as const, id: med.prescriberOrganisationId, label: 'Practice'   } : null,
+    med.encounterId              ? { type: 'Encounter'    as const, id: med.encounterId,              label: 'Encounter'  } : null,
+    med.medicationResourceId     ? { type: 'Medication'   as const, id: med.medicationResourceId,     label: 'Medication' } : null,
+  ].filter((r): r is NonNullable<typeof r> => r !== null)
 
   return (
     <>
+      {/* Summary row */}
       <tr
         className={`border-b border-nhs-grey-5 cursor-pointer transition-colors ${selected ? 'bg-blue-100 hover:bg-blue-100' : 'hover:bg-blue-50'}`}
         onClick={() => { setExpanded(e => !e); onSelect?.(med.id) }}
@@ -66,8 +85,8 @@ function MedicationRow({ med, selected, selectedIssueId, onSelect, onSelectIssue
           {med.dosageInstruction ?? [med.dose, med.frequency].filter(Boolean).join(' · ') ?? '—'}
         </td>
         <td className="py-2.5 px-3 text-sm text-nhs-grey-2">{med.route ?? '—'}</td>
-        <td className="py-2.5 px-3 text-sm text-nhs-grey-2">{med.startDate ?? '—'}</td>
-        <td className="py-2.5 px-3 text-sm text-nhs-grey-2">{med.lastIssuedDate ?? '—'}</td>
+        <td className="py-2.5 px-3 text-sm text-nhs-grey-2">{med.startDate ?? 'Unknown'}</td>
+        <td className="py-2.5 px-3 text-sm text-nhs-grey-2">{med.lastIssuedDate ?? 'Unknown'}</td>
         <td className="py-2.5 px-3">
           <StatusBadge status={med.status} />
         </td>
@@ -75,104 +94,209 @@ function MedicationRow({ med, selected, selectedIssueId, onSelect, onSelectIssue
           {expanded ? '▲' : '▼'}
         </td>
       </tr>
+
+      {/* Expanded panel */}
       {expanded && (
         <tr className="bg-blue-50 border-b border-nhs-grey-5">
           <td colSpan={7} className="px-4 py-3">
-            <div className="grid grid-cols-2 gap-x-8 gap-y-1.5 text-sm">
-              <Detail label="Drug name" value={med.drugName} />
-              <Detail label="DM+D / SNOMED code" value={med.snomedCode} mono />
-              <Detail label="Dosage instruction" value={med.dosageInstruction} />
-              <Detail label="Route" value={med.route} />
-              <Detail label="Dose" value={med.dose} />
-              <Detail label="Frequency" value={med.frequency} />
-              <Detail label="Quantity" value={med.prescribedQuantity} />
-              <Detail label="Repeats allowed" value={med.numberOfRepeatsAllowed !== undefined ? String(med.numberOfRepeatsAllowed) : undefined} />
-              <Detail label="Prescription type" value={med.prescriptionType} />
-              <Detail label="Start date" value={med.startDate} />
-              <Detail label="End date" value={med.endDate} />
-              <Detail label="Last issued" value={med.lastIssuedDate} />
-              <Detail label="Prescriber" value={med.prescriber} />
-              <Detail label="Practice" value={med.prescriberOrganisation} />
-              <Detail label="Patient instructions" value={med.patientInstructions} />
-              <Detail label="Pharmacy / prescriber note" value={med.pharmacyInstructions} />
-              {med.additionalInformation && (
-                <div className="col-span-2 mt-1 pt-1 border-t border-nhs-grey-5">
-                  <span className="text-nhs-grey-3 text-xs uppercase tracking-wide">Additional information</span>
-                  <p className="mt-0.5 text-nhs-grey-1 italic">{med.additionalInformation}</p>
-                </div>
-              )}
-              <Detail label="FHIR ID" value={med.medicationStatementId} mono />
+
+            {/* ── Issues section (always shown first) ── */}
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-semibold text-nhs-grey-2 uppercase tracking-wide">
+                Issues ({med.issues.length})
+                {onSelectIssue && med.issues.length > 0 && (
+                  <span className="normal-case font-normal text-nhs-grey-3 ml-1">· click row to inspect FHIR source</span>
+                )}
+              </p>
+              <button
+                type="button"
+                onClick={e => { e.stopPropagation(); setShowDetail(d => !d) }}
+                className={`px-2.5 py-1 text-xs rounded border transition-colors ${
+                  showDetail
+                    ? 'bg-nhs-blue text-white border-nhs-blue'
+                    : 'bg-white text-nhs-grey-2 border-nhs-grey-4 hover:border-nhs-blue hover:text-nhs-blue'
+                }`}
+              >
+                {showDetail ? 'Hide detail' : 'Show detail'}
+              </button>
             </div>
-            {med.issues.length > 0 && (
-              <div className="mt-3 pt-3 border-t border-nhs-grey-4">
-                <p className="text-xs font-semibold text-nhs-grey-2 uppercase tracking-wide mb-2">
-                  Issues ({med.issues.length})
-                  {onSelectIssue && <span className="normal-case font-normal text-nhs-grey-3 ml-1">· click row to inspect FHIR source</span>}
-                </p>
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="text-nhs-grey-3 uppercase tracking-wide text-left">
-                      <th className="pb-1 pr-4 font-semibold">Issue date</th>
-                      <th className="pb-1 pr-4 font-semibold">End date</th>
-                      <th className="pb-1 pr-4 font-semibold">Quantity</th>
-                      <th className="pb-1 pr-4 font-semibold">Status</th>
-                      <th className="pb-1"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {med.issues.map(issue => {
-                      const changes = issueChanges(issue, med)
-                      const detailOpen = detailIssueId === issue.id
-                      return (
-                        <Fragment key={issue.id}>
-                          <tr
-                            onClick={onSelectIssue ? e => { e.stopPropagation(); onSelectIssue(med.id, issue.id) } : undefined}
-                            className={`transition-colors ${onSelectIssue ? 'cursor-pointer' : ''} ${selectedIssueId === issue.id ? 'bg-blue-200' : onSelectIssue ? 'hover:bg-blue-100' : ''}`}
-                          >
-                            <td className="py-0.5 pr-4">{issue.issueDate ?? '—'}</td>
-                            <td className="py-0.5 pr-4">{issue.endDate ?? '—'}</td>
-                            <td className="py-0.5 pr-4">{issue.quantity ?? '—'}</td>
-                            <td className="py-0.5 pr-4"><StatusBadge status={issue.status ?? 'unknown'} /></td>
-                            <td className="py-0.5">
-                              <button
-                                onClick={e => { e.stopPropagation(); setDetailIssueId(prev => prev === issue.id ? null : issue.id) }}
-                                className={`px-1.5 py-0.5 rounded border text-xs transition-colors whitespace-nowrap ${
-                                  detailOpen
-                                    ? 'bg-nhs-blue text-white border-nhs-blue'
-                                    : 'bg-white border-nhs-grey-4 text-nhs-grey-2 hover:border-nhs-blue hover:text-nhs-blue'
-                                }`}
-                              >
-                                {changes.length > 0 ? `${changes.length} change${changes.length > 1 ? 's' : ''}` : 'Detail'}
-                              </button>
-                            </td>
-                          </tr>
-                          {detailOpen && (
-                            <tr>
-                              <td colSpan={5} className="pb-2 pt-0.5 px-1">
-                                <div className="bg-white border border-nhs-grey-4 rounded p-2.5">
-                                  {changes.length === 0 ? (
-                                    <p className="text-nhs-grey-3 italic text-xs">No changes from the authorised prescription</p>
-                                  ) : (
-                                    <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
-                                      {changes.map(c => (
-                                        <div key={c.label}>
-                                          <span className="text-nhs-grey-3 text-xs uppercase tracking-wide">{c.label}</span>
-                                          <p className="text-nhs-grey-1 text-xs mt-0.5">{c.value}</p>
-                                        </div>
-                                      ))}
+
+            {med.issues.length > 0 ? (
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-nhs-grey-3 uppercase tracking-wide text-left">
+                    <th className="pb-1 pr-4 font-semibold">Issue date</th>
+                    <th className="pb-1 pr-4 font-semibold">Start date</th>
+                    <th className="pb-1 pr-4 font-semibold">End date</th>
+                    <th className="pb-1 pr-4 font-semibold">Quantity</th>
+                    <th className="pb-1 pr-4 font-semibold">Status</th>
+                    <th className="pb-1"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {med.issues.map(issue => {
+                    const detailOpen = detailIssueId === issue.id
+                    return (
+                      <Fragment key={issue.id}>
+                        <tr
+                          onClick={onSelectIssue ? e => { e.stopPropagation(); onSelectIssue(med.id, issue.id) } : undefined}
+                          className={`transition-colors ${onSelectIssue ? 'cursor-pointer' : ''} ${selectedIssueId === issue.id ? 'bg-blue-200' : onSelectIssue ? 'hover:bg-blue-100' : ''}`}
+                        >
+                          <td className="py-0.5 pr-4">{issue.issueDate ?? 'Unknown'}</td>
+                          <td className="py-0.5 pr-4">{issue.startDate ?? 'Unknown'}</td>
+                          <td className="py-0.5 pr-4">{issue.endDate ?? 'Unknown'}</td>
+                          <td className="py-0.5 pr-4">{issue.quantity ?? '—'}</td>
+                          <td className="py-0.5 pr-4"><StatusBadge status={issue.status ?? 'unknown'} /></td>
+                          <td className="py-0.5">
+                            <button
+                              onClick={e => { e.stopPropagation(); setDetailIssueId(prev => prev === issue.id ? null : issue.id) }}
+                              className={`px-1.5 py-0.5 rounded border text-xs transition-colors whitespace-nowrap ${
+                                detailOpen
+                                  ? 'bg-nhs-blue text-white border-nhs-blue'
+                                  : 'bg-white border-nhs-grey-4 text-nhs-grey-2 hover:border-nhs-blue hover:text-nhs-blue'
+                              }`}
+                            >
+                              Detail
+                            </button>
+                          </td>
+                        </tr>
+                        {detailOpen && (
+                          <tr>
+                            <td colSpan={6} className="pb-2 pt-0.5 px-1">
+                              <div className="bg-white border border-nhs-grey-4 rounded p-2.5">
+                                <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
+                                  {[
+                                    { label: 'Issue date',                  value: issue.issueDate },
+                                    { label: 'Start date',                  value: issue.startDate },
+                                    { label: 'End date',                    value: issue.endDate },
+                                    { label: 'Status',                      value: issue.status },
+                                    { label: 'Quantity',                    value: issue.quantity },
+                                    { label: 'Supply duration',             value: issue.supplyDuration },
+                                    { label: 'Dosage instruction',          value: issue.dosageInstruction },
+                                    { label: 'Patient instructions',        value: issue.patientInstructions },
+                                    { label: 'Pharmacy / prescriber note',  value: issue.pharmacyInstructions },
+                                  ].filter(f => f.value).map(f => (
+                                    <div key={f.label}>
+                                      <span className="text-nhs-grey-3 text-xs uppercase tracking-wide">{f.label}</span>
+                                      <p className="text-nhs-grey-1 text-xs mt-0.5">{f.value}</p>
+                                    </div>
+                                  ))}
+                                  {issue.recorder && (
+                                    <div>
+                                      <span className="text-nhs-grey-3 text-xs uppercase tracking-wide">Recorder</span>
+                                      <p className="mt-0.5">
+                                        {issue.recorderId
+                                          ? <ReferenceChip label={issue.recorder} onClick={() => toggle(issue.recorderId!)} active={openResourceId === issue.recorderId} />
+                                          : <span className="text-nhs-grey-1 text-xs">{issue.recorder}</span>
+                                        }
+                                      </p>
                                     </div>
                                   )}
                                 </div>
-                              </td>
-                            </tr>
-                          )}
-                        </Fragment>
-                      )
-                    })}
-                  </tbody>
-                </table>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    )
+                  })}
+                </tbody>
+              </table>
+            ) : (
+              <p className="text-xs text-nhs-grey-3 italic">No issues recorded for this authorisation.</p>
+            )}
+
+            {/* ── Detail panel (hidden until "Show detail" is clicked) ── */}
+            {showDetail && (
+              <div className="mt-3 pt-3 border-t border-nhs-grey-4" onClick={e => e.stopPropagation()}>
+                <div className="grid grid-cols-2 gap-x-8 gap-y-1.5 text-sm">
+                  <Detail label="Drug name"              value={med.drugName} />
+                  <Detail label="DM+D / SNOMED code"     value={med.snomedCode} mono />
+                  <Detail label="Dosage instruction"     value={med.dosageInstruction} />
+                  <Detail label="Route"                  value={med.route} />
+                  <Detail label="Dose"                   value={med.dose} />
+                  <Detail label="Frequency"              value={med.frequency} />
+                  <Detail label="Quantity"               value={med.prescribedQuantity} />
+                  <Detail label="Repeats allowed"        value={med.numberOfRepeatsAllowed !== undefined ? String(med.numberOfRepeatsAllowed) : undefined} />
+                  <Detail label="Issues to date"         value={
+                    med.numberOfIssued !== undefined
+                      ? med.numberOfRepeatsAllowed !== undefined
+                        ? `${med.numberOfIssued} of ${med.numberOfRepeatsAllowed}`
+                        : String(med.numberOfIssued)
+                      : undefined
+                  } />
+                  <Detail label="Authorisation expiry"   value={med.authorisationExpiryDate} />
+                  <Detail label="Prescription type"      value={med.prescriptionType} />
+                  <Detail label="Start date"             value={med.startDate} />
+                  <Detail label="End date"               value={med.endDate} />
+                  <Detail label="Last issued"            value={med.lastIssuedDate} />
+                  <Detail label="Date asserted"          value={med.dateAsserted} />
+                  <Detail label="Expected supply"        value={med.expectedSupplyDuration} />
+                  <div>
+                    <span className="text-nhs-grey-3 text-xs uppercase tracking-wide">Prescriber</span>
+                    <p className="mt-0.5">
+                      {med.prescriber
+                        ? med.prescriberId
+                          ? <ReferenceChip label={med.prescriber} onClick={() => toggle(med.prescriberId!)} active={openResourceId === med.prescriberId} />
+                          : <span className="text-nhs-grey-1">{med.prescriber}</span>
+                        : <span className="text-nhs-grey-3 italic">—</span>
+                      }
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-nhs-grey-3 text-xs uppercase tracking-wide">Recorder</span>
+                    <p className="mt-0.5">
+                      {med.recorder
+                        ? med.recorderId
+                          ? <ReferenceChip label={med.recorder} onClick={() => toggle(med.recorderId!)} active={openResourceId === med.recorderId} />
+                          : <span className="text-nhs-grey-1">{med.recorder}</span>
+                        : <span className="text-nhs-grey-3 italic">—</span>
+                      }
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-nhs-grey-3 text-xs uppercase tracking-wide">Practice</span>
+                    <p className="mt-0.5">
+                      {med.prescriberOrganisation
+                        ? med.prescriberOrganisationId
+                          ? <ReferenceChip label={med.prescriberOrganisation} onClick={() => toggle(med.prescriberOrganisationId!)} active={openResourceId === med.prescriberOrganisationId} />
+                          : <span className="text-nhs-grey-1">{med.prescriberOrganisation}</span>
+                        : <span className="text-nhs-grey-3 italic">—</span>
+                      }
+                    </p>
+                  </div>
+                  <Detail label="Patient instructions"        value={med.patientInstructions} />
+                  <Detail label="Pharmacy / prescriber note"  value={med.pharmacyInstructions} />
+                  {(med.statusReason || med.statusChangeDate) && (
+                    <div className="col-span-2 mt-1 pt-1 border-t border-nhs-grey-5">
+                      <span className="text-nhs-grey-3 text-xs uppercase tracking-wide">Status reason</span>
+                      <p className="mt-0.5 text-nhs-grey-1">
+                        {[med.statusReason, med.statusChangeDate && `(${med.statusChangeDate})`].filter(Boolean).join(' ')}
+                      </p>
+                    </div>
+                  )}
+                  {med.additionalInformation && (
+                    <div className="col-span-2 mt-1 pt-1 border-t border-nhs-grey-5">
+                      <span className="text-nhs-grey-3 text-xs uppercase tracking-wide">Additional information</span>
+                      <p className="mt-0.5 text-nhs-grey-1 italic">{med.additionalInformation}</p>
+                    </div>
+                  )}
+                  <Detail label="FHIR ID" value={med.medicationStatementId} mono />
+                </div>
+                <ReferencedResources
+                  refs={refs}
+                  practitioners={record.practitioners}
+                  organisations={record.organisations}
+                  healthcareServices={record.healthcareServices}
+                  consultations={record.consultations}
+                  fhirMedications={record.fhirMedications}
+                  highlightedId={openResourceId ?? undefined}
+                  onJumpToSource={onJumpToSource}
+                  onJumpToRecord={onJumpToRecord}
+                />
               </div>
             )}
+
           </td>
         </tr>
       )}
@@ -180,23 +304,15 @@ function MedicationRow({ med, selected, selectedIssueId, onSelect, onSelectIssue
   )
 }
 
-function Detail({ label, value, mono = false }: { label: string; value?: string; mono?: boolean }) {
-  return (
-    <div>
-      <span className="text-nhs-grey-3 text-xs uppercase tracking-wide">{label}</span>
-      <p className={`mt-0.5 ${value ? `text-nhs-grey-1 ${mono ? 'font-mono text-xs' : ''}` : 'text-nhs-grey-3 italic'}`}>
-        {value ?? '—'}
-      </p>
-    </div>
-  )
-}
-
-function MedicationsTable({ medications, selectedId, selectedIssueId, onSelect, onSelectIssue }: {
+function MedicationsTable({ medications, record, selectedId, selectedIssueId, onSelect, onSelectIssue, onJumpToSource, onJumpToRecord }: {
   medications: GpConnectMedication[]
+  record: GpConnectMedicationsRecord
   selectedId?: string
   selectedIssueId?: string
   onSelect?: (id: string) => void
   onSelectIssue?: (medId: string, issueId: string) => void
+  onJumpToSource?: (id: string) => void
+  onJumpToRecord?: (domain: DomainId, id: string) => void
 }) {
   if (medications.length === 0) return null
   return (
@@ -218,10 +334,13 @@ function MedicationsTable({ medications, selectedId, selectedIssueId, onSelect, 
             <MedicationRow
               key={med.id}
               med={med}
+              record={record}
               selected={med.id === selectedId}
               selectedIssueId={med.id === selectedId ? selectedIssueId : undefined}
               onSelect={onSelect}
               onSelectIssue={onSelectIssue}
+              onJumpToSource={onJumpToSource}
+              onJumpToRecord={onJumpToRecord}
             />
           ))}
         </tbody>
@@ -242,7 +361,6 @@ const TAB_DEFS: { id: MedTab; label: string; description: string }[] = [
 ]
 
 function getPrescriptionTab(med: GpConnectMedication): MedTab {
-  // prescribingAgency 'prescribed-at-gp-practice' = this practice; anything else = elsewhere
   if (med.prescribingAgency && med.prescribingAgency !== 'prescribed-at-gp-practice') return 'prescribed-elsewhere'
   const pt = med.prescriptionType?.toLowerCase() ?? ''
   if (pt.includes('elsewhere')) return 'prescribed-elsewhere'
@@ -252,27 +370,18 @@ function getPrescriptionTab(med: GpConnectMedication): MedTab {
   return 'other'
 }
 
-export function MedicationsView({ record, selectedId, selectedIssueId, onSelect, onSelectIssue }: Props) {
+export function MedicationsView({ record, selectedId, selectedIssueId, onSelect, onSelectIssue, onJumpToSource, onJumpToRecord }: Props) {
   const isPast = (m: GpConnectMedication) => ['completed', 'stopped', 'entered-in-error'].includes(m.status)
 
-  // Build counts per tab
   const counts: Record<MedTab, GpConnectMedication[]> = {
-    acute:                  [],
-    repeat:                 [],
-    'repeat-dispensing':    [],
-    'prescribed-elsewhere': [],
-    past:                   [],
-    other:                  [],
+    acute: [], repeat: [], 'repeat-dispensing': [], 'prescribed-elsewhere': [], past: [], other: [],
   }
   for (const med of record.medications) {
     if (isPast(med)) counts.past.push(med)
     else counts[getPrescriptionTab(med)].push(med)
   }
 
-  // Only show the 'other' tab if it has any entries
   const visibleTabs = TAB_DEFS.filter(t => t.id !== 'other' || counts.other.length > 0)
-
-  // Default to the first tab that has items, fallback to 'acute'
   const defaultTab = visibleTabs.find(t => counts[t.id].length > 0)?.id ?? 'acute'
   const [activeTab, setActiveTab] = useState<MedTab>(defaultTab)
 
@@ -281,39 +390,16 @@ export function MedicationsView({ record, selectedId, selectedIssueId, onSelect,
 
   return (
     <div className="space-y-4">
-      {/* Patient header */}
-      {record.patient && (
-        <div className="bg-nhs-blue rounded-lg px-4 py-3 text-white">
-          <div className="flex items-baseline gap-3">
-            <span className="text-lg font-semibold">
-              {[record.patient.givenName, record.patient.familyName].filter(Boolean).join(' ') || 'Unknown patient'}
-            </span>
-            <span className="text-sm opacity-80">
-              {record.patient.dateOfBirth && `DOB: ${record.patient.dateOfBirth}`}
-              {record.patient.gender && ` · ${record.patient.gender.charAt(0).toUpperCase() + record.patient.gender.slice(1)}`}
-            </span>
-          </div>
-          <div className="flex gap-4 mt-1 text-sm opacity-80">
-            {record.patient.nhsNumber && (
-              <span>NHS No: <span className="font-mono font-semibold">{record.patient.nhsNumber}</span></span>
-            )}
-            {record.practiceOrganisation && <span>{record.practiceOrganisation}</span>}
-          </div>
-        </div>
-      )}
-
-      {/* Domain header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-base font-semibold text-nhs-grey-1">Medications &amp; Medical Devices</h2>
           <p className="text-xs text-nhs-grey-3 mt-0.5">
-            {record.medications.length} medication{record.medications.length !== 1 ? 's' : ''} · click a row to expand
+            {record.medications.length} medication{record.medications.length !== 1 ? 's' : ''} · click a row to see issues
           </p>
         </div>
         <span className="px-2 py-1 bg-nhs-blue text-white text-xs font-semibold rounded">GP Connect STU3</span>
       </div>
 
-      {/* Category tabs */}
       <div className="border-b border-nhs-grey-4">
         <div className="flex gap-0 -mb-px">
           {visibleTabs.map(tab => {
@@ -331,11 +417,7 @@ export function MedicationsView({ record, selectedId, selectedIssueId, onSelect,
               >
                 {tab.label}
                 <span className={`ml-1.5 px-1.5 py-0.5 text-xs rounded-full font-semibold ${
-                  isActive
-                    ? 'bg-nhs-blue text-white'
-                    : count > 0
-                      ? 'bg-nhs-grey-4 text-nhs-grey-2'
-                      : 'bg-nhs-grey-5 text-nhs-grey-3'
+                  isActive ? 'bg-nhs-blue text-white' : count > 0 ? 'bg-nhs-grey-4 text-nhs-grey-2' : 'bg-nhs-grey-5 text-nhs-grey-3'
                 }`}>
                   {count}
                 </span>
@@ -345,11 +427,19 @@ export function MedicationsView({ record, selectedId, selectedIssueId, onSelect,
         </div>
       </div>
 
-      {/* Tab content */}
       {activeMeds.length > 0 ? (
         <div>
           <p className="text-xs text-nhs-grey-3 mb-3">{activeTabDef.description}</p>
-          <MedicationsTable medications={activeMeds} selectedId={selectedId} selectedIssueId={selectedIssueId} onSelect={onSelect} onSelectIssue={onSelectIssue} />
+          <MedicationsTable
+            medications={activeMeds}
+            record={record}
+            selectedId={selectedId}
+            selectedIssueId={selectedIssueId}
+            onSelect={onSelect}
+            onSelectIssue={onSelectIssue}
+            onJumpToSource={onJumpToSource}
+            onJumpToRecord={onJumpToRecord}
+          />
         </div>
       ) : (
         <div className="text-center py-10 text-nhs-grey-3">

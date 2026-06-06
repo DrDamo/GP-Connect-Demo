@@ -1,4 +1,4 @@
-import { Fragment } from 'react'
+import { Fragment, useEffect, useRef } from 'react'
 import type React from 'react'
 
 export interface DomainColumn<T> {
@@ -52,6 +52,14 @@ export function DomainTable<T extends { id: string }>({
   emptyMessage?: string
   expandedContent?: (item: T) => React.ReactNode
 }) {
+  const selectedRowRef = useRef<HTMLTableRowElement | null>(null)
+
+  useEffect(() => {
+    if (selectedId && selectedRowRef.current) {
+      selectedRowRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [selectedId])
+
   if (items.length === 0) {
     return (
       <div className="text-center py-10 text-nhs-grey-3">
@@ -78,6 +86,7 @@ export function DomainTable<T extends { id: string }>({
             return (
               <Fragment key={item.id}>
                 <tr
+                  ref={isSelected ? selectedRowRef : undefined}
                   onClick={() => onSelect?.(item.id)}
                   className={`transition-colors ${
                     isSelected && expandedContent ? '' : 'border-b border-nhs-grey-5'

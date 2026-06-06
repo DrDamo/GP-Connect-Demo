@@ -2,6 +2,48 @@ import type { ValidationIssue, ValidationResult } from './types'
 
 type AnyResource = fhir3.Resource & { resourceType: string }
 
+// All valid SNOMED codes for GP Connect List resources (14 total):
+// 11 primary domain Lists + 3 consultation-structure Lists (per CareConnect-GPC-List-1 profile)
+const GP_CONNECT_KNOWN_LIST_CODES = new Set([
+  // Primary domain Lists
+  '886921000000105',  // Allergies and adverse reactions
+  '1103671000000101', // Ended allergies
+  '1149501000000101', // List of consultations
+  '714311000000108',  // Patient recall administration (diary entries)
+  '1102181000000102', // Immunisations
+  '887191000000108',  // Investigations and results
+  '933361000000108',  // Medications and medical devices
+  '792931000000107',  // Outbound referral
+  '717711000000103',  // Problems
+  '826501000000100',  // Miscellaneous record (uncategorised data)
+  '823701000000100',  // Documents
+  // Consultation-structure Lists (GP Connect structured consultation record)
+  '325851000000107',  // Consultation (consultation wrapper List per Encounter)
+  '25851000000105',   // Consultation topic (topic List within consultation)
+  '24781000000107',   // Consultation category (category List within topic)
+])
+
+function buildReferenceIndex(bundle: fhir3.Bundle): Set<string> {
+  const refs = new Set<string>()
+  for (const entry of bundle.entry ?? []) {
+    const r = entry.resource as AnyResource | undefined
+    if (!r) continue
+    if (entry.fullUrl) refs.add(entry.fullUrl)
+    if (r.id) {
+      refs.add(`${r.resourceType}/${r.id}`)
+      refs.add(r.id)
+    }
+  }
+  return refs
+}
+
+// Returns true if ref is absent, local ('#'), or found in the index
+function resolves(ref: string | undefined, index: Set<string>): boolean {
+  if (!ref) return true
+  if (ref.startsWith('#')) return true
+  return index.has(ref)
+}
+
 function countResources(bundle: fhir3.Bundle): Record<string, number> {
   const counts: Record<string, number> = {}
   for (const entry of bundle.entry ?? []) {
@@ -175,6 +217,124 @@ export function validateBundle(bundle: fhir3.Bundle): ValidationResult {
     req(issues, !!p.intent, 'error', 'ProcedureRequest.intent is required', path, p.id)
     req(issues, !!p.subject, 'error', 'ProcedureRequest.subject is required', path, p.id)
     req(issues, !!p.code, 'warning', 'ProcedureRequest.code (procedure type) is missing', path, p.id)
+  }
+
+  // ─── GP Connect-specific checks ─────────────────────────────────────────────
+
+  const refIndex = buildReferenceIndex(bundle)
+
+  // NOPAT security labels (patient-restricted information)
+  for (const entry of bundle.entry ?? []) {
+    const r = entry.resource as AnyResource | undefined
+    if (!r) continue
+    const hasNopat = (r.meta?.security ?? []).some((s: fhir3.Coding) => s.code === 'NOPAT')
+    if (hasNopat) {
+      issues.push({
+        severity: 'info',
+        message: 'Patient-restricted information present (NOPAT security label)',
+        path: `${r.resourceType}/${r.id}`,
+        resourceId: r.id,
+      })
+    }
+  }
+
+  // All subject/patient references should point to the same Patient
+  const patientRefs = new Set<string>()
+  const addPatientRef = (ref: string | undefined) => { if (ref) patientRefs.add(ref) }
+  statements.forEach(s => addPatientRef(s.subject?.reference))
+  allergies.forEach(a => addPatientRef(a.patient?.reference))
+  conditions.forEach(c => addPatientRef(c.subject?.reference))
+  encounters.forEach(e => addPatientRef(e.subject?.reference))
+  immunizations.forEach(i => addPatientRef(i.patient?.reference))
+  reports.forEach(r => addPatientRef(r.subject?.reference))
+  observations.forEach(o => addPatientRef(o.subject?.reference))
+  procedureRequests.forEach(p => addPatientRef(p.subject?.reference))
+  if (patientRefs.size > 1) {
+    issues.push({
+      severity: 'warning',
+      message: `Resources reference ${patientRefs.size} different patients — bundle must represent a single patient`,
+      path: 'Bundle',
+    })
+  }
+
+  // MedicationStatement: medicationReference must resolve; warn if inline code used instead
+  for (const stmt of statements) {
+    if (stmt.medicationReference?.reference) {
+      req(issues, resolves(stmt.medicationReference.reference, refIndex), 'warning',
+        'MedicationStatement.medicationReference does not resolve to a bundle entry',
+        `MedicationStatement/${stmt.id}`, stmt.id)
+    }
+    if (!stmt.medicationReference && stmt.medicationCodeableConcept) {
+      issues.push({
+        severity: 'info',
+        message: 'MedicationStatement uses inline medicationCodeableConcept — GP Connect expects a Reference to a Medication resource',
+        path: `MedicationStatement/${stmt.id}`,
+        resourceId: stmt.id,
+      })
+    }
+  }
+
+  // Resolved allergies must be in List.contained, not top-level bundle entries
+  for (const a of allergies) {
+    if (a.clinicalStatus === 'resolved') {
+      issues.push({
+        severity: 'warning',
+        message: 'Resolved AllergyIntolerance is a top-level bundle entry — GP Connect requires resolved allergies inside List.contained (ended-allergies List)',
+        path: `AllergyIntolerance/${a.id}`,
+        resourceId: a.id,
+      })
+    }
+  }
+
+  // MedicationRequest.intent should be 'plan' (authorisation) or 'order' (issue)
+  for (const mr of requests) {
+    if (mr.intent && !['plan', 'order'].includes(mr.intent)) {
+      issues.push({
+        severity: 'info',
+        message: `MedicationRequest.intent is "${mr.intent}" — GP Connect uses "plan" (authorisation) or "order" (issue)`,
+        path: `MedicationRequest/${mr.id}`,
+        resourceId: mr.id,
+      })
+    }
+  }
+
+  // Encounters should carry a GP Connect consultation record type code
+  for (const e of encounters) {
+    const hasConsultationType = (e.type ?? []).some(t =>
+      (t.coding ?? []).some(c =>
+        c.system === 'https://fhir.nhs.uk/STU3/CodeSystem/GPConnect-ConsultationRecordType-1'
+      )
+    )
+    req(issues, hasConsultationType, 'info',
+      'Encounter.type does not include a GP Connect consultation record type code',
+      `Encounter/${e.id}`, e.id)
+  }
+
+  // Lists should have a code; primary Lists should use a known GP Connect SNOMED code
+  for (const list of lists) {
+    const codings = list.code?.coding ?? []
+    const hasCode = codings.length > 0 || !!list.code?.text
+    if (!hasCode) {
+      issues.push({
+        severity: 'info',
+        message: 'List has no code — GP Connect primary Lists identify their clinical area with a SNOMED CT code',
+        path: `List/${list.id}`,
+        resourceId: list.id,
+      })
+    } else {
+      const snomedCodes = codings
+        .filter(c => c.system === 'http://snomed.info/sct')
+        .map(c => c.code)
+        .filter((c): c is string => !!c)
+      if (snomedCodes.length > 0 && !snomedCodes.some(c => GP_CONNECT_KNOWN_LIST_CODES.has(c))) {
+        issues.push({
+          severity: 'info',
+          message: `List SNOMED code(s) [${snomedCodes.join(', ')}] are not a recognised GP Connect list code`,
+          path: `List/${list.id}`,
+          resourceId: list.id,
+        })
+      }
+    }
   }
 
   const hasErrors = issues.some(i => i.severity === 'error')

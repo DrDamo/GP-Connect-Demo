@@ -1,6 +1,9 @@
-import { PatientBanner } from './PatientBanner'
+import { useState } from 'react'
 import { DomainTable, StatusBadge, type DomainColumn } from './DomainTable'
 import type { GpConnectBundle, GpConnectDocument } from '../../fhir/types'
+import { ReferencedResources } from './ReferencedResources'
+import { ReferenceChip } from './ResourceCard'
+import { type DomainId } from './domains'
 
 const MIME_LABELS: Record<string, string> = {
   'application/pdf':    'PDF',
@@ -18,7 +21,7 @@ function mimeLabel(mimeType?: string): string {
 }
 
 const COLUMNS: DomainColumn<GpConnectDocument>[] = [
-  { label: 'Date',        className: 'w-28', render: d => d.date ?? '—' },
+  { label: 'Date',        className: 'w-28', render: d => d.date ?? 'Unknown' },
   { label: 'Type',        className: 'w-52', render: d => d.type },
   { label: 'Description', render: d => d.description ?? '—' },
   { label: 'Author',      className: 'w-40', render: d => d.author ?? '—' },
@@ -36,7 +39,23 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
   )
 }
 
-function DocumentDetail({ document }: { document: GpConnectDocument }) {
+function formatFileSize(bytes?: number): string | undefined {
+  if (bytes === undefined) return undefined
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function DocumentDetail({ document, bundle, onJumpToSource, onJumpToRecord }: { document: GpConnectDocument; bundle: GpConnectBundle; onJumpToSource?: (id: string) => void; onJumpToRecord?: (domain: DomainId, id: string) => void }) {
+  const [openResourceId, setOpenResourceId] = useState<string | null>(null)
+  const toggle = (id: string) => setOpenResourceId(prev => prev === id ? null : id)
+
+  const refs = [
+    document.authorId     ? { type: 'Practitioner' as const, id: document.authorId,     label: 'Author'    } : null,
+    document.custodianId  ? { type: 'Organisation' as const, id: document.custodianId,  label: 'Custodian' } : null,
+    document.encounterId  ? { type: 'Encounter'    as const, id: document.encounterId,  label: 'Encounter' } : null,
+  ].filter((r): r is NonNullable<typeof r> => r !== null)
+
   return (
     <div className="border border-nhs-blue/20 rounded-lg bg-blue-50/50 p-4 space-y-3">
       <div className="flex items-center justify-between gap-3">
@@ -44,32 +63,58 @@ function DocumentDetail({ document }: { document: GpConnectDocument }) {
         <StatusBadge value={document.status} />
       </div>
       <div className="grid grid-cols-2 gap-x-8 gap-y-1.5">
-        <DetailRow label="Date"        value={document.date} />
-        <DetailRow label="Author"      value={document.author} />
-        <DetailRow label="Format"      value={document.mimeType ? mimeLabel(document.mimeType) : undefined} />
+        <DetailRow label="Date" value={document.date} />
+        <DetailRow label="Author" value={
+          document.author
+            ? document.authorId
+              ? <ReferenceChip label={document.author} onClick={() => toggle(document.authorId!)} active={openResourceId === document.authorId} />
+              : document.author
+            : undefined
+        } />
+        <DetailRow label="Custodian" value={
+          document.custodian
+            ? document.custodianId
+              ? <ReferenceChip label={document.custodian} onClick={() => toggle(document.custodianId!)} active={openResourceId === document.custodianId} />
+              : document.custodian
+            : undefined
+        } />
+        <DetailRow label="Format"     value={document.mimeType ? mimeLabel(document.mimeType) : undefined} />
         {document.mimeType && (
           <DetailRow label="MIME type" value={<span className="font-mono text-xs">{document.mimeType}</span>} />
         )}
+        <DetailRow label="File size" value={formatFileSize(document.attachmentSize)} />
         {document.description && (
           <div className="col-span-2 flex gap-2 min-w-0">
             <span className="text-xs text-nhs-grey-3 shrink-0 w-36">Description</span>
             <span className="text-xs text-nhs-grey-1 min-w-0">{document.description}</span>
           </div>
         )}
+        {document.attachmentTitle && (
+          <div className="col-span-2 flex gap-2 items-start min-w-0 bg-amber-50 border border-amber-300 rounded px-3 py-2">
+            <span className="text-amber-600 text-sm leading-none mt-0.5">⚠</span>
+            <span className="text-xs text-amber-800">{document.attachmentTitle}</span>
+          </div>
+        )}
         {document.url && (
           <div className="col-span-2 flex gap-2 min-w-0">
             <span className="text-xs text-nhs-grey-3 shrink-0 w-36">URL</span>
-            <a
-              href={document.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-nhs-blue underline hover:no-underline truncate"
-            >
+            <a href={document.url} target="_blank" rel="noopener noreferrer"
+               className="text-xs text-nhs-blue underline hover:no-underline truncate">
               {document.url}
             </a>
           </div>
         )}
       </div>
+      <ReferencedResources
+        refs={refs}
+        practitioners={bundle.practitioners}
+        organisations={bundle.organisations}
+        healthcareServices={bundle.healthcareServices}
+        consultations={bundle.consultations}
+        highlightedId={openResourceId ?? undefined}
+        onJumpToSource={onJumpToSource}
+        onJumpToRecord={onJumpToRecord}
+      />
     </div>
   )
 }
@@ -78,12 +123,13 @@ interface Props {
   bundle: GpConnectBundle
   selectedId?: string
   onSelect?: (id: string) => void
+  onJumpToSource?: (id: string) => void
+  onJumpToRecord?: (domain: DomainId, id: string) => void
 }
 
-export function DocumentsView({ bundle, selectedId, onSelect }: Props) {
+export function DocumentsView({ bundle, selectedId, onSelect, onJumpToSource, onJumpToRecord }: Props) {
   return (
     <div className="space-y-4">
-      <PatientBanner patient={bundle.patient} practiceOrganisation={bundle.practiceOrganisation} />
       <div className="flex items-start justify-between">
         <div>
           <h2 className="text-base font-semibold text-nhs-grey-1">Documents</h2>
@@ -100,7 +146,7 @@ export function DocumentsView({ bundle, selectedId, onSelect }: Props) {
         selectedId={selectedId}
         onSelect={onSelect}
         emptyMessage="No documents found in this bundle"
-        expandedContent={document => <DocumentDetail document={document} />}
+        expandedContent={document => <DocumentDetail document={document} bundle={bundle} onJumpToSource={onJumpToSource} onJumpToRecord={onJumpToRecord} />}
       />
     </div>
   )

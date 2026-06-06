@@ -39,8 +39,19 @@ function findMatchingBraceEnd(lines: string[], fromLine: number): number {
   return -1
 }
 
+// Prefix used for title-based index keys, so they cannot collide with real FHIR IDs.
+// FHIR IDs are restricted to [A-Za-z0-9\-\.\_\~] so a null byte is safe as a sentinel.
+export const TITLE_KEY_PREFIX = '\x00'
+
+export function titleIndexKey(title: string): string {
+  return TITLE_KEY_PREFIX + title
+}
+
 // Builds a map of FHIR resource ID → line range (1-based) by scanning
 // the raw source for every "id": "value" occurrence.
+// Also indexes resources by "title": "value" (using titleIndexKey) so that
+// resources lacking an id field (common in some GP Connect bundles) can still
+// be highlighted.
 export function buildResourceLineIndex(source: string): Map<string, LineRange> {
   const index = new Map<string, LineRange>()
   const lines = source.split('\n')
@@ -64,24 +75,26 @@ export function buildResourceLineIndex(source: string): Map<string, LineRange> {
     return lo
   }
 
-  const idPattern = /"id"\s*:\s*"([^"]+)"/g
-  let match: RegExpExecArray | null
-
-  while ((match = idPattern.exec(source)) !== null) {
-    const resourceId = match[1]
-    const lineIdx = lineOf(match.index)
-
-    const startLine = findEnclosingBraceStart(lines, lineIdx)
-    if (startLine === -1) continue
-
-    const endLine = findMatchingBraceEnd(lines, startLine)
-    if (endLine === -1) continue
-
-    // Only keep the outermost range for a given ID (first match wins)
-    if (!index.has(resourceId)) {
-      index.set(resourceId, { start: startLine + 1, end: endLine + 1 })
+  function indexField(pattern: RegExp, makeKey: (value: string) => string) {
+    let match: RegExpExecArray | null
+    while ((match = pattern.exec(source)) !== null) {
+      const key = makeKey(match[1])
+      if (index.has(key)) continue // first match wins
+      const lineIdx = lineOf(match.index)
+      const startLine = findEnclosingBraceStart(lines, lineIdx)
+      if (startLine === -1) continue
+      const endLine = findMatchingBraceEnd(lines, startLine)
+      if (endLine === -1) continue
+      index.set(key, { start: startLine + 1, end: endLine + 1 })
     }
   }
+
+  // Pass 1: index by "id" field (covers most FHIR resources)
+  indexField(/"id"\s*:\s*"([^"]+)"/g, v => v)
+
+  // Pass 2: index by "title" field for resources that lack an id.
+  // Uses titleIndexKey() to avoid collision with real FHIR IDs.
+  indexField(/"title"\s*:\s*"([^"]+)"/g, titleIndexKey)
 
   return index
 }

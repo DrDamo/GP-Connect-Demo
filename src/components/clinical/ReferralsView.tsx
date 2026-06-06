@@ -1,16 +1,21 @@
+import { useState } from 'react'
 import type { GpConnectBundle, GpConnectReferral } from '../../fhir/types'
-import { PatientBanner } from './PatientBanner'
 import { DomainTable, StatusBadge } from './DomainTable'
 import type { DomainColumn } from './DomainTable'
+import { ReferencedResources } from './ReferencedResources'
+import { ReferenceChip } from './ResourceCard'
+import { type DomainId } from './domains'
 
 interface Props {
   bundle: GpConnectBundle
   selectedId?: string
   onSelect?: (id: string) => void
+  onJumpToSource?: (id: string) => void
+  onJumpToRecord?: (domain: DomainId, id: string) => void
 }
 
 const COLUMNS: DomainColumn<GpConnectReferral>[] = [
-  { label: 'Date', render: item => item.date ?? '—' },
+  { label: 'Date', render: item => item.date ?? 'Unknown' },
   { label: 'Recipient service', render: item => item.recipient ?? '—' },
   {
     label: 'Priority',
@@ -32,25 +37,50 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
   )
 }
 
-function ReferralDetail({ referral }: { referral: GpConnectReferral }) {
+function ReferralDetail({ referral, bundle, onJumpToSource, onJumpToRecord }: { referral: GpConnectReferral; bundle: GpConnectBundle; onJumpToSource?: (id: string) => void; onJumpToRecord?: (domain: DomainId, id: string) => void }) {
+  const [openResourceId, setOpenResourceId] = useState<string | null>(null)
+  const toggle = (id: string) => setOpenResourceId(prev => prev === id ? null : id)
+
+  const refs = [
+    referral.requesterId ? { type: 'Practitioner' as const, id: referral.requesterId, label: 'Requester' } : null,
+    referral.recipientId
+      ? bundle.organisations.some(o => o.id === referral.recipientId)
+        ? { type: 'Organisation' as const, id: referral.recipientId, label: 'Recipient' }
+        : bundle.healthcareServices.some(h => h.id === referral.recipientId)
+          ? { type: 'HealthcareService' as const, id: referral.recipientId, label: 'Recipient' }
+          : null
+      : null,
+  ].filter((r): r is NonNullable<typeof r> => r !== null)
+
   return (
     <div className="border border-nhs-blue/20 rounded-lg bg-blue-50/50 p-4 space-y-3">
       <div className="flex items-center justify-between gap-3">
-        <h3 className="text-sm font-semibold text-nhs-grey-1">
-          {referral.recipient ?? 'Referral'}
-        </h3>
+        <h3 className="text-sm font-semibold text-nhs-grey-1">{referral.recipient ?? 'Referral'}</h3>
         <div className="flex gap-2">
           {referral.priority && <StatusBadge value={referral.priority} />}
           <StatusBadge value={referral.status} />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-x-8 gap-y-1.5">
-        <DetailRow label="Date"              value={referral.date} />
+        <DetailRow label="Date"             value={referral.date} />
         <DetailRow label="Recipient service" value={referral.recipient} />
+        <DetailRow label="Requester" value={
+          referral.requester
+            ? referral.requesterId
+              ? <ReferenceChip label={referral.requester} onClick={() => toggle(referral.requesterId!)} active={openResourceId === referral.requesterId} />
+              : referral.requester
+            : undefined
+        } />
         {referral.priority && (
           <DetailRow label="Priority" value={<StatusBadge value={referral.priority} />} />
         )}
         <DetailRow label="Status" value={<StatusBadge value={referral.status} />} />
+        {referral.description && (
+          <div className="col-span-2 flex gap-2 min-w-0">
+            <span className="text-xs text-nhs-grey-3 shrink-0 w-36">Description</span>
+            <span className="text-xs text-nhs-grey-1 min-w-0">{referral.description}</span>
+          </div>
+        )}
         {referral.reason && (
           <div className="col-span-2 flex gap-2 min-w-0">
             <span className="text-xs text-nhs-grey-3 shrink-0 w-36">Reason</span>
@@ -58,15 +88,31 @@ function ReferralDetail({ referral }: { referral: GpConnectReferral }) {
           </div>
         )}
       </div>
+      {referral.notes.length > 0 && (
+        <div className="space-y-1 pt-1 border-t border-nhs-blue/20">
+          <span className="text-xs text-nhs-grey-3 uppercase tracking-wide">Notes</span>
+          {referral.notes.map((note, i) => (
+            <p key={i} className="text-xs text-nhs-grey-1">{note}</p>
+          ))}
+        </div>
+      )}
+      <ReferencedResources
+        refs={refs}
+        practitioners={bundle.practitioners}
+        organisations={bundle.organisations}
+        healthcareServices={bundle.healthcareServices}
+        highlightedId={openResourceId ?? undefined}
+        onJumpToSource={onJumpToSource}
+        onJumpToRecord={onJumpToRecord}
+      />
     </div>
   )
 }
 
-export function ReferralsView({ bundle, selectedId, onSelect }: Props) {
+export function ReferralsView({ bundle, selectedId, onSelect, onJumpToSource, onJumpToRecord }: Props) {
   const count = bundle.referrals.length
   return (
     <div className="space-y-4">
-      <PatientBanner patient={bundle.patient} practiceOrganisation={bundle.practiceOrganisation} />
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-base font-semibold text-nhs-grey-1">Referrals</h2>
@@ -83,7 +129,7 @@ export function ReferralsView({ bundle, selectedId, onSelect }: Props) {
         selectedId={selectedId}
         onSelect={onSelect}
         emptyMessage="No referral records found in this bundle"
-        expandedContent={referral => <ReferralDetail referral={referral} />}
+        expandedContent={referral => <ReferralDetail referral={referral} bundle={bundle} onJumpToSource={onJumpToSource} onJumpToRecord={onJumpToRecord} />}
       />
     </div>
   )

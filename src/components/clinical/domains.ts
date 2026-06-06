@@ -9,6 +9,8 @@ export type DomainId =
   | 'problems'
   | 'referrals'
   | 'coded-data'
+  | 'supporting-resources'
+  | 'lists'
 
 export interface DomainDef {
   id: DomainId
@@ -98,6 +100,22 @@ export const DOMAINS: DomainDef[] = [
     description: 'SNOMED coded entries not captured in other clinical areas',
     fhirResources: ['Observation', 'List'],
     tableColumns: ['Date', 'SNOMED code', 'Description', 'Value', 'Associated problem'],
+    implemented: true,
+  },
+  {
+    id: 'supporting-resources',
+    label: 'Supporting Resources',
+    description: 'Practitioners, Organisations, Locations, Healthcare Services and Medications referenced in this bundle',
+    fhirResources: ['Practitioner', 'Organization', 'HealthcareService'],
+    tableColumns: ['Name', 'Type', 'Identifier', 'Contact'],
+    implemented: true,
+  },
+  {
+    id: 'lists',
+    label: 'Lists',
+    description: 'FHIR List resources organising entries by clinical category',
+    fhirResources: ['List'],
+    tableColumns: ['List', 'Date', 'Mode', 'Status', 'Entries'],
     implemented: true,
   },
 ]
