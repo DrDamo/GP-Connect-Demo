@@ -122,7 +122,7 @@ function ResultsTable({
                       )}
                       {onJumpToSource && (
                         <button
-                          onClick={() => onJumpToSource(r.id)}
+                          onClick={() => onJumpToSource(`Observation/${r.id}`)}
                           className="text-[11px] text-nhs-grey-3 hover:text-nhs-grey-1 hover:underline"
                         >
                           View FHIR ↗

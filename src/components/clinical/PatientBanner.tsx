@@ -87,7 +87,7 @@ export function PatientBanner({ patient, practiceOrganisation, patientId, onJump
           )}
           {onJumpToSource && patientId && (
             <button
-              onClick={e => { e.stopPropagation(); onJumpToSource(patientId) }}
+              onClick={e => { e.stopPropagation(); onJumpToSource(`Patient/${patientId}`) }}
               className="text-[11px] text-white/70 hover:text-white hover:underline"
             >
               View FHIR &#8599;

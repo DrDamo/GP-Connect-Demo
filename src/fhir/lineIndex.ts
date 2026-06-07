@@ -75,11 +75,54 @@ export function buildResourceLineIndex(source: string): Map<string, LineRange> {
     return lo
   }
 
-  function indexField(pattern: RegExp, makeKey: (value: string) => string) {
+  // Pass 1: index by "id" field, keyed as resourceType/id.
+  // Also stores a bare-id secondary key (first occurrence only) for callers that
+  // haven't yet been updated to pass the full resourceType/id form.
+  // When two resources share the same id, the bare-id key points to the first
+  // occurrence (a known limitation); each gets its own resourceType/id key.
+  {
+    const bareIdSeen = new Set<string>()
+    const idPattern = /"id"\s*:\s*"([^"]+)"/g
+    let match: RegExpExecArray | null
+    while ((match = idPattern.exec(source)) !== null) {
+      const id = match[1]
+      const lineIdx = lineOf(match.index)
+      const startLine = findEnclosingBraceStart(lines, lineIdx)
+      if (startLine === -1) continue
+      const endLine = findMatchingBraceEnd(lines, startLine)
+      if (endLine === -1) continue
+      const range = { start: startLine + 1, end: endLine + 1 }
+
+      // Find "resourceType" within the opening lines of this brace block.
+      // It is virtually always within the first few lines of a FHIR resource.
+      let resourceType: string | undefined
+      const scanEnd = Math.min(startLine + 10, endLine)
+      for (let i = startLine; i <= scanEnd; i++) {
+        const m = lines[i].match(/"resourceType"\s*:\s*"([^"]+)"/)
+        if (m) { resourceType = m[1]; break }
+      }
+
+      if (resourceType) {
+        const compositeKey = `${resourceType}/${id}`
+        if (!index.has(compositeKey)) index.set(compositeKey, range)
+      }
+
+      // Bare-id secondary key — first occurrence wins (backward compat)
+      if (!bareIdSeen.has(id)) {
+        bareIdSeen.add(id)
+        if (!index.has(id)) index.set(id, range)
+      }
+    }
+  }
+
+  // Pass 2: index by "title" field for resources that lack an id.
+  // Uses titleIndexKey() to avoid collision with real FHIR IDs.
+  {
+    const pattern = /"title"\s*:\s*"([^"]+)"/g
     let match: RegExpExecArray | null
     while ((match = pattern.exec(source)) !== null) {
-      const key = makeKey(match[1])
-      if (index.has(key)) continue // first match wins
+      const key = titleIndexKey(match[1])
+      if (index.has(key)) continue
       const lineIdx = lineOf(match.index)
       const startLine = findEnclosingBraceStart(lines, lineIdx)
       if (startLine === -1) continue
@@ -88,13 +131,6 @@ export function buildResourceLineIndex(source: string): Map<string, LineRange> {
       index.set(key, { start: startLine + 1, end: endLine + 1 })
     }
   }
-
-  // Pass 1: index by "id" field (covers most FHIR resources)
-  indexField(/"id"\s*:\s*"([^"]+)"/g, v => v)
-
-  // Pass 2: index by "title" field for resources that lack an id.
-  // Uses titleIndexKey() to avoid collision with real FHIR IDs.
-  indexField(/"title"\s*:\s*"([^"]+)"/g, titleIndexKey)
 
   return index
 }

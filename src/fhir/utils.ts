@@ -27,7 +27,10 @@ export function resolveReference(bundle: fhir3.Bundle, ref: string | undefined):
     .find(r => {
       if (!r) return false
       const relRef = `${r.resourceType}/${r.id}`
-      return ref === relRef || ref.endsWith(`/${relRef}`) || ref.endsWith(`/${r.id}`)
+      // Match by ResourceType/id only. The bare-id fallback (ref.endsWith(`/${r.id}`))
+      // is intentionally omitted: it ignores resource type and causes wrong matches
+      // when two resources share the same id (e.g. Organization/1 matching Patient/1).
+      return ref === relRef || ref.endsWith(`/${relRef}`)
     })
 }
 

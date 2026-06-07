@@ -70,7 +70,7 @@ function PractitionerDetail({ data: p, onJumpToSource, onJumpToRecord }: DetailP
       <Row label="SDS Role Profile ID" value={p.sdsRoleProfileId} />
       <Row label="Gender" value={p.gender} />
       <Row label="Resource ID" value={p.id} />
-      <RecordLinks id={p.id} onJumpToSource={onJumpToSource} onJumpToRecord={onJumpToRecord} recordLabel="View in Supporting Resources" />
+      <RecordLinks id={`Practitioner/${p.id}`} onJumpToSource={onJumpToSource} onJumpToRecord={onJumpToRecord} recordLabel="View in Supporting Resources" />
     </div>
   )
 }
@@ -83,7 +83,7 @@ function OrganisationDetail({ data: o, onJumpToSource, onJumpToRecord }: DetailP
       <Row label="Phone" value={o.phone} />
       <Row label="Address" value={o.address} />
       <Row label="Resource ID" value={o.id} />
-      <RecordLinks id={o.id} onJumpToSource={onJumpToSource} onJumpToRecord={onJumpToRecord} recordLabel="View in Supporting Resources" />
+      <RecordLinks id={`Organization/${o.id}`} onJumpToSource={onJumpToSource} onJumpToRecord={onJumpToRecord} recordLabel="View in Supporting Resources" />
     </div>
   )
 }
@@ -96,7 +96,7 @@ function HealthcareServiceDetail({ data: h, onJumpToSource, onJumpToRecord }: De
       <Row label="Provided By" value={h.providedBy} />
       <Row label="Comment" value={h.comment} />
       <Row label="Resource ID" value={h.id} />
-      <RecordLinks id={h.id} onJumpToSource={onJumpToSource} onJumpToRecord={onJumpToRecord} recordLabel="View in Supporting Resources" />
+      <RecordLinks id={`HealthcareService/${h.id}`} onJumpToSource={onJumpToSource} onJumpToRecord={onJumpToRecord} recordLabel="View in Supporting Resources" />
     </div>
   )
 }
@@ -107,7 +107,7 @@ function LocationDetail({ data: l, onJumpToSource, onJumpToRecord }: DetailProps
       <Row label="Name"        value={l.name} />
       <Row label="Address"     value={l.address} />
       <Row label="Resource ID" value={l.id} />
-      <RecordLinks id={l.id} onJumpToSource={onJumpToSource} onJumpToRecord={onJumpToRecord} recordLabel="View in Supporting Resources" />
+      <RecordLinks id={`Location/${l.id}`} onJumpToSource={onJumpToSource} onJumpToRecord={onJumpToRecord} recordLabel="View in Supporting Resources" />
     </div>
   )
 }
@@ -123,7 +123,7 @@ function DocumentDetail({ data: d, onJumpToSource, onJumpToRecord }: DetailProps
       <Row label="Custodian"   value={d.custodian} />
       <Row label="MIME type"   value={d.mimeType} />
       <Row label="Resource ID" value={d.id} />
-      <RecordLinks id={d.id} onJumpToSource={onJumpToSource} onJumpToRecord={onJumpToRecord} recordLabel="View in Documents" />
+      <RecordLinks id={`DocumentReference/${d.id}`} onJumpToSource={onJumpToSource} onJumpToRecord={onJumpToRecord} recordLabel="View in Documents" />
     </div>
   )
 }
@@ -134,7 +134,7 @@ function MedicationResourceDetail({ data: m, onJumpToSource, onJumpToRecord }: D
       <Row label="Name"        value={m.name} />
       <Row label="SNOMED code" value={m.snomedCode} />
       <Row label="Resource ID" value={m.id} />
-      <RecordLinks id={m.id} onJumpToSource={onJumpToSource} onJumpToRecord={onJumpToRecord} recordLabel="View in Supporting Resources" />
+      <RecordLinks id={`Medication/${m.id}`} onJumpToSource={onJumpToSource} onJumpToRecord={onJumpToRecord} recordLabel="View in Supporting Resources" />
     </div>
   )
 }
@@ -147,7 +147,7 @@ function EncounterDetail({ data: c, onJumpToSource, onJumpToRecord }: DetailProp
       <Row label="Clinician"    value={c.clinician} />
       <Row label="Organisation" value={c.organisation} />
       <Row label="Resource ID"  value={c.id} />
-      <RecordLinks id={c.id} onJumpToSource={onJumpToSource} onJumpToRecord={onJumpToRecord} recordLabel="View in Consultations" />
+      <RecordLinks id={`Encounter/${c.id}`} onJumpToSource={onJumpToSource} onJumpToRecord={onJumpToRecord} recordLabel="View in Consultations" />
     </div>
   )
 }

@@ -85,6 +85,25 @@ export function validateBundle(bundle: fhir3.Bundle): ValidationResult {
     return { valid: false, issues, resourceCounts }
   }
 
+  // Duplicate resource IDs — FHIR requires each resource in a bundle to have a unique id.
+  // Duplicate ids cause reference resolution to return the wrong resource and FHIR source
+  // links to navigate to the first occurrence regardless of type.
+  const seenIds = new Set<string>()
+  for (const entry of bundle.entry) {
+    const r = entry.resource as AnyResource | undefined
+    if (!r?.id) continue
+    const key = `${r.resourceType}/${r.id}`
+    if (seenIds.has(key)) {
+      issues.push({
+        severity: 'error',
+        message: `Duplicate resource ID "${r.id}" on ${r.resourceType} — IDs must be unique per resource type within a bundle. FHIR links for this resource will resolve to the first occurrence.`,
+        path: key,
+        resourceId: r.id,
+      })
+    }
+    seenIds.add(key)
+  }
+
   // Patient
   const patients = getEntries<fhir3.Patient>(bundle, 'Patient')
   if (patients.length === 0) {
