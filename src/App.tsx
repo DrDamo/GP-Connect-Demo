@@ -413,7 +413,17 @@ export default function App() {
                     const parsed = parseBundle(loaded.source)
                     if (!parsed.ok) return
                     const { bundle: cleaned } = cleanDanglingRefs(parsed.data)
-                    handleLoad(JSON.stringify(cleaned, null, 2), loaded.filename)
+                    const cleanedJson = JSON.stringify(cleaned, null, 2)
+                    // Download the cleaned file so it's permanently saved
+                    const blob = new Blob([cleanedJson], { type: 'application/json' })
+                    const url = URL.createObjectURL(blob)
+                    const a = document.createElement('a')
+                    a.href = url
+                    a.download = loaded.filename.replace(/\.(json|xml)$/i, '') + '-cleaned.json'
+                    a.click()
+                    URL.revokeObjectURL(url)
+                    // Also reload the cleaned version into the viewer
+                    handleLoad(cleanedJson, loaded.filename)
                     setTab('validation')
                   }}
                 />
