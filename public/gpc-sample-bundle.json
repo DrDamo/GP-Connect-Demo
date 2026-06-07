@@ -22665,7 +22665,7 @@
         ],
         "valueQuantity": {
           "value": 21.2,
-          "unit": "Kg/m\u00b2"
+          "unit": "Kg/m²"
         }
       }
     },
@@ -22724,7 +22724,7 @@
         ],
         "valueQuantity": {
           "value": 21.2,
-          "unit": "Kg/m\u00b2"
+          "unit": "Kg/m²"
         }
       }
     },
@@ -22999,7 +22999,7 @@
         ],
         "valueQuantity": {
           "value": 21.2,
-          "unit": "Kg/m\u00b2"
+          "unit": "Kg/m²"
         }
       }
     },
@@ -23390,7 +23390,7 @@
         ],
         "valueQuantity": {
           "value": 21.2,
-          "unit": "Kg/m\u00b2"
+          "unit": "Kg/m²"
         }
       }
     },
@@ -23449,7 +23449,7 @@
         ],
         "valueQuantity": {
           "value": 21.2,
-          "unit": "Kg/m\u00b2"
+          "unit": "Kg/m²"
         }
       }
     },
@@ -23508,7 +23508,7 @@
         ],
         "valueQuantity": {
           "value": 21.2,
-          "unit": "Kg/m\u00b2"
+          "unit": "Kg/m²"
         }
       }
     },
@@ -23675,7 +23675,7 @@
         ],
         "valueQuantity": {
           "value": 21.2,
-          "unit": "Kg/m\u00b2"
+          "unit": "Kg/m²"
         }
       }
     },
@@ -23788,7 +23788,7 @@
         ],
         "valueQuantity": {
           "value": 21.2,
-          "unit": "Kg/m\u00b2"
+          "unit": "Kg/m²"
         }
       }
     },
@@ -24014,7 +24014,7 @@
         ],
         "valueQuantity": {
           "value": 21.2,
-          "unit": "Kg/m\u00b2"
+          "unit": "Kg/m²"
         }
       }
     },
@@ -24182,7 +24182,7 @@
         ],
         "valueQuantity": {
           "value": 21.2,
-          "unit": "Kg/m\u00b2"
+          "unit": "Kg/m²"
         }
       }
     },
@@ -24349,7 +24349,7 @@
         ],
         "valueQuantity": {
           "value": 21.22,
-          "unit": "Kg/m\u00b2"
+          "unit": "Kg/m²"
         }
       }
     },
@@ -24467,7 +24467,7 @@
         ],
         "valueQuantity": {
           "value": 23.62,
-          "unit": "Kg/m\u00b2"
+          "unit": "Kg/m²"
         }
       }
     },
@@ -24698,7 +24698,7 @@
         ],
         "valueQuantity": {
           "value": 21.22,
-          "unit": "Kg/m\u00b2"
+          "unit": "Kg/m²"
         }
       }
     },
@@ -24811,7 +24811,7 @@
         ],
         "valueQuantity": {
           "value": 21.2,
-          "unit": "Kg/m\u00b2"
+          "unit": "Kg/m²"
         }
       }
     },
@@ -25086,7 +25086,7 @@
         ],
         "valueQuantity": {
           "value": 21.2,
-          "unit": "Kg/m\u00b2"
+          "unit": "Kg/m²"
         }
       }
     },
@@ -25312,7 +25312,7 @@
         ],
         "valueQuantity": {
           "value": 20.31,
-          "unit": "Kg/m\u00b2"
+          "unit": "Kg/m²"
         }
       }
     },
@@ -25587,7 +25587,7 @@
         ],
         "valueQuantity": {
           "value": 34.3,
-          "unit": "Kg/m\u00b2"
+          "unit": "Kg/m²"
         }
       }
     },
@@ -25700,7 +25700,7 @@
         ],
         "valueQuantity": {
           "value": 34.3,
-          "unit": "Kg/m\u00b2"
+          "unit": "Kg/m²"
         }
       }
     },
@@ -25813,7 +25813,7 @@
         ],
         "valueQuantity": {
           "value": 34.3,
-          "unit": "Kg/m\u00b2"
+          "unit": "Kg/m²"
         }
       }
     },
@@ -26034,7 +26034,7 @@
         ],
         "valueQuantity": {
           "value": 34.3,
-          "unit": "Kg/m\u00b2"
+          "unit": "Kg/m²"
         }
       }
     },
@@ -26255,7 +26255,7 @@
         ],
         "valueQuantity": {
           "value": 34.3,
-          "unit": "Kg/m\u00b2"
+          "unit": "Kg/m²"
         }
       }
     },
@@ -26432,7 +26432,7 @@
         ],
         "valueQuantity": {
           "value": 32.82,
-          "unit": "Kg/m\u00b2"
+          "unit": "Kg/m²"
         }
       }
     },
@@ -27595,7 +27595,7 @@
         ],
         "valueQuantity": {
           "value": 24,
-          "unit": "Kg/m\u00b2"
+          "unit": "Kg/m²"
         }
       }
     },
@@ -27870,7 +27870,7 @@
         ],
         "valueQuantity": {
           "value": 24,
-          "unit": "Kg/m\u00b2"
+          "unit": "Kg/m²"
         }
       }
     },
@@ -28420,7 +28420,7 @@
         ],
         "valueQuantity": {
           "value": 18,
-          "unit": "Kg/m\u00b2"
+          "unit": "Kg/m²"
         }
       }
     },
@@ -28587,7 +28587,7 @@
         ],
         "valueQuantity": {
           "value": 50,
-          "unit": "Kg/m\u00b2"
+          "unit": "Kg/m²"
         }
       }
     },
@@ -59696,7 +59696,7 @@
             "reference": "Organization/0100000000000000_1750000000000000"
           }
         ],
-        "comment": "Clinical summary: Patient presented for ongoing monitoring / supply of oral contraception. Patient reported no contraindications and was supplied with 3 months of Combined Pill\r\nInformation and advice given: &#39;Take pills regularly&#39;. Individual was informed about the superior effectiveness of LARC. Individual was provided with written information or a link to a trusted online resource to support safe, effective COC use. An explanation of the mode of action, side effects and benefits of the medicine. Advice was given about the risks of the medication including failure rates and serious side effects and the actions to be taken noting that the risks of using COC could outweigh the benefits. Individual was advised when, in the event of serious side-effects, they should stop taking the COC and seek medical help urgently if they experience calf swelling, heat or pain in the calf, shortness of breath, chest pain or haemoptysis. The individual should seek advice if they experience their first ever migraine or develops aura with existing migraine. Individual was advised that current use of COC is associated with a small increased risk of breast cancer which reduces with time after stopping COC. Individual was advised that current use of COC is associated with an increased risk of VTE/ATE. Individual was should be advised that current use of COC for more than 5 years is associated with a small increased risk of cervical cancer; risk which reduces over time after stopping COC and is no longer increased by about 10 years after stopping. Individual was advised about reducing periods of immobility during travel. Individual was advised that trekking to high altitudes (above 4500m or 14500 feet) for periods of more than 1 week may be advised to consider switching to a safer alternative contraceptive method. Individual was advised to stop CHC and to switch to an alternative contraceptive method at least 4 weeks prior to planned major surgery or expected period of limited mobility. Individual was provided with contact details of local service/sexual health services, where necessary. Individual was provided with actions to take if vomiting or severe diarrhoea occurs and with missed pill advice, in line with FSRH guidance. Individual was advised that non-enzyme-inducing antibiotics do not interact with COC and if these are prescribed COC should be continued as normal with no additional precautions required. Individual was offered condoms and advice on safer sex practices and possible need for screening for sexually transmitted infections (STIs)\r\nExamination findings: Body mass index - observation 21.2 Kg/m\u00b2\r\n"
+        "comment": "Clinical summary: Patient presented for ongoing monitoring / supply of oral contraception. Patient reported no contraindications and was supplied with 3 months of Combined Pill\r\nInformation and advice given: &#39;Take pills regularly&#39;. Individual was informed about the superior effectiveness of LARC. Individual was provided with written information or a link to a trusted online resource to support safe, effective COC use. An explanation of the mode of action, side effects and benefits of the medicine. Advice was given about the risks of the medication including failure rates and serious side effects and the actions to be taken noting that the risks of using COC could outweigh the benefits. Individual was advised when, in the event of serious side-effects, they should stop taking the COC and seek medical help urgently if they experience calf swelling, heat or pain in the calf, shortness of breath, chest pain or haemoptysis. The individual should seek advice if they experience their first ever migraine or develops aura with existing migraine. Individual was advised that current use of COC is associated with a small increased risk of breast cancer which reduces with time after stopping COC. Individual was advised that current use of COC is associated with an increased risk of VTE/ATE. Individual was should be advised that current use of COC for more than 5 years is associated with a small increased risk of cervical cancer; risk which reduces over time after stopping COC and is no longer increased by about 10 years after stopping. Individual was advised about reducing periods of immobility during travel. Individual was advised that trekking to high altitudes (above 4500m or 14500 feet) for periods of more than 1 week may be advised to consider switching to a safer alternative contraceptive method. Individual was advised to stop CHC and to switch to an alternative contraceptive method at least 4 weeks prior to planned major surgery or expected period of limited mobility. Individual was provided with contact details of local service/sexual health services, where necessary. Individual was provided with actions to take if vomiting or severe diarrhoea occurs and with missed pill advice, in line with FSRH guidance. Individual was advised that non-enzyme-inducing antibiotics do not interact with COC and if these are prescribed COC should be continued as normal with no additional precautions required. Individual was offered condoms and advice on safer sex practices and possible need for screening for sexually transmitted infections (STIs)\r\nExamination findings: Body mass index - observation 21.2 Kg/m²\r\n"
       }
     },
     {
@@ -61186,7 +61186,7 @@
             "reference": "Organization/0100000000000000_1750000000000000"
           }
         ],
-        "comment": "Clinical summary: Patient presented for ongoing monitoring / supply of oral contraception. Patient reported no contraindications and was supplied with 3 months of Combined Pill\r\nInformation and advice given: &#39;Take pills regularly&#39;. Individual was informed about the superior effectiveness of LARC. Individual was provided with written information or a link to a trusted online resource to support safe, effective COC use. An explanation of the mode of action, side effects and benefits of the medicine. Advice was given about the risks of the medication including failure rates and serious side effects and the actions to be taken noting that the risks of using COC could outweigh the benefits. Individual was advised when, in the event of serious side-effects, they should stop taking the COC and seek medical help urgently if they experience calf swelling, heat or pain in the calf, shortness of breath, chest pain or haemoptysis. The individual should seek advice if they experience their first ever migraine or develops aura with existing migraine. Individual was advised that current use of COC is associated with a small increased risk of breast cancer which reduces with time after stopping COC. Individual was advised that current use of COC is associated with an increased risk of VTE/ATE. Individual was should be advised that current use of COC for more than 5 years is associated with a small increased risk of cervical cancer; risk which reduces over time after stopping COC and is no longer increased by about 10 years after stopping. Individual was advised about reducing periods of immobility during travel. Individual was advised that trekking to high altitudes (above 4500m or 14500 feet) for periods of more than 1 week may be advised to consider switching to a safer alternative contraceptive method. Individual was advised to stop CHC and to switch to an alternative contraceptive method at least 4 weeks prior to planned major surgery or expected period of limited mobility. Individual was provided with contact details of local service/sexual health services, where necessary. Individual was provided with actions to take if vomiting or severe diarrhoea occurs and with missed pill advice, in line with FSRH guidance. Individual was advised that non-enzyme-inducing antibiotics do not interact with COC and if these are prescribed COC should be continued as normal with no additional precautions required. Individual was offered condoms and advice on safer sex practices and possible need for screening for sexually transmitted infections (STIs)\r\nExamination findings: Body mass index - observation 21.2 Kg/m\u00b2\r\n"
+        "comment": "Clinical summary: Patient presented for ongoing monitoring / supply of oral contraception. Patient reported no contraindications and was supplied with 3 months of Combined Pill\r\nInformation and advice given: &#39;Take pills regularly&#39;. Individual was informed about the superior effectiveness of LARC. Individual was provided with written information or a link to a trusted online resource to support safe, effective COC use. An explanation of the mode of action, side effects and benefits of the medicine. Advice was given about the risks of the medication including failure rates and serious side effects and the actions to be taken noting that the risks of using COC could outweigh the benefits. Individual was advised when, in the event of serious side-effects, they should stop taking the COC and seek medical help urgently if they experience calf swelling, heat or pain in the calf, shortness of breath, chest pain or haemoptysis. The individual should seek advice if they experience their first ever migraine or develops aura with existing migraine. Individual was advised that current use of COC is associated with a small increased risk of breast cancer which reduces with time after stopping COC. Individual was advised that current use of COC is associated with an increased risk of VTE/ATE. Individual was should be advised that current use of COC for more than 5 years is associated with a small increased risk of cervical cancer; risk which reduces over time after stopping COC and is no longer increased by about 10 years after stopping. Individual was advised about reducing periods of immobility during travel. Individual was advised that trekking to high altitudes (above 4500m or 14500 feet) for periods of more than 1 week may be advised to consider switching to a safer alternative contraceptive method. Individual was advised to stop CHC and to switch to an alternative contraceptive method at least 4 weeks prior to planned major surgery or expected period of limited mobility. Individual was provided with contact details of local service/sexual health services, where necessary. Individual was provided with actions to take if vomiting or severe diarrhoea occurs and with missed pill advice, in line with FSRH guidance. Individual was advised that non-enzyme-inducing antibiotics do not interact with COC and if these are prescribed COC should be continued as normal with no additional precautions required. Individual was offered condoms and advice on safer sex practices and possible need for screening for sexually transmitted infections (STIs)\r\nExamination findings: Body mass index - observation 21.2 Kg/m²\r\n"
       }
     },
     {
@@ -61844,7 +61844,7 @@
             "reference": "Organization/0100000000000000_1750000000000000"
           }
         ],
-        "comment": "Clinical summary: Patient presented for ongoing monitoring / supply of oral contraception. Patient reported no contraindications and was supplied with 3 months of Combined Pill\r\nInformation and advice given: &#39;Take pills regularly&#39;. Individual was informed about the superior effectiveness of LARC. Individual was provided with written information or a link to a trusted online resource to support safe, effective COC use. An explanation of the mode of action, side effects and benefits of the medicine. Advice was given about the risks of the medication including failure rates and serious side effects and the actions to be taken noting that the risks of using COC could outweigh the benefits. Individual was advised when, in the event of serious side-effects, they should stop taking the COC and seek medical help urgently if they experience calf swelling, heat or pain in the calf, shortness of breath, chest pain or haemoptysis. The individual should seek advice if they experience their first ever migraine or develops aura with existing migraine. Individual was advised that current use of COC is associated with a small increased risk of breast cancer which reduces with time after stopping COC. Individual was advised that current use of COC is associated with an increased risk of VTE/ATE. Individual was should be advised that current use of COC for more than 5 years is associated with a small increased risk of cervical cancer; risk which reduces over time after stopping COC and is no longer increased by about 10 years after stopping. Individual was advised about reducing periods of immobility during travel. Individual was advised that trekking to high altitudes (above 4500m or 14500 feet) for periods of more than 1 week may be advised to consider switching to a safer alternative contraceptive method. Individual was advised to stop CHC and to switch to an alternative contraceptive method at least 4 weeks prior to planned major surgery or expected period of limited mobility. Individual was provided with contact details of local service/sexual health services, where necessary. Individual was provided with actions to take if vomiting or severe diarrhoea occurs and with missed pill advice, in line with FSRH guidance. Individual was advised that non-enzyme-inducing antibiotics do not interact with COC and if these are prescribed COC should be continued as normal with no additional precautions required. Individual was offered condoms and advice on safer sex practices and possible need for screening for sexually transmitted infections (STIs)\r\nExamination findings: Body mass index - observation 21.2 Kg/m\u00b2\r\n"
+        "comment": "Clinical summary: Patient presented for ongoing monitoring / supply of oral contraception. Patient reported no contraindications and was supplied with 3 months of Combined Pill\r\nInformation and advice given: &#39;Take pills regularly&#39;. Individual was informed about the superior effectiveness of LARC. Individual was provided with written information or a link to a trusted online resource to support safe, effective COC use. An explanation of the mode of action, side effects and benefits of the medicine. Advice was given about the risks of the medication including failure rates and serious side effects and the actions to be taken noting that the risks of using COC could outweigh the benefits. Individual was advised when, in the event of serious side-effects, they should stop taking the COC and seek medical help urgently if they experience calf swelling, heat or pain in the calf, shortness of breath, chest pain or haemoptysis. The individual should seek advice if they experience their first ever migraine or develops aura with existing migraine. Individual was advised that current use of COC is associated with a small increased risk of breast cancer which reduces with time after stopping COC. Individual was advised that current use of COC is associated with an increased risk of VTE/ATE. Individual was should be advised that current use of COC for more than 5 years is associated with a small increased risk of cervical cancer; risk which reduces over time after stopping COC and is no longer increased by about 10 years after stopping. Individual was advised about reducing periods of immobility during travel. Individual was advised that trekking to high altitudes (above 4500m or 14500 feet) for periods of more than 1 week may be advised to consider switching to a safer alternative contraceptive method. Individual was advised to stop CHC and to switch to an alternative contraceptive method at least 4 weeks prior to planned major surgery or expected period of limited mobility. Individual was provided with contact details of local service/sexual health services, where necessary. Individual was provided with actions to take if vomiting or severe diarrhoea occurs and with missed pill advice, in line with FSRH guidance. Individual was advised that non-enzyme-inducing antibiotics do not interact with COC and if these are prescribed COC should be continued as normal with no additional precautions required. Individual was offered condoms and advice on safer sex practices and possible need for screening for sexually transmitted infections (STIs)\r\nExamination findings: Body mass index - observation 21.2 Kg/m²\r\n"
       }
     },
     {
@@ -84961,15 +84961,11 @@
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Encounter/4000000000000000_c654170000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/5000000000000000_c8fb070000000000"
-            }
+            "valueReference": null
           }
         ]
       }
@@ -85040,15 +85036,11 @@
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Encounter/4000000000000000_8544170000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/9300000000000000_1e1e640000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
@@ -85064,15 +85056,11 @@
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/9300000000000000_882e640000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/9300000000000000_982e640000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
@@ -85082,33 +85070,23 @@
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "MedicationRequest/1000000000000000_af55c40000000000_order"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/5000000000000000_5bfb070000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/5000000000000000_4bfb070000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Encounter/4000000000000000_f454170000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "MedicationRequest/1000000000000000_ef55c40000000000_order"
-            }
+            "valueReference": null
           }
         ]
       }
@@ -85183,21 +85161,15 @@
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Encounter/4000000000000000_8544170000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/5000000000000000_e2eb070000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/9300000000000000_1e1e640000000000"
-            }
+            "valueReference": null
           }
         ]
       }
@@ -85267,63 +85239,43 @@
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Encounter/4000000000000000_8544170000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/4000000000000000_8544170000000000_T_2e1e640000000000_Cat_H_Nar"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/5000000000000000_b2eb070000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/4000000000000000_8544170000000000_T_2e1e640000000000_Cat_E_Nar"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/5000000000000000_a2eb070000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/4000000000000000_8544170000000000_T_2e1e640000000000_Cat_D_Nar"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/5000000000000000_92eb070000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Encounter/4000000000000000_d354170000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/5000000000000000_3bfb070000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Encounter/4000000000000000_7354170000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
@@ -85333,27 +85285,19 @@
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Encounter/4000000000000000_0754170000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/5000000000000000_f8fb070000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Encounter/4000000000000000_5354170000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "MedicationRequest/1000000000000000_9f55c40000000000_order"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
@@ -85369,21 +85313,15 @@
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Encounter/4000000000000000_9354170000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "MedicationRequest/9000000000000000_f770110000000000_plan"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/9300000000000000_982e640000000000"
-            }
+            "valueReference": null
           }
         ]
       }
@@ -85663,9 +85601,7 @@
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Encounter/4000000000000000_1554170000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
@@ -85891,123 +85827,83 @@
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Encounter/4000000000000000_d354170000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/5000000000000000_bafb070000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Encounter/4000000000000000_f354170000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/5000000000000000_3afb070000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/5000000000000000_4afb070000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Encounter/4000000000000000_6454170000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "AllergyIntolerance/5000000000000000_2afb070000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Encounter/4000000000000000_8454170000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/5000000000000000_a9fb070000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Encounter/4000000000000000_b454170000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/5000000000000000_79fb070000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Encounter/4000000000000000_c454170000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/5000000000000000_19fb070000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Encounter/4000000000000000_b354170000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "MedicationRequest/1000000000000000_cf55c40000000000_order"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Encounter/4000000000000000_e454170000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "MedicationRequest/1000000000000000_df55c40000000000_order"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Encounter/4000000000000000_f454170000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "MedicationRequest/1000000000000000_ef55c40000000000_order"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Encounter/4000000000000000_e354170000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
@@ -86017,15 +85913,11 @@
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Encounter/4000000000000000_2454170000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Encounter/4000000000000000_3454170000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
@@ -86041,123 +85933,83 @@
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Encounter/4000000000000000_5454170000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/9300000000000000_392e640000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Encounter/4000000000000000_7454170000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/4000000000000000_7454170000000000_T_692e640000000000_Cat_H_Nar"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/5000000000000000_1afb070000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/4000000000000000_7454170000000000_T_692e640000000000_Cat_E_Nar"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/BP-e9fb070000000000-f9fb070000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/4000000000000000_7454170000000000_T_692e640000000000_Cat_D_Nar"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/5000000000000000_b9fb070000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "AllergyIntolerance/b000000000000000_550c000000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Encounter/4000000000000000_9454170000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/BP-89fb070000000000-99fb070000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Encounter/4000000000000000_a454170000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Encounter/4000000000000000_2554170000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Encounter/4000000000000000_0554170000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/5d00000000000000_dbd9000000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/5d00000000000000_cbd9000000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Immunization/b100000000000000_4b752a0000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Immunization/b100000000000000_3b752a0000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Immunization/b100000000000000_2b752a0000000000"
-            }
+            "valueReference": null
           }
         ]
       }
@@ -86294,75 +86146,51 @@
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Encounter/4000000000000000_7454170000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/4000000000000000_7454170000000000_T_792e640000000000_Cat_H_Nar"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/5000000000000000_0afb070000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/4000000000000000_7454170000000000_T_792e640000000000_Cat_E_Nar"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/5000000000000000_d9fb070000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/5000000000000000_c9fb070000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/4000000000000000_7454170000000000_T_692e640000000000_Cat_H_Nar"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/5000000000000000_1afb070000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/4000000000000000_7454170000000000_T_692e640000000000_Cat_E_Nar"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/BP-e9fb070000000000-f9fb070000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/4000000000000000_7454170000000000_T_692e640000000000_Cat_D_Nar"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/5000000000000000_b9fb070000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
@@ -86372,81 +86200,55 @@
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Encounter/4000000000000000_b454170000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/5000000000000000_59fb070000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/5000000000000000_49fb070000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/5000000000000000_79fb070000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/5000000000000000_69fb070000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/5000000000000000_29fb070000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/5000000000000000_39fb070000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Encounter/4000000000000000_c654170000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/5000000000000000_c8fb070000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Encounter/4000000000000000_a654170000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/5000000000000000_68fb070000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Encounter/4000000000000000_e654170000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/5000000000000000_d8fb070000000000"
-            }
+            "valueReference": null
           }
         ]
       }
@@ -86521,15 +86323,11 @@
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Encounter/4000000000000000_f454170000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "MedicationRequest/1000000000000000_ef55c40000000000_order"
-            }
+            "valueReference": null
           }
         ]
       }
@@ -86737,15 +86535,11 @@
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Encounter/4000000000000000_f454170000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "MedicationRequest/1000000000000000_ef55c40000000000_order"
-            }
+            "valueReference": null
           }
         ]
       }
@@ -86882,9 +86676,7 @@
         "extension": [
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-ActualProblem-1",
-            "valueReference": {
-              "reference": "Observation/5000000000000000_0bdb070000000000"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedProblemHeader-1",
@@ -87416,7 +87208,7 @@
             ]
           }
         ],
-        "description": "Special Characters !'@\u00a3$%^&*()_+-={}[]:\"|;'\\<>?,./",
+        "description": "Special Characters !'@£$%^&*()_+-={}[]:\"|;'\\<>?,./",
         "note": [
           {
             "text": "Mode:Written"
@@ -88248,57 +88040,39 @@
         "extension": [
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-ActualProblem-1",
-            "valueReference": {
-              "reference": "Observation/1DBFC8C2-3321-414F-861D-D094799EF9DC"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Encounter/472F4B2D-83A3-4E4D-B9D0-079B16CA9009"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "List/472F4B2D-83A3-4E4D-B9D0-079B16CA9009-PG0"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/8CA13A8E-9267-40D2-B404-CC380A51D27C"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/0D6E6278-3800-4D19-9E5C-DF5A184EDB3C"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/3D30687C-0E16-42A3-9249-50B96C1846C1"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/264B2B2D-A597-4EFB-A6E5-A3FEA20922D1"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/2DBE0A47-1080-4CC3-BDD7-158B9757B070"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
-            "valueReference": {
-              "reference": "Observation/CD47BD98-18AC-49B8-A9B4-E9B3373A66D8"
-            }
+            "valueReference": null
           },
           {
             "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedClinicalContent-1",
@@ -88353,9 +88127,7 @@
         "subject": {
           "reference": "Patient/e2f6100000000000"
         },
-        "context": {
-          "reference": "Encounter/472F4B2D-83A3-4E4D-B9D0-079B16CA9009"
-        },
+        "context": null,
         "onsetDateTime": "2020-12-14T10:18:00+00:00",
         "abatementDateTime": "2021-07-15",
         "assertedDate": "2020-12-14T10:25:06.1+00:00",
