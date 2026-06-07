@@ -403,3 +403,37 @@ export function validateBundle(bundle: fhir3.Bundle): ValidationResult {
 
 // Backward-compat alias
 export const validateMedicationsBundle = validateBundle
+
+// Remove all unresolvable references from a bundle.
+// Returns the cleaned bundle and the number of reference strings removed.
+// Local contained refs (#id) and absolute URLs (http/https/urn) are left untouched.
+export function cleanDanglingRefs(bundle: fhir3.Bundle): { bundle: fhir3.Bundle; removedCount: number } {
+  const index = buildReferenceIndex(bundle)
+  let removedCount = 0
+
+  function clean(obj: unknown): unknown {
+    if (!obj || typeof obj !== 'object') return obj
+    if (Array.isArray(obj)) {
+      return (obj as unknown[]).map(clean).filter(item => item !== null)
+    }
+    const record = obj as Record<string, unknown>
+    let refRemoved = false
+    if (typeof record.reference === 'string' && record.reference) {
+      const ref = record.reference
+      if (!ref.startsWith('#') && !/^https?:\/\/|^urn:/.test(ref) && !index.has(ref)) {
+        refRemoved = true
+        removedCount++
+      }
+    }
+    const result: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(record)) {
+      if (key === 'reference' && refRemoved) continue
+      result[key] = clean(value)
+    }
+    // Object was purely {reference: "..."} and ref was removed — signal parent to drop it
+    if (refRemoved && Object.keys(result).length === 0) return null
+    return result
+  }
+
+  return { bundle: clean(bundle) as fhir3.Bundle, removedCount }
+}

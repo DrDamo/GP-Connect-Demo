@@ -2,6 +2,7 @@ import type { ValidationResult } from '../fhir/types'
 
 interface Props {
   result: ValidationResult
+  onCleanRefs?: () => void
 }
 
 const severityConfig = {
@@ -10,9 +11,10 @@ const severityConfig = {
   info: { bg: 'bg-blue-50', border: 'border-blue-300', text: 'text-blue-800', icon: 'ℹ', badge: 'bg-nhs-blue-light text-white' },
 }
 
-export function ValidationPanel({ result }: Props) {
+export function ValidationPanel({ result, onCleanRefs }: Props) {
   const errors = result.issues.filter(i => i.severity === 'error')
   const warnings = result.issues.filter(i => i.severity === 'warning')
+  const danglingCount = warnings.filter(i => i.message.includes('does not resolve')).length
 
   return (
     <div className="space-y-3">
@@ -26,7 +28,7 @@ export function ValidationPanel({ result }: Props) {
             {result.valid ? 'Bundle is structurally valid' : 'Validation errors found'}
           </span>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {errors.length > 0 && (
             <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-nhs-red text-white">
               {errors.length} error{errors.length !== 1 ? 's' : ''}
@@ -39,6 +41,14 @@ export function ValidationPanel({ result }: Props) {
           )}
           {result.issues.length === 0 && (
             <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-nhs-green text-white">No issues</span>
+          )}
+          {danglingCount > 0 && onCleanRefs && (
+            <button
+              onClick={onCleanRefs}
+              className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-nhs-blue text-white hover:bg-nhs-blue/80 transition-colors"
+            >
+              Remove {danglingCount} dangling ref{danglingCount !== 1 ? 's' : ''} →
+            </button>
           )}
         </div>
       </div>

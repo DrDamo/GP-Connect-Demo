@@ -7,7 +7,7 @@ import { ClinicalView } from './components/clinical/ClinicalView'
 import { InspectorView } from './components/InspectorView'
 import { BuilderView } from './builder/views/BuilderView'
 import { parseBundle, normalizePastedJson } from './fhir/parser'
-import { validateMedicationsBundle } from './fhir/validator'
+import { validateMedicationsBundle, cleanDanglingRefs } from './fhir/validator'
 import { extractMedications } from './fhir/medications'
 import { extractAllergies } from './fhir/allergies'
 import { extractProblems } from './fhir/problems'
@@ -407,7 +407,16 @@ export default function App() {
 
             {tab === 'validation' && (
               <div className="bg-white rounded-lg border border-nhs-grey-4 p-4">
-                <ValidationPanel result={loaded.validation} />
+                <ValidationPanel
+                  result={loaded.validation}
+                  onCleanRefs={() => {
+                    const parsed = parseBundle(loaded.source)
+                    if (!parsed.ok) return
+                    const { bundle: cleaned } = cleanDanglingRefs(parsed.data)
+                    handleLoad(JSON.stringify(cleaned, null, 2), loaded.filename)
+                    setTab('validation')
+                  }}
+                />
               </div>
             )}
           </div>
