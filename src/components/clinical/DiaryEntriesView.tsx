@@ -15,26 +15,17 @@ interface Props {
 }
 
 const COLUMNS: DomainColumn<GpConnectDiaryEntry>[] = [
-  { label: 'Date', render: item => item.date ?? 'Unknown' },
-  {
-    label: 'Description',
-    render: item => (
-      <div>
-        <div className="font-medium text-nhs-grey-1">{item.description}</div>
-        {item.snomedCode && (
-          <div className="text-xs text-nhs-grey-3 font-mono mt-0.5">{item.snomedCode}</div>
-        )}
-      </div>
-    ),
-  },
-  { label: 'Clinician', render: item => item.clinician ?? '—' },
+  { label: 'Recorded date', className: 'w-32', render: item => item.date ?? 'Unknown' },
+  { label: 'Start date',    className: 'w-32', render: item => item.occurrenceStart ?? '—' },
+  { label: 'Description',  render: item => <span className="font-medium text-nhs-grey-1">{item.description}</span> },
   {
     label: 'Priority',
+    className: 'w-28',
     render: item => item.priority
       ? <StatusBadge value={item.priority} />
       : <span className="text-nhs-grey-3">—</span>,
   },
-  { label: 'Status', render: item => <StatusBadge value={item.status} /> },
+  { label: 'Status', className: 'w-28', render: item => <StatusBadge value={item.status} /> },
 ]
 
 function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
@@ -72,13 +63,7 @@ function DiaryEntryDetail({ entry, bundle, onJumpToSource, onJumpToRecord }: { e
         {entry.snomedCode && (
           <DetailRow label="SNOMED code" value={<span className="font-mono">{entry.snomedCode}</span>} />
         )}
-        <DetailRow label="Date" value={entry.date} />
-        {entry.occurrenceStart && (
-          <DetailRow label="Occurrence start" value={entry.occurrenceStart} />
-        )}
-        {entry.occurrenceEnd && entry.occurrenceEnd !== entry.occurrenceStart && (
-          <DetailRow label="Occurrence end" value={entry.occurrenceEnd} />
-        )}
+        <DetailRow label="Recorded date" value={entry.date} />
         <DetailRow label="Clinician" value={
           entry.clinician
             ? entry.clinicianId
@@ -86,6 +71,12 @@ function DiaryEntryDetail({ entry, bundle, onJumpToSource, onJumpToRecord }: { e
               : entry.clinician
             : undefined
         } />
+        {entry.occurrenceStart && (
+          <DetailRow label="Occurrence start" value={entry.occurrenceStart} />
+        )}
+        {entry.occurrenceEnd && (
+          <DetailRow label="Occurrence end" value={entry.occurrenceEnd} />
+        )}
         {entry.intent && (
           <DetailRow label="Intent" value={<StatusBadge value={entry.intent} />} />
         )}

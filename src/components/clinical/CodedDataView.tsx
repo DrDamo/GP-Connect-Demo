@@ -35,9 +35,6 @@ const COLUMNS: DomainColumn<GpConnectCodedDataItem>[] = [
             {item.category}
           </span>
         )}
-        {item.snomedCode && (
-          <div className="font-mono text-[10px] text-nhs-grey-3 mt-0.5">{item.snomedCode}</div>
-        )}
       </div>
     ),
   },
@@ -70,8 +67,9 @@ function CodedDataDetail({ item, bundle, onJumpToSource, onJumpToRecord }: { ite
   const toggle = (id: string) => setOpenResourceId(prev => prev === id ? null : id)
 
   const refs = [
-    item.performerId  ? { type: 'Practitioner' as const, id: item.performerId,  label: 'Performer' } : null,
-    item.encounterId  ? { type: 'Encounter'    as const, id: item.encounterId,  label: 'Encounter' } : null,
+    item.performerId    ? { type: 'Practitioner' as const, id: item.performerId,    label: 'Performer'    } : null,
+    item.organisationId ? { type: 'Organisation' as const, id: item.organisationId, label: 'Organisation' } : null,
+    item.encounterId    ? { type: 'Encounter'    as const, id: item.encounterId,    label: 'Encounter'    } : null,
   ].filter((r): r is NonNullable<typeof r> => r !== null)
 
   const valueText = [item.value, item.unit].filter(Boolean).join(' ') || undefined
@@ -98,6 +96,13 @@ function CodedDataDetail({ item, bundle, onJumpToSource, onJumpToRecord }: { ite
             ? item.performerId
               ? <ReferenceChip label={item.performer} onClick={() => toggle(item.performerId!)} active={openResourceId === item.performerId} />
               : item.performer
+            : undefined
+        } />
+        <DetailRow label="Organisation" value={
+          item.organisation
+            ? item.organisationId
+              ? <ReferenceChip label={item.organisation} onClick={() => toggle(item.organisationId!)} active={openResourceId === item.organisationId} />
+              : item.organisation
             : undefined
         } />
       </div>

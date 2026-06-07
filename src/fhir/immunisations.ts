@@ -3,13 +3,7 @@ import { getEntries, formatDate, resolvePractitionerRef, getExtensionValue, extr
 
 export function extractImmunisations(bundle: fhir3.Bundle): GpConnectImmunisation[] {
   return getEntries<fhir3.Immunization>(bundle, 'Immunization')
-    .sort((a, b) => {
-      const recA = getExtensionValue(a.extension, 'Extension-CareConnect-DateRecorded-1')
-      const recB = getExtensionValue(b.extension, 'Extension-CareConnect-DateRecorded-1')
-      const keyA = fhirDateKey((recA?.valueDateTime ?? recA?.valueDate ?? a.date) as string | undefined)
-      const keyB = fhirDateKey((recB?.valueDateTime ?? recB?.valueDate ?? b.date) as string | undefined)
-      return keyB.localeCompare(keyA)
-    })
+    .sort((a, b) => fhirDateKey(b.date).localeCompare(fhirDateKey(a.date)))
     .map(resource => {
     const cast = resource as unknown as Record<string, unknown>
 
@@ -18,9 +12,9 @@ export function extractImmunisations(bundle: fhir3.Bundle): GpConnectImmunisatio
     const vpCC = vpExt?.valueCodeableConcept as fhir3.CodeableConcept | undefined
     const vaccinationProcedureCode = extractSnomedCode(vpCC?.coding)
     const vpSnomedCoding = vpCC?.coding?.find(c => c.system === 'http://snomed.info/sct') ?? vpCC?.coding?.[0]
-    // display = clinical SNOMED term (for detail); text = short label (for summary fallback)
+    // display = clinical SNOMED term (for detail); text = short label including dose number
     const vaccinationProcedureDisplay = vpSnomedCoding?.display
-    const vaccinationProcedureText = vpCC?.text ?? vaccinationProcedureDisplay
+    const vaccinationProcedureText = vpCC?.text
 
     // Date recorded extension (distinct from date given)
     const dateRecordedExt = getExtensionValue(resource.extension, 'Extension-CareConnect-DateRecorded-1')
@@ -66,10 +60,11 @@ export function extractImmunisations(bundle: fhir3.Bundle): GpConnectImmunisatio
 
     return {
       id: resource.id ?? crypto.randomUUID(),
-      vaccine: resource.vaccineCode?.text ?? vaccinationProcedureText ?? vaccineCodings?.[0]?.display ?? 'Unknown',
+      vaccine: resource.vaccineCode?.text ?? vaccineCodings?.[0]?.display ?? 'Unknown',
       snomedCode,
       vaccinationProcedureCode,
       vaccinationProcedureDisplay,
+      vaccinationProcedureText,
       vaccineCodeDisplay: vaccineCodings?.[0]?.display,
       dateGiven: formatDate(resource.date),
       dateRecorded,

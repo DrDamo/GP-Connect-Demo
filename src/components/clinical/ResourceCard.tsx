@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
-import type { GpConnectPractitioner, GpConnectOrganisation, GpConnectHealthcareService, GpConnectLocation, GpConnectConsultation, GpConnectFhirMedication } from '../../fhir/types'
+import type { GpConnectPractitioner, GpConnectOrganisation, GpConnectHealthcareService, GpConnectLocation, GpConnectConsultation, GpConnectFhirMedication, GpConnectDocument } from '../../fhir/types'
 import { type DomainId } from './domains'
 
 export type ResourceRef = {
-  type: 'Practitioner' | 'Organisation' | 'HealthcareService' | 'Location' | 'Encounter' | 'Medication'
+  type: 'Practitioner' | 'Organisation' | 'HealthcareService' | 'Location' | 'Encounter' | 'Medication' | 'Document'
   id: string
   label: string
 }
@@ -15,6 +15,7 @@ const RECORD_DOMAIN: Record<ResourceRef['type'], DomainId | null> = {
   HealthcareService: 'supporting-resources',
   Medication:        'supporting-resources',
   Location:          'supporting-resources',
+  Document:          'documents',
 }
 
 interface ResourceCardProps {
@@ -25,6 +26,7 @@ interface ResourceCardProps {
   locations?: GpConnectLocation[]
   consultations?: GpConnectConsultation[]
   fhirMedications?: GpConnectFhirMedication[]
+  documents?: GpConnectDocument[]
   onJumpToSource?: (id: string) => void
   onJumpToRecord?: (domain: DomainId, id: string) => void
   forceOpen?: boolean
@@ -110,6 +112,22 @@ function LocationDetail({ data: l, onJumpToSource, onJumpToRecord }: DetailProps
   )
 }
 
+function DocumentDetail({ data: d, onJumpToSource, onJumpToRecord }: DetailProps<GpConnectDocument>) {
+  return (
+    <div className="space-y-1">
+      <Row label="Type"        value={d.type} />
+      <Row label="Description" value={d.description} />
+      <Row label="Date"        value={d.date} />
+      <Row label="Status"      value={d.status} />
+      <Row label="Author"      value={d.author} />
+      <Row label="Custodian"   value={d.custodian} />
+      <Row label="MIME type"   value={d.mimeType} />
+      <Row label="Resource ID" value={d.id} />
+      <RecordLinks id={d.id} onJumpToSource={onJumpToSource} onJumpToRecord={onJumpToRecord} recordLabel="View in Documents" />
+    </div>
+  )
+}
+
 function MedicationResourceDetail({ data: m, onJumpToSource, onJumpToRecord }: DetailProps<GpConnectFhirMedication>) {
   return (
     <div className="space-y-1">
@@ -134,7 +152,7 @@ function EncounterDetail({ data: c, onJumpToSource, onJumpToRecord }: DetailProp
   )
 }
 
-export function ResourceCard({ ref_, practitioners, organisations, healthcareServices, locations, consultations, fhirMedications, onJumpToSource, onJumpToRecord, forceOpen }: ResourceCardProps) {
+export function ResourceCard({ ref_, practitioners, organisations, healthcareServices, locations, consultations, fhirMedications, documents, onJumpToSource, onJumpToRecord, forceOpen }: ResourceCardProps) {
   const [open, setOpen] = useState(false)
   useEffect(() => { if (forceOpen) setOpen(true) }, [forceOpen])
 
@@ -193,6 +211,12 @@ export function ResourceCard({ ref_, practitioners, organisations, healthcareSer
     if (m) {
       summary = m.name
       detail = <MedicationResourceDetail data={m} onJumpToSource={onJumpToSource} onJumpToRecord={jumpToRecord} />
+    }
+  } else if (ref_.type === 'Document') {
+    const d = (documents ?? []).find(x => x.id === ref_.id)
+    if (d) {
+      summary = d.description ?? d.type ?? ref_.id
+      detail = <DocumentDetail data={d} onJumpToSource={onJumpToSource} onJumpToRecord={jumpToRecord} />
     }
   } else {
     const h = healthcareServices.find(x => x.id === ref_.id)

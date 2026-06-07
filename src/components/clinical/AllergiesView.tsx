@@ -17,14 +17,7 @@ interface Props {
 const COLUMNS: DomainColumn<GpConnectAllergy>[] = [
   {
     label: 'Causative agent',
-    render: item => (
-      <div>
-        <div className="font-medium text-nhs-grey-1">{item.causativeAgent}</div>
-        {item.snomedCode && (
-          <div className="text-xs text-nhs-grey-3 font-mono mt-0.5">{item.snomedCode}</div>
-        )}
-      </div>
-    ),
+    render: item => <div className="font-medium text-nhs-grey-1">{item.causativeAgent}</div>,
   },
   { label: 'Reaction', render: item => item.reaction ?? '—' },
   {
@@ -41,7 +34,7 @@ const COLUMNS: DomainColumn<GpConnectAllergy>[] = [
       ? item.category.charAt(0).toUpperCase() + item.category.slice(1)
       : '—',
   },
-  { label: 'Date recorded', className: 'w-32', render: item => item.dateRecorded ?? 'Unknown' },
+  { label: 'Asserted date', className: 'w-32', render: item => item.dateRecorded ?? 'Unknown' },
   { label: 'Status', className: 'w-24', render: item => <StatusBadge value={item.status} /> },
 ]
 
@@ -87,8 +80,8 @@ function AllergyDetail({ allergy, bundle, onJumpToSource, onJumpToRecord }: { al
         {allergy.snomedCode && (
           <DetailRow label="SNOMED code" value={<span className="font-mono">{allergy.snomedCode}</span>} />
         )}
-        <DetailRow label="Onset date"    value={allergy.onsetDate} />
-        <DetailRow label="Date recorded" value={allergy.dateRecorded} />
+        <DetailRow label="Onset date"     value={allergy.onsetDate} />
+        <DetailRow label="Asserted date"  value={allergy.dateRecorded} />
         <DetailRow label="Category" value={allergy.category
           ? allergy.category.charAt(0).toUpperCase() + allergy.category.slice(1)
           : undefined}
@@ -144,65 +137,76 @@ function AllergyDetail({ allergy, bundle, onJumpToSource, onJumpToRecord }: { al
   )
 }
 
-function AllergySection({
-  title, description, allergies, selectedId, onSelect, onJumpToSource, onJumpToRecord, bundle,
-}: {
-  title: string; description: string; allergies: GpConnectAllergy[]
-  selectedId?: string; onSelect?: (id: string) => void; onJumpToSource?: (id: string) => void
-  onJumpToRecord?: (domain: DomainId, id: string) => void
-  bundle: GpConnectBundle
-}) {
-  if (allergies.length === 0) return null
-  return (
-    <div className="space-y-2">
-      <div className="border-b border-nhs-grey-4 pb-1">
-        <h3 className="text-sm font-semibold text-nhs-grey-1">{title}</h3>
-        <p className="text-xs text-nhs-grey-3">{description}</p>
-      </div>
-      <DomainTable
-        columns={COLUMNS}
-        items={allergies}
-        selectedId={selectedId}
-        onSelect={onSelect}
-        emptyMessage="No records in this section"
-        expandedContent={allergy => <AllergyDetail allergy={allergy} bundle={bundle} onJumpToSource={onJumpToSource} onJumpToRecord={onJumpToRecord} />}
-      />
-    </div>
-  )
-}
-
 export function AllergiesView({ bundle, selectedId, onSelect, onJumpToSource, onJumpToRecord }: Props) {
+  const [activeTab, setActiveTab] = useState<'active' | 'resolved'>('active')
   const { allergies } = bundle
   const active   = allergies.filter(a => a.status === 'active')
   const resolved = allergies.filter(a => a.status !== 'active')
   const total    = allergies.length
+  const shown    = activeTab === 'active' ? active : resolved
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-base font-semibold text-nhs-grey-1">Allergies &amp; Adverse Reactions</h2>
           <p className="text-xs text-nhs-grey-3 mt-0.5">
-            {total} record{total !== 1 ? 's' : ''} —{' '}
-            {active.length} active · {resolved.length} resolved
+            {total} record{total !== 1 ? 's' : ''}
             {onSelect ? ' · click a row to expand' : ''}
           </p>
         </div>
         <span className="px-2 py-1 bg-nhs-blue text-white text-xs font-semibold rounded">GP Connect STU3</span>
       </div>
 
-      <AllergySection
-        title="Active"
-        description="Current active allergies and adverse reactions"
-        allergies={active}
-        selectedId={selectedId} onSelect={onSelect} onJumpToSource={onJumpToSource} onJumpToRecord={onJumpToRecord} bundle={bundle}
-      />
-      <AllergySection
-        title="Resolved"
-        description="Previously recorded allergies that have resolved"
-        allergies={resolved}
-        selectedId={selectedId} onSelect={onSelect} onJumpToSource={onJumpToSource} onJumpToRecord={onJumpToRecord} bundle={bundle}
-      />
+      {/* Tabs */}
+      <div className="flex border-b border-nhs-grey-4">
+        {(['active', 'resolved'] as const).map(tab => {
+          const count = tab === 'active' ? active.length : resolved.length
+          const isActive = activeTab === tab
+          return (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={[
+                'px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors',
+                isActive
+                  ? 'border-nhs-blue text-nhs-blue'
+                  : 'border-transparent text-nhs-grey-3 hover:text-nhs-grey-1 hover:border-nhs-grey-4',
+              ].join(' ')}
+            >
+              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              <span className={[
+                'ml-1.5 px-1.5 py-0.5 rounded-full text-xs font-semibold',
+                isActive ? 'bg-nhs-blue text-white' : 'bg-nhs-grey-5 text-nhs-grey-2',
+              ].join(' ')}>
+                {count}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+
+      {shown.length === 0 ? (
+        <p className="text-sm text-nhs-grey-3 text-center py-8">
+          No {activeTab} allergy records found
+        </p>
+      ) : (
+        <DomainTable
+          columns={COLUMNS}
+          items={shown}
+          selectedId={selectedId}
+          onSelect={onSelect}
+          emptyMessage="No records"
+          expandedContent={allergy => (
+            <AllergyDetail
+              allergy={allergy}
+              bundle={bundle}
+              onJumpToSource={onJumpToSource}
+              onJumpToRecord={onJumpToRecord}
+            />
+          )}
+        />
+      )}
 
       {total === 0 && (
         <p className="text-sm text-nhs-grey-3 text-center py-8">No allergy records found in this bundle</p>

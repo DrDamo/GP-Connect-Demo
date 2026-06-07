@@ -1,4 +1,4 @@
-import type { GpConnectPractitioner, GpConnectOrganisation, GpConnectHealthcareService, GpConnectLocation, GpConnectConsultation, GpConnectFhirMedication } from '../../fhir/types'
+import type { GpConnectPractitioner, GpConnectOrganisation, GpConnectHealthcareService, GpConnectLocation, GpConnectConsultation, GpConnectFhirMedication, GpConnectDocument } from '../../fhir/types'
 import { ResourceCard, type ResourceRef } from './ResourceCard'
 import { type DomainId } from './domains'
 
@@ -10,18 +10,20 @@ interface ReferencedResourcesProps {
   locations?: GpConnectLocation[]
   consultations?: GpConnectConsultation[]
   fhirMedications?: GpConnectFhirMedication[]
+  documents?: GpConnectDocument[]
   onJumpToSource?: (id: string) => void
   onJumpToRecord?: (domain: DomainId, id: string) => void
   highlightedId?: string
 }
 
-export function ReferencedResources({ refs, practitioners, organisations, healthcareServices, locations, consultations, fhirMedications, onJumpToSource, onJumpToRecord, highlightedId }: ReferencedResourcesProps) {
+export function ReferencedResources({ refs, practitioners, organisations, healthcareServices, locations, consultations, fhirMedications, documents, onJumpToSource, onJumpToRecord, highlightedId }: ReferencedResourcesProps) {
   const resolved = refs.filter(r => {
     if (r.type === 'Practitioner') return !!r.id
     if (r.type === 'Organisation') return organisations.some(o => o.id === r.id)
     if (r.type === 'Location') return (locations ?? []).some(l => l.id === r.id)
     if (r.type === 'Encounter') return !!r.id
     if (r.type === 'Medication') return (fhirMedications ?? []).some(m => m.id === r.id)
+    if (r.type === 'Document') return (documents ?? []).some(d => d.id === r.id)
     return healthcareServices.some(h => h.id === r.id)
   })
 
@@ -60,6 +62,7 @@ export function ReferencedResources({ refs, practitioners, organisations, health
           locations={locations}
           consultations={consultations}
           fhirMedications={fhirMedications}
+          documents={documents}
           onJumpToSource={onJumpToSource}
           onJumpToRecord={onJumpToRecord}
           forceOpen={highlightedId === r.id}

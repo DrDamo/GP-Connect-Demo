@@ -194,6 +194,7 @@ export interface GpConnectImmunisation {
   snomedCode?: string
   vaccinationProcedureCode?: string
   vaccinationProcedureDisplay?: string
+  vaccinationProcedureText?: string
   vaccineCodeDisplay?: string
   dateGiven?: string
   dateRecorded?: string
@@ -237,7 +238,17 @@ export interface GpConnectInvestigationResult {
   referenceRange?: string
   interpretation?: string
   comment?: string
+  isSubHeader?: boolean
   components?: GpConnectObservationComponent[]
+}
+
+export interface GpConnectTestGroup {
+  id: string
+  name: string
+  snomedCode?: string
+  comment?: string
+  date?: string
+  results: GpConnectInvestigationResult[]
 }
 
 export interface GpConnectInvestigation {
@@ -245,6 +256,11 @@ export interface GpConnectInvestigation {
   date?: string
   name: string
   snomedCode?: string
+  status?: string
+  category?: string
+  filingComment?: string
+  filingCommentDate?: string
+  filingCommentPerformer?: string
   // First-result shortcuts kept for table column display
   result?: string
   unit?: string
@@ -253,7 +269,22 @@ export interface GpConnectInvestigation {
   performer?: string
   performerId?: string
   encounterId?: string
+  testGroups: GpConnectTestGroup[]
   results: GpConnectInvestigationResult[]
+}
+
+export interface GpConnectReferralRecipient {
+  id: string
+  type: 'Organisation' | 'HealthcareService' | 'Practitioner'
+  name?: string
+}
+
+export interface GpConnectReferralDocument {
+  id: string
+  title: string
+  description?: string
+  date?: string
+  status?: string
 }
 
 export interface GpConnectReferral {
@@ -261,6 +292,7 @@ export interface GpConnectReferral {
   date?: string
   recipient?: string
   recipientId?: string
+  recipientRefs: GpConnectReferralRecipient[]
   priority?: string
   reason?: string
   description?: string
@@ -268,6 +300,7 @@ export interface GpConnectReferral {
   requesterId?: string
   notes: string[]
   status: string
+  supportingDocs: GpConnectReferralDocument[]
 }
 
 export interface GpConnectDiaryNote {
@@ -306,6 +339,8 @@ export interface GpConnectCodedDataItem {
   interpretation?: string
   performer?: string
   performerId?: string
+  organisation?: string
+  organisationId?: string
   encounterId?: string
   components?: GpConnectObservationComponent[]
 }

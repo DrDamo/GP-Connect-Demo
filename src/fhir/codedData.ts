@@ -1,5 +1,5 @@
 import type { GpConnectCodedDataItem, GpConnectObservationComponent } from './types'
-import { getEntries, formatDate, extractSnomedCode, resolvePractitionerRef, extractId, fhirDateKey } from './utils'
+import { getEntries, formatDate, extractSnomedCode, resolvePractitionerRef, resolveReference, extractId, fhirDateKey } from './utils'
 
 type ObsLike = fhir3.Observation & {
   comment?: string
@@ -71,8 +71,25 @@ export function extractCodedData(bundle: fhir3.Bundle): GpConnectCodedDataItem[]
           }))
         : undefined
 
-      const performerRef = (Array.isArray(obs.performer) ? obs.performer[0] : obs.performer)?.reference
-      const { name: performer, id: performerId } = resolvePractitionerRef(bundle, performerRef)
+      const performers = (Array.isArray(obs.performer) ? obs.performer : obs.performer ? [obs.performer] : []) as Array<{ reference?: string; display?: string }>
+      let performer: string | undefined
+      let performerId: string | undefined
+      let organisation: string | undefined
+      let organisationId: string | undefined
+      for (const p of performers) {
+        const ref = p.reference
+        if (ref?.startsWith('Organization/') || ref?.startsWith('Organisation/')) {
+          const resolved = resolveReference(bundle, ref) as fhir3.Organization | undefined
+          organisation = resolved?.name ?? p.display
+          organisationId = extractId(ref)
+        } else if (ref) {
+          const { name, id } = resolvePractitionerRef(bundle, ref)
+          performer = name ?? p.display
+          performerId = id
+        } else if (p.display && !performer) {
+          performer = p.display
+        }
+      }
       const contextRef = (obs as unknown as { context?: { reference?: string } }).context?.reference
       const encounterId = extractId(contextRef)
 
@@ -94,6 +111,8 @@ export function extractCodedData(bundle: fhir3.Bundle): GpConnectCodedDataItem[]
         interpretation: interpretation || undefined,
         performer: performer || undefined,
         performerId: performerId || undefined,
+        organisation: organisation || undefined,
+        organisationId: organisationId || undefined,
         encounterId: encounterId || undefined,
         components,
       }

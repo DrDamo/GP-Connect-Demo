@@ -45,14 +45,7 @@ const ACTIVE_COLUMNS: DomainColumn<GpConnectProblem>[] = [
   { label: 'Start date',      className: 'w-28', render: item => item.startDate ?? 'Unknown' },
   {
     label: 'Problem',
-    render: item => (
-      <div>
-        <div className="font-medium text-nhs-grey-1">{item.problem}</div>
-        {item.snomedCode && (
-          <div className="text-xs text-nhs-grey-3 font-mono mt-0.5">{item.snomedCode}</div>
-        )}
-      </div>
-    ),
+    render: item => <span className="font-medium text-nhs-grey-1">{item.problem}</span>,
   },
   { label: 'Significance',    className: 'w-28', render: item => <SignificanceBadge value={item.significance} /> },
   { label: 'Clinical status', className: 'w-28', render: item => <StatusBadge value={item.clinicalStatus} /> },
@@ -62,14 +55,7 @@ const PAST_COLUMNS: DomainColumn<GpConnectProblem>[] = [
   { label: 'Start date',      className: 'w-28', render: item => item.startDate ?? 'Unknown' },
   {
     label: 'Problem',
-    render: item => (
-      <div>
-        <div className="font-medium text-nhs-grey-1">{item.problem}</div>
-        {item.snomedCode && (
-          <div className="text-xs text-nhs-grey-3 font-mono mt-0.5">{item.snomedCode}</div>
-        )}
-      </div>
-    ),
+    render: item => <span className="font-medium text-nhs-grey-1">{item.problem}</span>,
   },
   { label: 'Significance',    className: 'w-28', render: item => <SignificanceBadge value={item.significance} /> },
   { label: 'Clinical status', className: 'w-28', render: item => <StatusBadge value={item.clinicalStatus} /> },

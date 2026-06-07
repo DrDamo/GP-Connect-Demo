@@ -77,14 +77,10 @@ function MedicationRow({ med, record, selected, selectedIssueId, onSelect, onSel
       >
         <td className="py-2.5 px-3">
           <div className="font-medium text-nhs-grey-1 text-sm">{med.drugName}</div>
-          {med.snomedCode && (
-            <div className="text-xs text-nhs-grey-3 font-mono mt-0.5">{med.snomedCode}</div>
-          )}
         </td>
         <td className="py-2.5 px-3 text-sm text-nhs-grey-2">
           {med.dosageInstruction ?? [med.dose, med.frequency].filter(Boolean).join(' · ') ?? '—'}
         </td>
-        <td className="py-2.5 px-3 text-sm text-nhs-grey-2">{med.route ?? '—'}</td>
         <td className="py-2.5 px-3 text-sm text-nhs-grey-2">{med.startDate ?? 'Unknown'}</td>
         <td className="py-2.5 px-3 text-sm text-nhs-grey-2">{med.lastIssuedDate ?? 'Unknown'}</td>
         <td className="py-2.5 px-3">
@@ -211,7 +207,6 @@ function MedicationRow({ med, record, selected, selectedIssueId, onSelect, onSel
               <div className="mt-3 pt-3 border-t border-nhs-grey-4" onClick={e => e.stopPropagation()}>
                 <div className="grid grid-cols-2 gap-x-8 gap-y-1.5 text-sm">
                   <Detail label="Drug name"              value={med.drugName} />
-                  <Detail label="DM+D / SNOMED code"     value={med.snomedCode} mono />
                   <Detail label="Dosage instruction"     value={med.dosageInstruction} />
                   <Detail label="Route"                  value={med.route} />
                   <Detail label="Dose"                   value={med.dose} />
@@ -322,7 +317,6 @@ function MedicationsTable({ medications, record, selectedId, selectedIssueId, on
           <tr className="bg-nhs-grey-5 text-xs font-semibold text-nhs-grey-2 uppercase tracking-wide">
             <th className="py-2 px-3">Drug</th>
             <th className="py-2 px-3">Dose / Frequency</th>
-            <th className="py-2 px-3">Route</th>
             <th className="py-2 px-3">Start date</th>
             <th className="py-2 px-3">Last issued</th>
             <th className="py-2 px-3">Status</th>
