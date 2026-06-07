@@ -356,6 +356,47 @@ export function validateBundle(bundle: fhir3.Bundle): ValidationResult {
     }
   }
 
+  // ─── Dangling reference check ────────────────────────────────────────────────
+  // Walk every resource and collect all { reference: string } objects.
+  // Each ref must resolve to a bundle entry. Local contained refs (#id) are
+  // always skipped; absolute URLs (http/https/urn) are skipped as they point
+  // to external systems outside this bundle.
+
+  function collectRefs(obj: unknown, refs: Array<{ ref: string; path: string }>, path: string) {
+    if (!obj || typeof obj !== 'object') return
+    if (Array.isArray(obj)) {
+      obj.forEach((item, i) => collectRefs(item, refs, `${path}[${i}]`))
+      return
+    }
+    const record = obj as Record<string, unknown>
+    if (typeof record.reference === 'string' && record.reference) {
+      refs.push({ ref: record.reference, path })
+    }
+    for (const [key, value] of Object.entries(record)) {
+      if (key !== 'reference') collectRefs(value, refs, `${path}.${key}`)
+    }
+  }
+
+  for (const entry of bundle.entry ?? []) {
+    const r = entry.resource as AnyResource | undefined
+    if (!r) continue
+    const resourcePath = `${r.resourceType}/${r.id ?? '(no id)'}`
+    const refs: Array<{ ref: string; path: string }> = []
+    collectRefs(r, refs, resourcePath)
+    for (const { ref, path } of refs) {
+      if (ref.startsWith('#')) continue           // local contained — always valid
+      if (/^https?:\/\/|^urn:/.test(ref)) continue // external URL — out of scope
+      if (!resolves(ref, refIndex)) {
+        issues.push({
+          severity: 'warning',
+          message: `Reference "${ref}" does not resolve to any resource in this bundle`,
+          path,
+          resourceId: r.id,
+        })
+      }
+    }
+  }
+
   const hasErrors = issues.some(i => i.severity === 'error')
   return { valid: !hasErrors, issues, resourceCounts }
 }
