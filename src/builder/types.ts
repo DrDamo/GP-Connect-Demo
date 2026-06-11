@@ -61,6 +61,9 @@ export interface DraftMedication {
   _tempId: string
   drugName?: string
   snomedCode?: string
+  dmdCode?: string
+  dmdDisplay?: string
+  dmdType?: 'VMP' | 'AMP'
   prescriptionType?: 'acute' | 'repeat' | 'repeat-dispensing'
   status?: string
   dose?: string

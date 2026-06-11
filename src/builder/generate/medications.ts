@@ -47,20 +47,32 @@ function buildIssueDosage(issue: DraftMedicationIssue): fhir3.Dosage[] {
 function makeMedication(draft: DraftMedication, map: TempIdMap): { entry: fhir3.BundleEntry; id: string } {
   const { id, fullUrl } = map.entry(draft._tempId + '_med')
 
+  const codings: fhir3.Coding[] = []
+  if (draft.snomedCode || draft.drugName) {
+    codings.push({
+      system: 'http://snomed.info/sct',
+      ...(draft.snomedCode ? { code: draft.snomedCode } : {}),
+      ...(draft.drugName ? { display: draft.drugName } : {}),
+    })
+  }
+  if (draft.dmdCode) {
+    codings.push({
+      system: 'https://dmd.nhs.uk',
+      code: draft.dmdCode,
+      ...(draft.dmdDisplay ? { display: draft.dmdDisplay } : {}),
+    })
+  }
+
+  const displayText = draft.dmdDisplay ?? draft.drugName
+
   const resource: fhir3.Medication = {
     resourceType: 'Medication',
     id,
-    ...(draft.snomedCode || draft.drugName
+    ...(codings.length > 0
       ? {
           code: {
-            coding: [
-              {
-                system: 'http://snomed.info/sct',
-                ...(draft.snomedCode ? { code: draft.snomedCode } : {}),
-                ...(draft.drugName ? { display: draft.drugName } : {}),
-              },
-            ],
-            ...(draft.drugName ? { text: draft.drugName } : {}),
+            coding: codings,
+            ...(displayText ? { text: displayText } : {}),
           },
         }
       : {}),

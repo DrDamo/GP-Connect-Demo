@@ -61,26 +61,25 @@ interface ConfigModalProps {
 
 function ConfigModal({ onClose, onSaved }: ConfigModalProps) {
   const saved = loadConfig()
-  const [serverUrl, setServerUrl] = useState(saved.serverUrl ?? 'http://localhost:3000')
-  const [mode, setMode] = useState<'login' | 'paste'>('login')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  // Default to the local proxy; legacy users who pointed to a custom server keep their URL
+  const [serverUrl, setServerUrl] = useState(saved.serverUrl ?? 'http://localhost:3001')
+  // 'proxy' = NHS Terminology Proxy (no user token needed)
+  // 'token' = direct server with a bearer JWT
+  const [mode, setMode] = useState<'proxy' | 'token'>(saved.token ? 'token' : 'proxy')
   const [pastedToken, setPastedToken] = useState(saved.token ?? '')
   const [status, setStatus] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
-  const handleLogin = async () => {
+  const url = serverUrl.replace(/\/$/, '')
+
+  // Proxy mode: verify by hitting /api/health
+  const handleProxyConnect = async () => {
     setBusy(true)
     setStatus(null)
     try {
-      const res = await fetch(`${serverUrl}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.message ?? `HTTP ${res.status}`)
-      const cfg = { serverUrl, token: data.token }
+      const res = await fetch(`${url}/api/health`)
+      if (!res.ok) throw new Error(`Server returned HTTP ${res.status}`)
+      const cfg: SnomedConfig = { serverUrl: url, token: '' }
       saveConfig(cfg)
       onSaved(cfg)
     } catch (e) {
@@ -90,16 +89,17 @@ function ConfigModal({ onClose, onSaved }: ConfigModalProps) {
     }
   }
 
-  const handlePaste = async () => {
+  // Token mode: verify by attempting a test search with the supplied JWT
+  const handleTokenConnect = async () => {
     if (!pastedToken.trim()) { setStatus('Enter a token first'); return }
     setBusy(true)
     setStatus(null)
     try {
-      const res = await fetch(`${serverUrl}/api/snomed/search?q=test&limit=1`, {
+      const res = await fetch(`${url}/api/snomed/search?q=test&limit=1`, {
         headers: { Authorization: `Bearer ${pastedToken}` },
       })
       if (!res.ok) throw new Error(`Token rejected (HTTP ${res.status})`)
-      const cfg = { serverUrl, token: pastedToken }
+      const cfg: SnomedConfig = { serverUrl: url, token: pastedToken }
       saveConfig(cfg)
       onSaved(cfg)
     } catch (e) {
@@ -118,7 +118,7 @@ function ConfigModal({ onClose, onSaved }: ConfigModalProps) {
       <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl border border-nhs-grey-4 dark:border-nhs-grey-2 w-full max-w-md mx-4 p-5">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-semibold text-nhs-grey-1 dark:text-nhs-grey-5">
-            Connect to SNOMED Search
+            Connect to Terminology Server
           </h2>
           <button onClick={onClose} className="text-nhs-grey-3 hover:text-nhs-grey-1 dark:hover:text-nhs-grey-5">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -134,61 +134,43 @@ function ConfigModal({ onClose, onSaved }: ConfigModalProps) {
           <input
             className={inputCls}
             value={serverUrl}
-            onChange={e => setServerUrl(e.target.value.replace(/\/$/, ''))}
-            placeholder="http://localhost:3000"
+            onChange={e => setServerUrl(e.target.value)}
+            placeholder="http://localhost:3001"
           />
         </div>
 
         <div className="flex gap-2 mb-3">
           <button
-            onClick={() => setMode('login')}
-            className={`flex-1 py-1.5 rounded text-sm font-medium transition-colors ${mode === 'login' ? 'bg-nhs-blue text-white' : 'border border-nhs-grey-4 text-nhs-grey-2 hover:border-nhs-blue hover:text-nhs-blue'}`}
+            onClick={() => setMode('proxy')}
+            className={`flex-1 py-1.5 rounded text-sm font-medium transition-colors ${mode === 'proxy' ? 'bg-nhs-blue text-white' : 'border border-nhs-grey-4 text-nhs-grey-2 hover:border-nhs-blue hover:text-nhs-blue'}`}
           >
-            Login
+            NHS Proxy
           </button>
           <button
-            onClick={() => setMode('paste')}
-            className={`flex-1 py-1.5 rounded text-sm font-medium transition-colors ${mode === 'paste' ? 'bg-nhs-blue text-white' : 'border border-nhs-grey-4 text-nhs-grey-2 hover:border-nhs-blue hover:text-nhs-blue'}`}
+            onClick={() => setMode('token')}
+            className={`flex-1 py-1.5 rounded text-sm font-medium transition-colors ${mode === 'token' ? 'bg-nhs-blue text-white' : 'border border-nhs-grey-4 text-nhs-grey-2 hover:border-nhs-blue hover:text-nhs-blue'}`}
           >
-            Paste token
+            Bearer token
           </button>
         </div>
 
-        {mode === 'login' ? (
+        {mode === 'proxy' ? (
           <div className="space-y-2">
-            <div>
-              <label className="block text-xs font-medium text-nhs-grey-3 dark:text-nhs-grey-4 uppercase tracking-wide mb-0.5">Email</label>
-              <input
-                type="email"
-                className={inputCls}
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="user@example.com"
-                onKeyDown={e => e.key === 'Enter' && handleLogin()}
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-nhs-grey-3 dark:text-nhs-grey-4 uppercase tracking-wide mb-0.5">Password</label>
-              <input
-                type="password"
-                className={inputCls}
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleLogin()}
-              />
-            </div>
+            <p className="text-xs text-nhs-grey-3 dark:text-nhs-grey-4">
+              Use this mode when connecting to the NHS Terminology Proxy (<code>server/</code>). Credentials are managed server-side — no token needed here.
+            </p>
             <button
-              onClick={handleLogin}
-              disabled={busy || !email || !password}
-              className="w-full py-1.5 bg-nhs-blue text-white rounded text-sm font-medium hover:opacity-90 disabled:opacity-40 transition-opacity mt-1"
+              onClick={handleProxyConnect}
+              disabled={busy || !url}
+              className="w-full py-1.5 bg-nhs-blue text-white rounded text-sm font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
             >
-              {busy ? 'Connecting…' : 'Connect'}
+              {busy ? 'Testing…' : 'Test & Connect'}
             </button>
           </div>
         ) : (
           <div className="space-y-2">
             <div>
-              <label className="block text-xs font-medium text-nhs-grey-3 dark:text-nhs-grey-4 uppercase tracking-wide mb-0.5">JWT Token</label>
+              <label className="block text-xs font-medium text-nhs-grey-3 dark:text-nhs-grey-4 uppercase tracking-wide mb-0.5">Bearer Token</label>
               <textarea
                 className={`${inputCls} font-mono text-xs resize-none`}
                 rows={3}
@@ -198,7 +180,7 @@ function ConfigModal({ onClose, onSaved }: ConfigModalProps) {
               />
             </div>
             <button
-              onClick={handlePaste}
+              onClick={handleTokenConnect}
               disabled={busy || !pastedToken}
               className="w-full py-1.5 bg-nhs-blue text-white rounded text-sm font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
             >
@@ -234,11 +216,13 @@ export function SnomedPicker({ code, display, onSelect, label = 'SNOMED CT', sem
   const dropdownRef = useRef<HTMLDivElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const isConnected = Boolean(config.token && config.serverUrl)
+  // Proxy mode stores an empty token; direct-server mode stores a JWT.
+  // Both are considered connected as long as a serverUrl is present.
+  const isConnected = Boolean(config.serverUrl)
 
   // Search function
   const search = useCallback(async (q: string, cfg: Partial<SnomedConfig>) => {
-    if (!cfg.token || !cfg.serverUrl || q.length < 2) {
+    if (!cfg.serverUrl || q.length < 2) {
       setResults([])
       setIsOpen(false)
       return
@@ -249,9 +233,9 @@ export function SnomedPicker({ code, display, onSelect, label = 'SNOMED CT', sem
       const params = new URLSearchParams({ q, limit: '10', sort: 'relevance' })
       if (semanticTag) params.set('semantic_tag', semanticTag)
       const url = `${cfg.serverUrl}/api/snomed/search?${params}`
-      const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${cfg.token}` },
-      })
+      const headers: HeadersInit = {}
+      if (cfg.token) headers['Authorization'] = `Bearer ${cfg.token}`
+      const res = await fetch(url, { headers })
       if (res.status === 401) {
         setError('Token expired — reconnect via the settings icon')
         setResults([])
@@ -358,7 +342,7 @@ export function SnomedPicker({ code, display, onSelect, label = 'SNOMED CT', sem
                   onChange={e => setQuery(e.target.value)}
                   onFocus={() => results.length > 0 && setIsOpen(true)}
                   onKeyDown={handleKeyDown}
-                  placeholder={isConnected ? 'Search SNOMED CT…' : 'Connect to enable search'}
+                  placeholder={isConnected ? 'Search SNOMED CT…' : 'Configure server to enable search'}
                   disabled={!isConnected}
                   className={
                     'w-full rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-2 py-1.5 text-sm ' +

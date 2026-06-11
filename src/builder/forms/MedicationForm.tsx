@@ -5,6 +5,7 @@ import { Field } from './shared/FormField'
 import { SelectField } from './shared/SelectField'
 import { PractitionerSelect } from './shared/PractitionerSelect'
 import { SnomedPicker } from './shared/SnomedPicker'
+import { DmdPicker } from './shared/DmdPicker'
 
 // ---------------------------------------------------------------------------
 // MedicationForm
@@ -149,7 +150,7 @@ function MedicationCard({
           {/* Drug name */}
           <Field label="Drug name" value={med.drugName ?? ''} onChange={v => upd({ drugName: v })} required />
 
-          {/* SNOMED picker — selecting a concept also fills drug name */}
+          {/* SNOMED picker — clinical code; selecting a concept also fills drug name */}
           <SnomedPicker
             code={med.snomedCode}
             display={med.drugName}
@@ -157,6 +158,19 @@ function MedicationCard({
             onSelect={({ code, display }) => upd({
               snomedCode: code || undefined,
               ...(display ? { drugName: display } : {}),
+            })}
+          />
+
+          {/* dm+d picker — prescribing code (VMP preferred; AMP for branded) */}
+          <DmdPicker
+            code={med.dmdCode}
+            display={med.dmdDisplay}
+            dmdType={med.dmdType ?? 'VMP'}
+            onSelect={({ code, display, dmdType }) => upd({
+              dmdCode: code || undefined,
+              dmdDisplay: display || undefined,
+              dmdType: code ? dmdType : undefined,
+              ...(display && !med.drugName ? { drugName: display } : {}),
             })}
           />
 
