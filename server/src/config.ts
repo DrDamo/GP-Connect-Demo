@@ -2,7 +2,7 @@ import { config as loadDotenv } from 'dotenv'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
-loadDotenv({ path: resolve(dirname(fileURLToPath(import.meta.url)), '../../.env') })
+loadDotenv({ path: resolve(dirname(fileURLToPath(import.meta.url)), '../.env') })
 
 function required(name: string): string {
   const value = process.env[name]
