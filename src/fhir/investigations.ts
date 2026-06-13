@@ -378,8 +378,8 @@ export function extractInvestigations(bundle: fhir3.Bundle): GpConnectInvestigat
       const results = testGroups.flatMap(g => g.results).filter(r => !r.isSubHeader)
 
       // Report name derivation — priority order:
-      // 1. Filing comment title  2. DR code (canonical Test Report name)
-      // 3. First group name (fallback when no DR code)  4. Single result name (last resort)
+      // 1. Filing comment title  2. DR code when specific (not the generic category code)
+      // 3. First group name  4. Single result name (last resort)
       let reportName: string | undefined
       if (filingComment) {
         const m = filingComment.match(/^Title:\s+([^\n\r]+)/m)
@@ -387,7 +387,12 @@ export function extractInvestigations(bundle: fhir3.Bundle): GpConnectInvestigat
       }
       if (!reportName) {
         const coding = report.code?.coding
-        reportName = report.code?.text ?? extractSnomedDisplay(coding) ?? coding?.[0]?.display
+        const drName = report.code?.text ?? extractSnomedDisplay(coding) ?? coding?.[0]?.display
+        // 721981007 "Diagnostic studies report" is the generic category code used for ALL
+        // TPP/EMIS lab DiagnosticReports — skip it and derive the name from the test group.
+        if (drName && drName.toLowerCase() !== 'diagnostic studies report') {
+          reportName = drName
+        }
       }
       if (!reportName && testGroups.length > 0 && testGroups[0].name) {
         reportName = testGroups[0].name

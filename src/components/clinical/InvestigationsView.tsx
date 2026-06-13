@@ -278,6 +278,15 @@ function InvestigationDetail({ investigation, bundle, onJumpToSource, onJumpToRe
 
   const hasGroups = investigation.testGroups.length > 0
   const singleUnnamedGroup = investigation.testGroups.length === 1 && !investigation.testGroups[0].name
+  // When the sole group's name just repeats the report name it adds no information —
+  // the group header is an artefact of the implicit TPP/EMIS ordering convention
+  // (first obs = test-type descriptor, remainder = analyte results). Suppress the
+  // redundant header and render the results flat, same as singleUnnamedGroup.
+  const soleGroupRepeatsReportName =
+    investigation.testGroups.length === 1 &&
+    !!investigation.testGroups[0].name &&
+    investigation.testGroups[0].name.toLowerCase() === investigation.name.toLowerCase()
+  const showFlat = singleUnnamedGroup || soleGroupRepeatsReportName
 
   return (
     <div className="border border-nhs-blue/20 rounded-lg bg-blue-50/50 p-4 space-y-3">
@@ -314,13 +323,23 @@ function InvestigationDetail({ investigation, bundle, onJumpToSource, onJumpToRe
 
       {/* Test groups */}
       {hasGroups && (
-        <div className={`space-y-4 ${!singleUnnamedGroup ? 'pt-1 border-t border-nhs-blue/20' : ''}`}>
-          {singleUnnamedGroup ? (
-            // Simple flat list: one unnamed group → render results directly
-            <ResultsTable
-              results={investigation.testGroups[0].results}
-              onJumpToSource={onJumpToSource}
-            />
+        <div className={`space-y-4 ${!showFlat ? 'pt-1 border-t border-nhs-blue/20' : ''}`}>
+          {showFlat ? (
+            // Flat rendering: either a single unnamed group, or a sole group whose name
+            // merely repeats the report title (inferred TPP/EMIS test-type descriptor).
+            // Show any group-level comment, then the results directly.
+            <>
+              {investigation.testGroups[0].comment && (
+                <CommentText
+                  text={investigation.testGroups[0].comment}
+                  className="p-2 rounded bg-white/60 border border-nhs-blue/10"
+                />
+              )}
+              <ResultsTable
+                results={investigation.testGroups[0].results}
+                onJumpToSource={onJumpToSource}
+              />
+            </>
           ) : (
             // Named groups: render each as a labelled section
             investigation.testGroups.map(group => (
