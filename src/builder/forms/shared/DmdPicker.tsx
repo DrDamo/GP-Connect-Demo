@@ -151,7 +151,7 @@ export function DmdPicker({ code, display, dmdType = 'VMP', onSelect, label = 'd
           <div className="flex items-center gap-2 px-2 py-1 bg-nhs-grey-5 dark:bg-gray-800 rounded border border-nhs-grey-4 dark:border-nhs-grey-2 text-xs">
             <span className={`shrink-0 text-xs px-1.5 py-0.5 rounded font-medium ${typeCls(dmdType)}`}>{dmdType}</span>
             <span className="font-mono text-nhs-blue dark:text-blue-400 shrink-0">{code}</span>
-            {display && <span className="text-nhs-grey-1 dark:text-nhs-grey-5 truncate">{display}</span>}
+            {display && <span className="text-nhs-grey-1 truncate">{display}</span>}
             <button
               type="button"
               onClick={() => onSelect({ code: '', display: '', system: 'https://dmd.nhs.uk', dmdType: activeType })}
@@ -199,7 +199,7 @@ export function DmdPicker({ code, display, dmdType = 'VMP', onSelect, label = 'd
               disabled={!isConnected}
               className={
                 'w-full rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-2 py-1.5 text-sm ' +
-                'text-nhs-grey-1 dark:text-nhs-grey-5 dark:bg-gray-800 pr-8 ' +
+                'text-nhs-grey-1 dark:bg-gray-800 pr-8 ' +
                 'focus:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue ' +
                 'disabled:opacity-50 disabled:cursor-not-allowed'
               }
@@ -234,7 +234,7 @@ export function DmdPicker({ code, display, dmdType = 'VMP', onSelect, label = 'd
                 >
                   <span className={`shrink-0 text-xs px-1.5 py-0.5 rounded font-medium mt-0.5 ${typeCls(r.type)}`}>{r.type}</span>
                   <span className="flex-1 min-w-0">
-                    <span className="text-nhs-grey-1 dark:text-nhs-grey-5 block truncate">{r.display}</span>
+                    <span className="text-nhs-grey-1 block truncate">{r.display}</span>
                     <span className="text-xs text-nhs-grey-3 dark:text-nhs-grey-4 font-mono">{r.code}</span>
                   </span>
                 </button>

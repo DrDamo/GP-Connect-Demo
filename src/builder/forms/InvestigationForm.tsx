@@ -123,7 +123,7 @@ function InvestigationCard({
           >
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
           </svg>
-          <span className="text-sm font-medium text-nhs-grey-1 dark:text-nhs-grey-5">
+          <span className="text-sm font-medium text-nhs-grey-1">
             {inv.name || 'New investigation'}
           </span>
           {inv.date && <span className="text-xs text-nhs-grey-3">{inv.date}</span>}

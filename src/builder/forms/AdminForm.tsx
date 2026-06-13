@@ -49,7 +49,7 @@ function PractitionerCard({
           >
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
           </svg>
-          <span className="text-sm font-medium text-nhs-grey-1 dark:text-nhs-grey-5">{label}</span>
+          <span className="text-sm font-medium text-nhs-grey-1">{label}</span>
         </button>
         <button
           type="button"
@@ -104,7 +104,7 @@ function LocationCard({
           >
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
           </svg>
-          <span className="text-sm font-medium text-nhs-grey-1 dark:text-nhs-grey-5">
+          <span className="text-sm font-medium text-nhs-grey-1">
             {loc.name || 'New location'}
           </span>
         </button>

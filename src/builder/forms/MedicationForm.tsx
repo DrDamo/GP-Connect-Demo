@@ -47,7 +47,7 @@ function IssueRow({
           type="date"
           value={issue.issueDate ?? ''}
           onChange={e => upd({ issueDate: e.target.value })}
-          className="w-full rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-1 py-0.5 text-xs dark:bg-gray-800 focus:border-nhs-blue focus:outline-none"
+          className="w-full rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-1 py-0.5 text-xs text-nhs-grey-1 dark:bg-gray-800 focus:border-nhs-blue focus:outline-none"
         />
       </td>
       <td className="py-1 pr-1">
@@ -57,14 +57,14 @@ function IssueRow({
             value={issue.quantityValue ?? ''}
             onChange={e => upd({ quantityValue: e.target.value ? Number(e.target.value) : undefined })}
             placeholder="28"
-            className="w-16 rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-1 py-0.5 text-xs dark:bg-gray-800 focus:border-nhs-blue focus:outline-none"
+            className="w-16 rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-1 py-0.5 text-xs text-nhs-grey-1 dark:bg-gray-800 focus:border-nhs-blue focus:outline-none"
           />
           <input
             type="text"
             value={issue.quantityUnit ?? ''}
             onChange={e => upd({ quantityUnit: e.target.value })}
             placeholder="tablet(s)"
-            className="w-24 rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-1 py-0.5 text-xs dark:bg-gray-800 focus:border-nhs-blue focus:outline-none"
+            className="w-24 rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-1 py-0.5 text-xs text-nhs-grey-1 dark:bg-gray-800 focus:border-nhs-blue focus:outline-none"
           />
         </div>
       </td>
@@ -75,14 +75,14 @@ function IssueRow({
             value={issue.supplyDurationValue ?? ''}
             onChange={e => upd({ supplyDurationValue: e.target.value ? Number(e.target.value) : undefined })}
             placeholder="28"
-            className="w-12 rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-1 py-0.5 text-xs dark:bg-gray-800 focus:border-nhs-blue focus:outline-none"
+            className="w-12 rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-1 py-0.5 text-xs text-nhs-grey-1 dark:bg-gray-800 focus:border-nhs-blue focus:outline-none"
           />
           <input
             type="text"
             value={issue.supplyDurationUnit ?? ''}
             onChange={e => upd({ supplyDurationUnit: e.target.value })}
             placeholder="days"
-            className="w-16 rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-1 py-0.5 text-xs dark:bg-gray-800 focus:border-nhs-blue focus:outline-none"
+            className="w-16 rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-1 py-0.5 text-xs text-nhs-grey-1 dark:bg-gray-800 focus:border-nhs-blue focus:outline-none"
           />
         </div>
       </td>
@@ -129,7 +129,7 @@ function MedicationCard({
           >
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
           </svg>
-          <span className="text-sm font-medium text-nhs-grey-1 dark:text-nhs-grey-5">
+          <span className="text-sm font-medium text-nhs-grey-1">
             {med.drugName || 'New medication'}
           </span>
           {med.status && (

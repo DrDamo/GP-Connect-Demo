@@ -29,7 +29,7 @@ export function FormField({ label, required, children, className }: FormFieldPro
 
 const INPUT_CLS =
   'w-full rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-2 py-1.5 text-sm ' +
-  'text-nhs-grey-1 dark:text-nhs-grey-5 dark:bg-gray-800 ' +
+  'text-nhs-grey-1 dark:bg-gray-800 ' +
   'focus:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue'
 
 export interface FieldProps {

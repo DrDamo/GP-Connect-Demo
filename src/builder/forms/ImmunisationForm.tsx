@@ -24,7 +24,7 @@ const STATUS_OPTS = [
 
 const SELECT_CLS =
   'w-full rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-2 py-1.5 text-sm ' +
-  'text-nhs-grey-1 dark:text-nhs-grey-5 dark:bg-gray-800 ' +
+  'text-nhs-grey-1 dark:bg-gray-800 ' +
   'focus:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue'
 
 function ImmunisationCard({
@@ -59,7 +59,7 @@ function ImmunisationCard({
           >
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
           </svg>
-          <span className="text-sm font-medium text-nhs-grey-1 dark:text-nhs-grey-5">
+          <span className="text-sm font-medium text-nhs-grey-1">
             {imm.vaccineName || 'New immunisation'}
           </span>
           {imm.dateGiven && (

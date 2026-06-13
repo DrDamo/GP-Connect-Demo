@@ -23,7 +23,7 @@ export function FormSection({ title, count, children, defaultOpen = true }: Form
         className="w-full flex items-center justify-between px-4 py-2.5 bg-nhs-grey-5 dark:bg-gray-800 hover:bg-nhs-grey-4 dark:hover:bg-gray-700 transition-colors"
       >
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-nhs-grey-1 dark:text-nhs-grey-5">{title}</span>
+          <span className="text-sm font-semibold text-nhs-grey-1">{title}</span>
           {count !== undefined && (
             <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full bg-nhs-blue text-white">
               {count}

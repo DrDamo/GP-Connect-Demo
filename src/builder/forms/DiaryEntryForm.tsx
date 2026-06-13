@@ -62,7 +62,7 @@ function DiaryEntryCard({
           >
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
           </svg>
-          <span className="text-sm font-medium text-nhs-grey-1 dark:text-nhs-grey-5">
+          <span className="text-sm font-medium text-nhs-grey-1">
             {entry.description || 'New diary entry'}
           </span>
           {entry.date && (

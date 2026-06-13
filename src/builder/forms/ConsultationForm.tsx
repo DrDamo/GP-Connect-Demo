@@ -86,7 +86,7 @@ function ConsultationItemRow({
                 onChange={e => upd({ narrativeText: e.target.value })}
                 rows={2}
                 placeholder="Enter clinical narrative…"
-                className="w-full rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-2 py-1.5 text-sm text-nhs-grey-1 dark:text-nhs-grey-5 dark:bg-gray-800 focus:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue resize-none"
+                className="w-full rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-2 py-1.5 text-sm text-nhs-grey-1 dark:bg-gray-800 focus:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue resize-none"
               />
             </div>
           )}
@@ -164,7 +164,7 @@ function CategoryBlock({
                 payload: { consTempId, topicTempId, catTempId: cat._tempId, updates: { title: e.target.value } },
               })
             }
-            className="text-xs rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-1 py-0.5 dark:bg-gray-800 focus:border-nhs-blue focus:outline-none"
+            className="text-xs text-nhs-grey-1 rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-1 py-0.5 dark:bg-gray-800 focus:border-nhs-blue focus:outline-none"
           >
             <option value="">— Category —</option>
             {CATEGORY_TITLE_OPTS.map(o => (
@@ -241,7 +241,7 @@ function TopicBlock({
           >
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
           </svg>
-          <span className="text-sm font-medium text-nhs-grey-1 dark:text-nhs-grey-5">
+          <span className="text-sm font-medium text-nhs-grey-1">
             {topic.title || 'Topic'}
           </span>
           <span className="text-xs text-nhs-grey-3">
@@ -363,7 +363,7 @@ function ConsultationCard({
           >
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
           </svg>
-          <span className="text-sm font-medium text-nhs-grey-1 dark:text-nhs-grey-5">{label}</span>
+          <span className="text-sm font-medium text-nhs-grey-1">{label}</span>
           <span className="text-xs text-nhs-grey-3">({consultation.topics.length} topics)</span>
         </button>
         <button

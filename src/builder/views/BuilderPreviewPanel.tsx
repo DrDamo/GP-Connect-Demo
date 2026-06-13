@@ -49,7 +49,7 @@ export function BuilderPreviewPanel({
     <div className="flex flex-col h-full border-l border-nhs-grey-4 dark:border-nhs-grey-2 bg-white dark:bg-gray-900">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-nhs-grey-4 dark:border-nhs-grey-2 bg-nhs-grey-5 dark:bg-gray-800 shrink-0">
-        <h3 className="text-sm font-semibold text-nhs-grey-1 dark:text-nhs-grey-5">FHIR Preview</h3>
+        <h3 className="text-sm font-semibold text-nhs-grey-1">FHIR Preview</h3>
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -130,7 +130,7 @@ export function BuilderPreviewPanel({
           <svg className="w-3.5 h-3.5 shrink-0 text-nhs-red" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
-          <span className="text-nhs-grey-1 dark:text-nhs-grey-5">
+          <span className="text-nhs-grey-1">
             {[
               errorCount > 0 && `${errorCount} error${errorCount !== 1 ? 's' : ''}`,
               warningCount > 0 && `${warningCount} warning${warningCount !== 1 ? 's' : ''}`,
