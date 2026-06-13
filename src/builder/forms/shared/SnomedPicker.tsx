@@ -120,7 +120,7 @@ function ConfigModal({ onClose, onSaved }: ConfigModalProps) {
           <h2 className="text-sm font-semibold text-nhs-grey-1">
             Connect to Terminology Server
           </h2>
-          <button onClick={onClose} className="text-nhs-grey-3 hover:text-nhs-grey-1 dark:hover:text-nhs-grey-5">
+          <button onClick={onClose} className="text-nhs-grey-3 hover:text-nhs-grey-1">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -128,7 +128,7 @@ function ConfigModal({ onClose, onSaved }: ConfigModalProps) {
         </div>
 
         <div className="mb-3">
-          <label className="block text-xs font-medium text-nhs-grey-3 dark:text-nhs-grey-4 uppercase tracking-wide mb-0.5">
+          <label className="block text-xs font-medium text-nhs-grey-3 uppercase tracking-wide mb-0.5">
             Server URL
           </label>
           <input
@@ -156,7 +156,7 @@ function ConfigModal({ onClose, onSaved }: ConfigModalProps) {
 
         {mode === 'proxy' ? (
           <div className="space-y-2">
-            <p className="text-xs text-nhs-grey-3 dark:text-nhs-grey-4">
+            <p className="text-xs text-nhs-grey-3">
               Use this mode when connecting to the NHS Terminology Proxy (<code>server/</code>). Credentials are managed server-side — no token needed here.
             </p>
             <button
@@ -170,7 +170,7 @@ function ConfigModal({ onClose, onSaved }: ConfigModalProps) {
         ) : (
           <div className="space-y-2">
             <div>
-              <label className="block text-xs font-medium text-nhs-grey-3 dark:text-nhs-grey-4 uppercase tracking-wide mb-0.5">Bearer Token</label>
+              <label className="block text-xs font-medium text-nhs-grey-3 uppercase tracking-wide mb-0.5">Bearer Token</label>
               <textarea
                 className={`${inputCls} font-mono text-xs resize-none`}
                 rows={3}
@@ -309,7 +309,7 @@ export function SnomedPicker({ code, display, onSelect, label = 'SNOMED CT', sem
   }
   const tagCls = (tag: string) =>
     tagColour[Object.keys(tagColour).find(k => tag.includes(k)) ?? ''] ??
-    'bg-nhs-grey-5 text-nhs-grey-2 dark:bg-gray-700 dark:text-nhs-grey-4'
+    'bg-nhs-grey-5 text-nhs-grey-2 dark:bg-gray-700'
 
   return (
     <>
@@ -410,7 +410,7 @@ export function SnomedPicker({ code, display, onSelect, label = 'SNOMED CT', sem
                     <span className="flex-1 min-w-0">
                       <span className="text-nhs-grey-1 block truncate">{r.display_term}</span>
                       {r.fully_specified_name !== r.display_term && (
-                        <span className="text-xs text-nhs-grey-3 dark:text-nhs-grey-4 block truncate">{r.fully_specified_name}</span>
+                        <span className="text-xs text-nhs-grey-3 block truncate">{r.fully_specified_name}</span>
                       )}
                     </span>
                     <span className={`shrink-0 text-xs px-1.5 py-0.5 rounded font-medium ${tagCls(r.semantic_tag)}`}>

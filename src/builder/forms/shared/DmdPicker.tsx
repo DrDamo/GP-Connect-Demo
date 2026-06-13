@@ -180,7 +180,7 @@ export function DmdPicker({ code, display, dmdType = 'VMP', onSelect, label = 'd
               {t}
             </button>
           ))}
-          <span className="text-xs text-nhs-grey-3 dark:text-nhs-grey-4 self-center ml-1">
+          <span className="text-xs text-nhs-grey-3 self-center ml-1">
             {TYPE_LABELS[activeType]}
           </span>
         </div>
@@ -235,7 +235,7 @@ export function DmdPicker({ code, display, dmdType = 'VMP', onSelect, label = 'd
                   <span className={`shrink-0 text-xs px-1.5 py-0.5 rounded font-medium mt-0.5 ${typeCls(r.type)}`}>{r.type}</span>
                   <span className="flex-1 min-w-0">
                     <span className="text-nhs-grey-1 block truncate">{r.display}</span>
-                    <span className="text-xs text-nhs-grey-3 dark:text-nhs-grey-4 font-mono">{r.code}</span>
+                    <span className="text-xs text-nhs-grey-3 font-mono">{r.code}</span>
                   </span>
                 </button>
               ))}

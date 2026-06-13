@@ -114,6 +114,33 @@ html.dark body {
   background-color: #1c2a3e;
 }
 
+/* NHS blue (#005eb8) is designed for white backgrounds — too dark for dark surfaces.
+   Boost text, border, and focus-ring to the lighter NHS blue (#4c9fd5) in dark mode.
+   bg-nhs-blue is intentionally excluded so the header/badge backgrounds stay correct. */
+.dark .text-nhs-blue,
+.dark .hover\:text-nhs-blue:hover {
+  color: #4c9fd5;
+}
+.dark .border-nhs-blue,
+.dark .hover\:border-nhs-blue:hover,
+.dark .focus\:border-nhs-blue:focus {
+  border-color: #4c9fd5;
+}
+.dark .focus\:ring-nhs-blue:focus {
+  --tw-ring-color: #4c9fd5;
+}
+
+/* Active tab "flush" bottom border must match the dark card surface, not stay white */
+.dark .border-b-white {
+  border-bottom-color: #162032;
+}
+
+/* hover:bg-nhs-grey-5 — both colours collapse to #162032 in dark mode, making hover
+   states invisible. Lift the hover target slightly so it's distinguishable. */
+.dark .hover\:bg-nhs-grey-5:hover {
+  background-color: #1e2d40;
+}
+
 /* ── CodeMirror dark theme ───────────────────────────────────────── */
 
 .dark .cm-editor {

@@ -112,7 +112,7 @@ function DocumentCard({
 
           {/* Custodian org — display only */}
           <div>
-            <label className="block text-xs font-medium text-nhs-grey-3 dark:text-nhs-grey-4 uppercase tracking-wide mb-0.5">
+            <label className="block text-xs font-medium text-nhs-grey-3 uppercase tracking-wide mb-0.5">
               Custodian organisation
             </label>
             <div className="w-full rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-2 py-1.5 text-sm text-nhs-grey-3 dark:text-nhs-grey-3 bg-nhs-grey-5 dark:bg-gray-800">
@@ -137,7 +137,7 @@ export function DocumentForm({ draft, dispatch }: Props) {
       <button
         type="button"
         onClick={() => dispatch({ type: 'ADD_DOCUMENT' })}
-        className="border border-nhs-grey-4 dark:border-nhs-grey-2 text-nhs-grey-2 dark:text-nhs-grey-4 px-3 py-1.5 rounded text-sm hover:border-nhs-blue hover:text-nhs-blue transition-colors"
+        className="border border-nhs-grey-4 dark:border-nhs-grey-2 text-nhs-grey-2 px-3 py-1.5 rounded text-sm hover:border-nhs-blue hover:text-nhs-blue transition-colors"
       >
         + Add document
       </button>

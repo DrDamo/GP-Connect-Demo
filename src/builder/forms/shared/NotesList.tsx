@@ -28,7 +28,7 @@ export function NotesList({ notes, onChange, placeholder = 'Add a note…' }: No
 
   return (
     <div>
-      <label className="block text-xs font-medium text-nhs-grey-3 dark:text-nhs-grey-4 uppercase tracking-wide mb-1">
+      <label className="block text-xs font-medium text-nhs-grey-3 uppercase tracking-wide mb-1">
         Notes
       </label>
       <div className="space-y-1">

@@ -27,7 +27,7 @@ export function PractitionerSelect({ label, draft, value, onChange }: Practition
 
   return (
     <div>
-      <label className="block text-xs font-medium text-nhs-grey-3 dark:text-nhs-grey-4 uppercase tracking-wide mb-0.5">
+      <label className="block text-xs font-medium text-nhs-grey-3 uppercase tracking-wide mb-0.5">
         {label}
       </label>
       <select

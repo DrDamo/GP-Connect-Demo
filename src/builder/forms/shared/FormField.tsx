@@ -14,7 +14,7 @@ export interface FormFieldProps {
 export function FormField({ label, required, children, className }: FormFieldProps) {
   return (
     <div className={className}>
-      <label className="block text-xs font-medium text-nhs-grey-3 dark:text-nhs-grey-4 uppercase tracking-wide mb-0.5">
+      <label className="block text-xs font-medium text-nhs-grey-3 uppercase tracking-wide mb-0.5">
         {label}
         {required && <span className="text-nhs-red ml-0.5">*</span>}
       </label>

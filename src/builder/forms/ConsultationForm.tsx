@@ -78,7 +78,7 @@ function ConsultationItemRow({
         <div className="flex-1 space-y-1">
           {item.itemType === 'note' && (
             <div>
-              <label className="block text-xs font-medium text-nhs-grey-3 dark:text-nhs-grey-4 uppercase tracking-wide mb-0.5">
+              <label className="block text-xs font-medium text-nhs-grey-3 uppercase tracking-wide mb-0.5">
                 Narrative text
               </label>
               <textarea
@@ -150,7 +150,7 @@ function CategoryBlock({
           >
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
           </svg>
-          <span className="text-xs font-medium text-nhs-grey-2 dark:text-nhs-grey-4">
+          <span className="text-xs font-medium text-nhs-grey-2">
             {cat.title || 'Category'}
           </span>
           <span className="text-xs text-nhs-grey-3">({cat.items.length} items)</span>
@@ -276,7 +276,7 @@ function TopicBlock({
           {/* Categories */}
           <div>
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-medium text-nhs-grey-3 dark:text-nhs-grey-4 uppercase tracking-wide">
+              <span className="text-xs font-medium text-nhs-grey-3 uppercase tracking-wide">
                 Categories
               </span>
               <button
@@ -303,7 +303,7 @@ function TopicBlock({
           {/* Direct topic items (no category) */}
           <div>
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-medium text-nhs-grey-3 dark:text-nhs-grey-4 uppercase tracking-wide">
+              <span className="text-xs font-medium text-nhs-grey-3 uppercase tracking-wide">
                 Topic-level items
               </span>
               <button
@@ -410,7 +410,7 @@ function ConsultationCard({
           {/* Topics */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-nhs-grey-2 dark:text-nhs-grey-4 uppercase tracking-wide">
+              <span className="text-xs font-semibold text-nhs-grey-2 uppercase tracking-wide">
                 Topics
               </span>
               <button
@@ -460,7 +460,7 @@ export function ConsultationForm({ draft, dispatch }: Props) {
       <button
         type="button"
         onClick={() => dispatch({ type: 'ADD_CONSULTATION' })}
-        className="border border-nhs-grey-4 dark:border-nhs-grey-2 text-nhs-grey-2 dark:text-nhs-grey-4 px-3 py-1.5 rounded text-sm hover:border-nhs-blue hover:text-nhs-blue transition-colors"
+        className="border border-nhs-grey-4 dark:border-nhs-grey-2 text-nhs-grey-2 px-3 py-1.5 rounded text-sm hover:border-nhs-blue hover:text-nhs-blue transition-colors"
       >
         + Add consultation
       </button>

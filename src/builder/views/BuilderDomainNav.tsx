@@ -47,7 +47,7 @@ export function BuilderDomainNav({ active, draft, onChange }: BuilderDomainNavPr
   return (
     <div className="w-48 shrink-0 flex flex-col border-r border-nhs-grey-4 dark:border-nhs-grey-2 bg-nhs-grey-5 dark:bg-gray-900 overflow-y-auto">
       <div className="px-3 py-2.5 border-b border-nhs-grey-4 dark:border-nhs-grey-2">
-        <span className="text-xs font-semibold text-nhs-grey-2 dark:text-nhs-grey-4 uppercase tracking-wide">
+        <span className="text-xs font-semibold text-nhs-grey-2 uppercase tracking-wide">
           Record sections
         </span>
       </div>
@@ -62,13 +62,13 @@ export function BuilderDomainNav({ active, draft, onChange }: BuilderDomainNavPr
               className={`w-full text-left px-3 py-2 flex items-center justify-between gap-2 transition-colors ${
                 isActive
                   ? 'bg-white dark:bg-gray-800 border-l-4 border-nhs-blue text-nhs-blue font-medium pl-2'
-                  : 'border-l-4 border-transparent text-nhs-grey-2 dark:text-nhs-grey-4 hover:bg-white dark:hover:bg-gray-800 hover:text-nhs-grey-1 dark:hover:text-nhs-grey-5 pl-2'
+                  : 'border-l-4 border-transparent text-nhs-grey-2 hover:bg-white dark:hover:bg-gray-800 hover:text-nhs-grey-1 pl-2'
               }`}
             >
               <span className="text-sm truncate">{domain.label}</span>
               {count !== undefined && (
                 <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full shrink-0 ${
-                  isActive ? 'bg-nhs-blue text-white' : 'bg-nhs-grey-4 dark:bg-gray-700 text-nhs-grey-2 dark:text-nhs-grey-4'
+                  isActive ? 'bg-nhs-blue text-white' : 'bg-nhs-grey-4 dark:bg-gray-700 text-nhs-grey-2'
                 }`}>
                   {count}
                 </span>

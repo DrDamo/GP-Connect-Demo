@@ -108,7 +108,7 @@ function ImmunisationCard({
               required
             />
             <div className="flex items-end pb-1">
-              <label className="flex items-center gap-1.5 text-xs text-nhs-grey-2 dark:text-nhs-grey-4">
+              <label className="flex items-center gap-1.5 text-xs text-nhs-grey-2">
                 <input
                   type="checkbox"
                   checked={imm.notGiven ?? false}
@@ -145,7 +145,7 @@ function ImmunisationCard({
           />
 
           <div>
-            <label className="block text-xs font-medium text-nhs-grey-3 dark:text-nhs-grey-4 uppercase tracking-wide mb-0.5">
+            <label className="block text-xs font-medium text-nhs-grey-3 uppercase tracking-wide mb-0.5">
               Location
             </label>
             <select
@@ -181,7 +181,7 @@ export function ImmunisationForm({ draft, dispatch }: Props) {
       <button
         type="button"
         onClick={() => dispatch({ type: 'ADD_IMMUNISATION' })}
-        className="border border-nhs-grey-4 dark:border-nhs-grey-2 text-nhs-grey-2 dark:text-nhs-grey-4 px-3 py-1.5 rounded text-sm hover:border-nhs-blue hover:text-nhs-blue transition-colors"
+        className="border border-nhs-grey-4 dark:border-nhs-grey-2 text-nhs-grey-2 px-3 py-1.5 rounded text-sm hover:border-nhs-blue hover:text-nhs-blue transition-colors"
       >
         + Add immunisation
       </button>

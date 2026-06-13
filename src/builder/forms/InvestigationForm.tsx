@@ -172,7 +172,7 @@ function InvestigationCard({
           {/* Results */}
           <div>
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-medium text-nhs-grey-3 dark:text-nhs-grey-4 uppercase tracking-wide">
+              <span className="text-xs font-medium text-nhs-grey-3 uppercase tracking-wide">
                 Results ({inv.results.length})
               </span>
               <button
@@ -208,7 +208,7 @@ export function InvestigationForm({ draft, dispatch }: Props) {
       <button
         type="button"
         onClick={() => dispatch({ type: 'ADD_INVESTIGATION' })}
-        className="border border-nhs-grey-4 dark:border-nhs-grey-2 text-nhs-grey-2 dark:text-nhs-grey-4 px-3 py-1.5 rounded text-sm hover:border-nhs-blue hover:text-nhs-blue transition-colors"
+        className="border border-nhs-grey-4 dark:border-nhs-grey-2 text-nhs-grey-2 px-3 py-1.5 rounded text-sm hover:border-nhs-blue hover:text-nhs-blue transition-colors"
       >
         + Add investigation
       </button>

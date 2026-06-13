@@ -159,7 +159,7 @@ export function AdminForm({ draft, dispatch, onAutoPopulate }: Props) {
             required
           />
           <div className="flex items-end gap-2">
-            <label className="flex items-center gap-1.5 text-xs text-nhs-grey-2 dark:text-nhs-grey-4 pb-1">
+            <label className="flex items-center gap-1.5 text-xs text-nhs-grey-2 pb-1">
               <input
                 type="checkbox"
                 checked={p.nhsNumberVerified ?? false}
@@ -182,7 +182,7 @@ export function AdminForm({ draft, dispatch, onAutoPopulate }: Props) {
             placeholder="— Select —"
           />
           <div className="flex items-end gap-2">
-            <label className="flex items-center gap-1.5 text-xs text-nhs-grey-2 dark:text-nhs-grey-4 pb-1">
+            <label className="flex items-center gap-1.5 text-xs text-nhs-grey-2 pb-1">
               <input
                 type="checkbox"
                 checked={p.isActive ?? true}
@@ -222,7 +222,7 @@ export function AdminForm({ draft, dispatch, onAutoPopulate }: Props) {
         <button
           type="button"
           onClick={() => dispatch({ type: 'ADD_PRACTITIONER' })}
-          className="mt-1 border border-nhs-grey-4 dark:border-nhs-grey-2 text-nhs-grey-2 dark:text-nhs-grey-4 px-3 py-1.5 rounded text-sm hover:border-nhs-blue hover:text-nhs-blue transition-colors"
+          className="mt-1 border border-nhs-grey-4 dark:border-nhs-grey-2 text-nhs-grey-2 px-3 py-1.5 rounded text-sm hover:border-nhs-blue hover:text-nhs-blue transition-colors"
         >
           + Add practitioner
         </button>
@@ -239,7 +239,7 @@ export function AdminForm({ draft, dispatch, onAutoPopulate }: Props) {
         <button
           type="button"
           onClick={() => dispatch({ type: 'ADD_LOCATION' })}
-          className="mt-1 border border-nhs-grey-4 dark:border-nhs-grey-2 text-nhs-grey-2 dark:text-nhs-grey-4 px-3 py-1.5 rounded text-sm hover:border-nhs-blue hover:text-nhs-blue transition-colors"
+          className="mt-1 border border-nhs-grey-4 dark:border-nhs-grey-2 text-nhs-grey-2 px-3 py-1.5 rounded text-sm hover:border-nhs-blue hover:text-nhs-blue transition-colors"
         >
           + Add location
         </button>

@@ -54,7 +54,7 @@ export function BuilderPreviewPanel({
           <button
             type="button"
             onClick={onDownload}
-            className="border border-nhs-grey-4 dark:border-nhs-grey-2 text-nhs-grey-2 dark:text-nhs-grey-4 px-3 py-1.5 rounded text-sm hover:border-nhs-blue hover:text-nhs-blue transition-colors flex items-center gap-1"
+            className="border border-nhs-grey-4 dark:border-nhs-grey-2 text-nhs-grey-2 px-3 py-1.5 rounded text-sm hover:border-nhs-blue hover:text-nhs-blue transition-colors flex items-center gap-1"
             title="Download FHIR JSON"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -72,7 +72,7 @@ export function BuilderPreviewPanel({
           <button
             type="button"
             onClick={onClose}
-            className="text-nhs-grey-3 hover:text-nhs-grey-1 dark:hover:text-nhs-grey-5 transition-colors p-1"
+            className="text-nhs-grey-3 hover:text-nhs-grey-1 transition-colors p-1"
             title="Close preview"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -91,7 +91,7 @@ export function BuilderPreviewPanel({
             className={`px-3 py-1.5 text-xs font-medium transition-colors ${
               activeTab === 'json'
                 ? 'bg-white dark:bg-gray-900 border-b-2 border-nhs-blue text-nhs-blue'
-                : 'text-nhs-grey-2 dark:text-nhs-grey-4 hover:text-nhs-blue'
+                : 'text-nhs-grey-2 hover:text-nhs-blue'
             }`}
           >
             JSON
@@ -102,7 +102,7 @@ export function BuilderPreviewPanel({
             className={`px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1 ${
               activeTab === 'issues'
                 ? 'bg-white dark:bg-gray-900 border-b-2 border-nhs-blue text-nhs-blue'
-                : 'text-nhs-grey-2 dark:text-nhs-grey-4 hover:text-nhs-blue'
+                : 'text-nhs-grey-2 hover:text-nhs-blue'
             }`}
           >
             Validation
@@ -150,7 +150,7 @@ export function BuilderPreviewPanel({
       {/* Content */}
       <div className="flex-1 overflow-auto">
         {activeTab === 'json' ? (
-          <pre className="font-mono text-xs text-nhs-grey-1 dark:text-nhs-grey-4 p-4 whitespace-pre">
+          <pre className="font-mono text-xs text-nhs-grey-1 p-4 whitespace-pre">
             {preview}
           </pre>
         ) : (

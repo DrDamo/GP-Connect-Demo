@@ -233,7 +233,7 @@ function MedicationCard({
           {/* Issues sub-section */}
           <div>
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-medium text-nhs-grey-3 dark:text-nhs-grey-4 uppercase tracking-wide">
+              <span className="text-xs font-medium text-nhs-grey-3 uppercase tracking-wide">
                 Medication issues ({issues.length})
               </span>
               <button
@@ -248,7 +248,7 @@ function MedicationCard({
               <div className="border border-nhs-grey-4 dark:border-nhs-grey-2 rounded overflow-hidden">
                 <table className="w-full text-xs">
                   <thead>
-                    <tr className="bg-nhs-grey-5 dark:bg-gray-800 text-nhs-grey-2 dark:text-nhs-grey-4">
+                    <tr className="bg-nhs-grey-5 dark:bg-gray-800 text-nhs-grey-2">
                       <th className="py-1.5 px-2 text-left font-medium">Issue date</th>
                       <th className="py-1.5 px-2 text-left font-medium">Quantity</th>
                       <th className="py-1.5 px-2 text-left font-medium">Duration</th>
@@ -282,7 +282,7 @@ export function MedicationForm({ draft, dispatch }: Props) {
       <button
         type="button"
         onClick={() => dispatch({ type: 'ADD_MEDICATION' })}
-        className="border border-nhs-grey-4 dark:border-nhs-grey-2 text-nhs-grey-2 dark:text-nhs-grey-4 px-3 py-1.5 rounded text-sm hover:border-nhs-blue hover:text-nhs-blue transition-colors"
+        className="border border-nhs-grey-4 dark:border-nhs-grey-2 text-nhs-grey-2 px-3 py-1.5 rounded text-sm hover:border-nhs-blue hover:text-nhs-blue transition-colors"
       >
         + Add medication
       </button>
