@@ -220,6 +220,28 @@ export interface GpConnectImmunisation {
   notes: string[]
 }
 
+export interface GpConnectSpecimen {
+  id: string
+  type?: string
+  typeCode?: string
+  collectedDateTime?: string
+  receivedTime?: string
+  status?: string
+}
+
+export interface GpConnectProcedureRequest {
+  id: string
+  name?: string
+  snomedCode?: string
+  status?: string
+  intent?: string
+  requester?: string
+  requesterId?: string
+  performer?: string
+  performerId?: string
+  notes?: string[]
+}
+
 export interface GpConnectObservationComponent {
   name: string
   value?: string
@@ -269,6 +291,8 @@ export interface GpConnectInvestigation {
   performer?: string
   performerId?: string
   encounterId?: string
+  specimen?: GpConnectSpecimen
+  procedureRequest?: GpConnectProcedureRequest
   testGroups: GpConnectTestGroup[]
   results: GpConnectInvestigationResult[]
 }

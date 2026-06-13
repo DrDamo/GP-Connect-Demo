@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { GpConnectBundle, GpConnectInvestigation, GpConnectTestGroup, GpConnectInvestigationResult } from '../../fhir/types'
+import type { GpConnectBundle, GpConnectInvestigation, GpConnectTestGroup, GpConnectInvestigationResult, GpConnectSpecimen, GpConnectProcedureRequest } from '../../fhir/types'
 import { DomainTable, StatusBadge } from './DomainTable'
 import type { DomainColumn } from './DomainTable'
 import { ReferencedResources } from './ReferencedResources'
@@ -17,20 +17,11 @@ interface Props {
 const COLUMNS: DomainColumn<GpConnectInvestigation>[] = [
   { label: 'Date', className: 'w-28', render: item => item.date ?? 'Unknown' },
   {
-    label: 'Investigation',
+    label: 'Report',
     render: item => <span className="font-medium text-nhs-grey-1">{item.name}</span>,
   },
   {
-    label: 'Result',
-    className: 'w-32',
-    render: item => {
-      const parts = [item.result, item.unit].filter(Boolean)
-      return parts.length > 0 ? parts.join(' ') : '—'
-    },
-  },
-  { label: 'Reference range', className: 'w-36', render: item => item.referenceRange ?? '—' },
-  {
-    label: 'Interpretation',
+    label: 'Flag',
     className: 'w-36',
     render: item => item.interpretation
       ? <span className={interpretationClass(item.interpretation)}>{item.interpretation}</span>
@@ -74,14 +65,10 @@ function CommentText({ text, className }: { text: string; className?: string }) 
 
 function ResultsTable({
   results,
-  reportId,
   onJumpToSource,
-  onJumpToRecord,
 }: {
   results: GpConnectInvestigationResult[]
-  reportId: string
   onJumpToSource?: (id: string) => void
-  onJumpToRecord?: (domain: DomainId, id: string) => void
 }) {
   if (results.length === 0) return null
   return (
@@ -111,24 +98,14 @@ function ResultsTable({
                 <tr key={r.id} className="border-b border-nhs-blue/10 last:border-0">
                   <td className="py-1.5 pr-4 text-nhs-grey-1">
                     <div>{r.name}</div>
-                    <div className="flex gap-3 mt-0.5">
-                      {onJumpToRecord && (
-                        <button
-                          onClick={() => onJumpToRecord('investigations', reportId)}
-                          className="text-[11px] text-nhs-blue hover:underline"
-                        >
-                          Go to investigation →
-                        </button>
-                      )}
-                      {onJumpToSource && (
-                        <button
-                          onClick={() => onJumpToSource(`Observation/${r.id}`)}
-                          className="text-[11px] text-nhs-grey-3 hover:text-nhs-grey-1 hover:underline"
-                        >
-                          View FHIR ↗
-                        </button>
-                      )}
-                    </div>
+                    {onJumpToSource && (
+                      <button
+                        onClick={e => { e.stopPropagation(); onJumpToSource(`Observation/${r.id}`) }}
+                        className="text-[11px] text-nhs-grey-3 hover:text-nhs-grey-1 hover:underline mt-0.5"
+                      >
+                        View FHIR ↗
+                      </button>
+                    )}
                   </td>
                   <td className={`py-1.5 pr-4 font-medium ${intClass}`}>{valueText}</td>
                   <td className="py-1.5 pr-4 text-nhs-grey-2">{r.referenceRange ?? '—'}</td>
@@ -160,25 +137,117 @@ function ResultsTable({
   )
 }
 
-function TestGroupSection({
-  group,
-  reportId,
-  onJumpToSource,
-  onJumpToRecord,
-}: {
-  group: GpConnectTestGroup
-  reportId: string
-  onJumpToSource?: (id: string) => void
-  onJumpToRecord?: (domain: DomainId, id: string) => void
-}) {
+function SpecimenSection({ specimen, onJumpToSource }: { specimen: GpConnectSpecimen; onJumpToSource?: (id: string) => void }) {
   return (
-    <div className="space-y-2">
-      {group.name && (
-        <div className="flex items-baseline gap-3">
-          <span className="text-xs font-semibold text-nhs-grey-2 uppercase tracking-wide">{group.name}</span>
-          {group.date && <span className="text-xs text-nhs-grey-3">{group.date}</span>}
+    <div className="p-3 rounded-lg bg-nhs-grey-5/50 border border-nhs-blue/15 space-y-1.5">
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] font-semibold text-nhs-grey-3 uppercase tracking-wide">Specimen</p>
+        {onJumpToSource && specimen.id && (
+          <button onClick={() => onJumpToSource(`Specimen/${specimen.id}`)} className="text-[11px] text-nhs-grey-3 hover:text-nhs-grey-1 hover:underline">
+            View FHIR ↗
+          </button>
+        )}
+      </div>
+      <div className="flex flex-wrap gap-x-6 gap-y-1">
+        {specimen.type && (
+          <div className="flex gap-1.5 items-baseline">
+            <span className="text-xs text-nhs-grey-3 shrink-0">Type</span>
+            <span className="text-xs font-medium text-nhs-grey-1">{specimen.type}</span>
+          </div>
+        )}
+        {specimen.collectedDateTime && (
+          <div className="flex gap-1.5 items-baseline">
+            <span className="text-xs text-nhs-grey-3 shrink-0">Collected</span>
+            <span className="text-xs text-nhs-grey-1">{specimen.collectedDateTime}</span>
+          </div>
+        )}
+        {specimen.receivedTime && (
+          <div className="flex gap-1.5 items-baseline">
+            <span className="text-xs text-nhs-grey-3 shrink-0">Received</span>
+            <span className="text-xs text-nhs-grey-1">{specimen.receivedTime}</span>
+          </div>
+        )}
+        {specimen.status && (
+          <div className="flex gap-1.5 items-baseline">
+            <span className="text-xs text-nhs-grey-3 shrink-0">Status</span>
+            <span className="text-xs text-nhs-grey-1 capitalize">{specimen.status}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function ProcedureRequestSection({ pr, onJumpToSource }: { pr: GpConnectProcedureRequest; onJumpToSource?: (id: string) => void }) {
+  return (
+    <div className="p-3 rounded-lg bg-nhs-grey-5/50 border border-nhs-blue/15 space-y-1.5">
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] font-semibold text-nhs-grey-3 uppercase tracking-wide">Test request</p>
+        {onJumpToSource && pr.id && (
+          <button onClick={() => onJumpToSource(`ProcedureRequest/${pr.id}`)} className="text-[11px] text-nhs-grey-3 hover:text-nhs-grey-1 hover:underline">
+            View FHIR ↗
+          </button>
+        )}
+      </div>
+      {pr.name && (
+        <p className="text-xs font-medium text-nhs-grey-1">{pr.name}</p>
+      )}
+      <div className="flex flex-wrap gap-x-6 gap-y-1">
+        {pr.requester && (
+          <div className="flex gap-1.5 items-baseline">
+            <span className="text-xs text-nhs-grey-3 shrink-0">Requested by</span>
+            <span className="text-xs text-nhs-grey-1">{pr.requester}</span>
+          </div>
+        )}
+        {pr.performer && (
+          <div className="flex gap-1.5 items-baseline">
+            <span className="text-xs text-nhs-grey-3 shrink-0">Perform at</span>
+            <span className="text-xs text-nhs-grey-1">{pr.performer}</span>
+          </div>
+        )}
+        {pr.status && (
+          <div className="flex gap-1.5 items-baseline">
+            <span className="text-xs text-nhs-grey-3 shrink-0">Status</span>
+            <span className="text-xs text-nhs-grey-1 capitalize">{pr.status}</span>
+          </div>
+        )}
+      </div>
+      {pr.notes && pr.notes.length > 0 && (
+        <div className="space-y-0.5 pt-0.5">
+          {pr.notes.map((note, i) => (
+            <p key={i} className="text-xs text-nhs-grey-2 italic">{note}</p>
+          ))}
         </div>
       )}
+    </div>
+  )
+}
+
+function TestGroupSection({
+  group,
+  onJumpToSource,
+}: {
+  group: GpConnectTestGroup
+  onJumpToSource?: (id: string) => void
+}) {
+  return (
+    <div className="rounded border border-nhs-blue/20 bg-white/50 p-3 space-y-2">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-baseline gap-3">
+          {group.name && (
+            <span className="text-xs font-semibold text-nhs-grey-2 uppercase tracking-wide">{group.name}</span>
+          )}
+          {group.date && <span className="text-xs text-nhs-grey-3">{group.date}</span>}
+        </div>
+        <div className="flex items-center gap-3 shrink-0">
+          {onJumpToSource && (
+            <button onClick={() => onJumpToSource(`Observation/${group.id}`)} className="text-[11px] text-nhs-grey-3 hover:text-nhs-grey-1 hover:underline">
+              View FHIR ↗
+            </button>
+          )}
+          <span className="text-[10px] font-medium text-nhs-blue/50 uppercase tracking-wider">Test group</span>
+        </div>
+      </div>
       {group.comment && (
         <CommentText
           text={group.comment}
@@ -187,9 +256,7 @@ function TestGroupSection({
       )}
       <ResultsTable
         results={group.results}
-        reportId={reportId}
         onJumpToSource={onJumpToSource}
-        onJumpToRecord={onJumpToRecord}
       />
     </div>
   )
@@ -235,6 +302,16 @@ function InvestigationDetail({ investigation, bundle, onJumpToSource, onJumpToRe
         } />
       </div>
 
+      {/* Specimen */}
+      {investigation.specimen && (
+        <SpecimenSection specimen={investigation.specimen} onJumpToSource={onJumpToSource} />
+      )}
+
+      {/* Test request (ProcedureRequest) */}
+      {investigation.procedureRequest && (
+        <ProcedureRequestSection pr={investigation.procedureRequest} onJumpToSource={onJumpToSource} />
+      )}
+
       {/* Test groups */}
       {hasGroups && (
         <div className={`space-y-4 ${!singleUnnamedGroup ? 'pt-1 border-t border-nhs-blue/20' : ''}`}>
@@ -242,9 +319,7 @@ function InvestigationDetail({ investigation, bundle, onJumpToSource, onJumpToRe
             // Simple flat list: one unnamed group → render results directly
             <ResultsTable
               results={investigation.testGroups[0].results}
-              reportId={investigation.id}
               onJumpToSource={onJumpToSource}
-              onJumpToRecord={onJumpToRecord}
             />
           ) : (
             // Named groups: render each as a labelled section
@@ -252,9 +327,7 @@ function InvestigationDetail({ investigation, bundle, onJumpToSource, onJumpToRe
               <TestGroupSection
                 key={group.id}
                 group={group}
-                reportId={investigation.id}
                 onJumpToSource={onJumpToSource}
-                onJumpToRecord={onJumpToRecord}
               />
             ))
           )}

@@ -93,10 +93,11 @@ export function buildResourceLineIndex(source: string): Map<string, LineRange> {
       if (endLine === -1) continue
       const range = { start: startLine + 1, end: endLine + 1 }
 
-      // Find "resourceType" within the opening lines of this brace block.
-      // It is virtually always within the first few lines of a FHIR resource.
+      // Find "resourceType" anywhere within this brace block.
+      // Some GP Connect bundles place "category" before "resourceType", pushing
+      // it well past line 10, so scan the full block.
       let resourceType: string | undefined
-      const scanEnd = Math.min(startLine + 10, endLine)
+      const scanEnd = endLine
       for (let i = startLine; i <= scanEnd; i++) {
         const m = lines[i].match(/"resourceType"\s*:\s*"([^"]+)"/)
         if (m) { resourceType = m[1]; break }

@@ -60,8 +60,12 @@ export function ClinicalView({ record, onJumpToSource, onOpenTraining }: Props) 
   }
 
   const handleJumpToRecord = (domain: DomainId, id: string) => {
-    jumpTargetIdRef.current = id
-    setActiveDomain(domain)
+    if (domain === activeDomain) {
+      setSelectedId(id)
+    } else {
+      jumpTargetIdRef.current = id
+      setActiveDomain(domain)
+    }
   }
 
   return (
