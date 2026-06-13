@@ -133,6 +133,9 @@ function MedicationResourceDetail({ data: m, onJumpToSource, onJumpToRecord }: D
     <div className="space-y-1">
       <Row label="Name"        value={m.name} />
       <Row label="SNOMED code" value={m.snomedCode} />
+      {m.alternativeCodes?.map(c => (
+        <Row key={c.label} label={c.label} value={c.code} />
+      ))}
       <Row label="Resource ID" value={m.id} />
       <RecordLinks id={`Medication/${m.id}`} onJumpToSource={onJumpToSource} onJumpToRecord={onJumpToRecord} recordLabel="View in Supporting Resources" />
     </div>

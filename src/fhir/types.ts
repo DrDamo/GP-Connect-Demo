@@ -22,6 +22,7 @@ export interface GpConnectFhirMedication {
   id: string
   name: string
   snomedCode?: string
+  alternativeCodes?: Array<{ label: string; code: string }>
 }
 
 export interface GpConnectMedicationIssue {
@@ -261,6 +262,7 @@ export interface GpConnectInvestigationResult {
   interpretation?: string
   comment?: string
   isSubHeader?: boolean
+  isTransferDegraded?: boolean
   components?: GpConnectObservationComponent[]
 }
 
@@ -270,6 +272,7 @@ export interface GpConnectTestGroup {
   snomedCode?: string
   comment?: string
   date?: string
+  isTransferDegraded?: boolean
   results: GpConnectInvestigationResult[]
 }
 
@@ -357,6 +360,7 @@ export interface GpConnectCodedDataItem {
   category?: string
   snomedCode?: string
   description: string
+  isTransferDegraded?: boolean
   value?: string
   unit?: string
   comment?: string

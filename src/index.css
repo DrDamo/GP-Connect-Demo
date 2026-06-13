@@ -101,7 +101,10 @@ html.dark body {
   background-color: rgb(26 40 56 / 0.9);
 }
 
-/* Test group and sub-row surfaces (bg-white/50, bg-white/40) */
+/* Test group and sub-row surfaces (bg-white/40, bg-white/50, bg-white/60) */
+.dark .bg-white\/60 {
+  background-color: rgb(30 48 70 / 0.85);
+}
 .dark .bg-white\/50 {
   background-color: rgb(30 48 70 / 0.7);
 }

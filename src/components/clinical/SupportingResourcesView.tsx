@@ -137,6 +137,9 @@ function MedicationResourceCard({ m, selected, onSelect, onJumpToSource }: {
       </div>
       <div className="mt-2 space-y-0.5">
         <Row label="SNOMED / DM+D" value={m.snomedCode} />
+        {m.alternativeCodes?.map(c => (
+          <Row key={c.label} label={c.label} value={c.code} />
+        ))}
         <Row label="Resource ID"   value={m.id} />
       </div>
     </div>

@@ -85,12 +85,28 @@ export function extractHealthcareServices(bundle: fhir3.Bundle): GpConnectHealth
   }).filter(h => h.id)
 }
 
+function alternativeCodeLabel(system: string): string {
+  if (system.includes('emis-drug-codes')) return 'EMIS drug code'
+  if (system.includes('dmd.nhs.uk') || system.includes('/dmd')) return 'dm+d code'
+  if (system.includes('tpp')) return 'TPP code'
+  const last = system.replace(/\/$/, '').split(/[/:]/).pop() ?? system
+  return last
+}
+
 export function extractFhirMedications(bundle: fhir3.Bundle): GpConnectFhirMedication[] {
-  return getEntries<fhir3.Medication>(bundle, 'Medication').map(med => ({
-    id: med.id ?? '',
-    name: med.code?.text ?? med.code?.coding?.[0]?.display ?? 'Unknown',
-    snomedCode: extractSnomedCode(med.code?.coding),
-  })).filter(m => m.id)
+  return getEntries<fhir3.Medication>(bundle, 'Medication').map(med => {
+    const codings = med.code?.coding ?? []
+    const alternativeCodes = codings
+      .filter(c => c.system && !c.system.includes('snomed.info'))
+      .map(c => ({ label: alternativeCodeLabel(c.system!), code: c.code ?? '' }))
+      .filter(c => c.code)
+    return {
+      id: med.id ?? '',
+      name: med.code?.text ?? codings[0]?.display ?? 'Unknown',
+      snomedCode: extractSnomedCode(codings),
+      alternativeCodes: alternativeCodes.length ? alternativeCodes : undefined,
+    }
+  }).filter(m => m.id)
 }
 
 export function extractLocations(bundle: fhir3.Bundle): GpConnectLocation[] {

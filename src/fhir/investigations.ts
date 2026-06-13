@@ -16,6 +16,7 @@ type ObsLike = fhir3.Observation & {
 const GROUP_HEADER_CODE = '364712009'   // Laboratory test observable (TPP explicit group marker)
 const COMMENT_NOTE_CODE = '37331000000100'  // Comment note / filing comment
 const SKIP_CODE = '24641000000107'  // Investigation result placeholder — skip
+const TRANSFER_DEGRADED_CODE = '196411000000103'  // Transfer-degraded record entry
 
 function formatRange(rr: fhir3.ObservationReferenceRange | undefined): string | undefined {
   if (!rr) return undefined
@@ -81,15 +82,42 @@ function cleanGroupComment(raw: string | undefined): string | undefined {
   return stripped || undefined
 }
 
-// Resolve a better name for TPP's generic "Laboratory procedures" group header
+// Resolve a better name for TPP's generic "Laboratory procedures" group header,
+// and for transfer-degraded observations whose original text is in the comment.
 const GENERIC_GROUP_NAMES = new Set(['Laboratory procedures', 'Laboratory test observable'])
+
+function originalTextFromComment(obs: ObsLike): string | undefined {
+  if (!obs.comment) return undefined
+  const m = obs.comment.match(/^Original text:\s*([^\n\r]+)/im)
+  return m ? m[1].trim() : undefined
+}
+
 function groupHeaderName(obs: ObsLike): string {
-  const name = obs.code?.text ?? obs.code?.coding?.[0]?.display ?? ''
-  if (GENERIC_GROUP_NAMES.has(name) && obs.comment) {
-    const m = obs.comment.match(/^Original text:\s+([^\n\r]+)/m)
-    if (m) return m[1].trim()
+  const coding = obs.code?.coding
+  const codeText = obs.code?.text
+  const displayName = coding?.[0]?.display ?? ''
+  const isGeneric = GENERIC_GROUP_NAMES.has(codeText ?? displayName)
+  const isTransferDegraded = !codeText && coding?.some(c => c.code === TRANSFER_DEGRADED_CODE)
+  if (isGeneric || isTransferDegraded) {
+    const original = originalTextFromComment(obs)
+    if (original) return original
   }
-  return name || 'Results'
+  return codeText ?? (displayName || 'Results')
+}
+
+function resolveObsName(obs: ObsLike, fallback: string): string {
+  const coding = obs.code?.coding
+  const codeText = obs.code?.text
+  if (!codeText && coding?.some(c => c.code === TRANSFER_DEGRADED_CODE)) {
+    const original = originalTextFromComment(obs)
+    if (original) return original
+  }
+  return codeText ?? extractSnomedDisplay(coding) ?? coding?.[0]?.display ?? fallback
+}
+
+function isTransferDegradedObs(obs: ObsLike): boolean {
+  if (!obs.code?.coding?.some(c => c.code === TRANSFER_DEGRADED_CODE)) return false
+  return !!obs.code?.text || !!originalTextFromComment(obs)
 }
 
 function obsHasValue(obs: ObsLike): boolean {
@@ -288,10 +316,11 @@ export function extractInvestigations(bundle: fhir3.Bundle): GpConnectInvestigat
             const obsCoding = obs.code?.coding
             const group: GpConnectTestGroup = {
               id: obs.id ?? crypto.randomUUID(),
-              name: obs.code?.text ?? extractSnomedDisplay(obsCoding) ?? obsCoding?.[0]?.display ?? 'Results',
+              name: resolveObsName(obs, 'Results'),
               snomedCode: extractSnomedCode(obsCoding),
               comment: cleanGroupComment(obs.comment),
               date: formatDate(castRelated.effectiveDateTime ?? obs.issued),
+              isTransferDegraded: isTransferDegradedObs(obs) || undefined,
               results: [],
             }
             for (const memberRef of memberRefs) {
@@ -301,8 +330,9 @@ export function extractInvestigations(bundle: fhir3.Bundle): GpConnectInvestigat
               group.results.push({
                 id: memberObs.id ?? crypto.randomUUID(),
                 reportId,
-                name: memberObs.code?.text ?? extractSnomedDisplay(memberCoding) ?? memberCoding?.[0]?.display ?? 'Result',
+                name: resolveObsName(memberObs, 'Result'),
                 snomedCode: extractSnomedCode(memberCoding),
+                isTransferDegraded: isTransferDegradedObs(memberObs) || undefined,
                 ...extractObsResult(memberObs),
               })
             }
@@ -318,8 +348,9 @@ export function extractInvestigations(bundle: fhir3.Bundle): GpConnectInvestigat
             directGroup.results.push({
               id: obs.id ?? crypto.randomUUID(),
               reportId,
-              name: obs.code?.text ?? extractSnomedDisplay(obsCoding) ?? obsCoding?.[0]?.display ?? 'Result',
+              name: resolveObsName(obs, 'Result'),
               snomedCode: extractSnomedCode(obsCoding),
+              isTransferDegraded: isTransferDegradedObs(obs) || undefined,
               ...extractObsResult(obs),
             })
           }
@@ -349,6 +380,7 @@ export function extractInvestigations(bundle: fhir3.Bundle): GpConnectInvestigat
               snomedCode: extractSnomedCode(obsCoding),
               comment: cleanGroupComment(obs.comment),
               date: formatDate(castObs.effectiveDateTime ?? obs.issued),
+              isTransferDegraded: isTransferDegradedObs(obs) || undefined,
               results: [],
             }
             testGroups.push(currentGroup)
@@ -363,9 +395,10 @@ export function extractInvestigations(bundle: fhir3.Bundle): GpConnectInvestigat
             const result: GpConnectInvestigationResult = {
               id: obs.id ?? crypto.randomUUID(),
               reportId,
-              name: obs.code?.text ?? extractSnomedDisplay(obsCoding) ?? obsCoding?.[0]?.display ?? 'Result',
+              name: resolveObsName(obs, 'Result'),
               snomedCode: extractSnomedCode(obsCoding),
               isSubHeader,
+              isTransferDegraded: isTransferDegradedObs(obs) || undefined,
               ...extractObsResult(obs),
             }
             currentGroup.results.push(result)

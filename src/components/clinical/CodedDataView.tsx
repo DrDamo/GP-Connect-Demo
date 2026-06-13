@@ -29,7 +29,12 @@ const COLUMNS: DomainColumn<GpConnectCodedDataItem>[] = [
     label: 'Description',
     render: item => (
       <div>
-        <div className="font-medium text-nhs-grey-1">{item.description}</div>
+        <div className="font-medium text-nhs-grey-1">
+          {item.description}
+          {item.isTransferDegraded && (
+            <span className="inline-block ml-1.5 text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200 font-medium leading-none align-middle">Degrade</span>
+          )}
+        </div>
         {item.category && (
           <span className="inline-block mt-0.5 text-[10px] px-1.5 py-0.5 rounded bg-nhs-grey-5 text-nhs-grey-2 border border-nhs-grey-4 font-medium">
             {item.category}
@@ -42,8 +47,18 @@ const COLUMNS: DomainColumn<GpConnectCodedDataItem>[] = [
     label: 'Value',
     className: 'w-32',
     render: item => {
-      const parts = [item.value, item.unit].filter(Boolean)
-      return parts.length > 0 ? parts.join(' ') : '—'
+      if (item.value !== undefined || item.unit) {
+        return [item.value, item.unit].filter(Boolean).join(' ')
+      }
+      if (item.components?.length) {
+        const sys = item.components.find(c => /systolic/i.test(c.name))
+        const dia = item.components.find(c => /diastolic/i.test(c.name))
+        if (sys?.value !== undefined && dia?.value !== undefined) {
+          const unit = sys.unit ?? dia.unit
+          return [sys.value + '/' + dia.value, unit].filter(Boolean).join(' ')
+        }
+      }
+      return '—'
     },
   },
   {

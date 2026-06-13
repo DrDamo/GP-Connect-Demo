@@ -97,7 +97,12 @@ function ResultsTable({
               <>
                 <tr key={r.id} className="border-b border-nhs-blue/10 last:border-0">
                   <td className="py-1.5 pr-4 text-nhs-grey-1">
-                    <div>{r.name}</div>
+                    <div>
+                      {r.name}
+                      {r.isTransferDegraded && (
+                        <span className="inline-block ml-1.5 text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200 font-medium leading-none align-middle">Degrade</span>
+                      )}
+                    </div>
                     {onJumpToSource && (
                       <button
                         onClick={e => { e.stopPropagation(); onJumpToSource(`Observation/${r.id}`) }}
@@ -235,7 +240,12 @@ function TestGroupSection({
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-baseline gap-3">
           {group.name && (
-            <span className="text-xs font-semibold text-nhs-grey-2 uppercase tracking-wide">{group.name}</span>
+            <span className="text-xs font-semibold text-nhs-grey-2 uppercase tracking-wide">
+              {group.name}
+              {group.isTransferDegraded && (
+                <span className="inline-block ml-1.5 text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200 font-medium leading-none align-middle normal-case tracking-normal">Degrade</span>
+              )}
+            </span>
           )}
           {group.date && <span className="text-xs text-nhs-grey-3">{group.date}</span>}
         </div>
