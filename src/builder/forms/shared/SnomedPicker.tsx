@@ -50,6 +50,10 @@ function saveConfig(cfg: Partial<SnomedConfig>): void {
   } catch {}
 }
 
+// In dev the Express proxy runs separately; in production the /api routes are
+// Vercel serverless functions on the same origin.
+const DEFAULT_SERVER_URL = import.meta.env.DEV ? 'http://localhost:3001' : window.location.origin
+
 // ---------------------------------------------------------------------------
 // Config modal
 // ---------------------------------------------------------------------------
@@ -61,8 +65,7 @@ interface ConfigModalProps {
 
 function ConfigModal({ onClose, onSaved }: ConfigModalProps) {
   const saved = loadConfig()
-  // Default to the local proxy; legacy users who pointed to a custom server keep their URL
-  const [serverUrl, setServerUrl] = useState(saved.serverUrl ?? 'http://localhost:3001')
+  const [serverUrl, setServerUrl] = useState(saved.serverUrl ?? DEFAULT_SERVER_URL)
   // 'proxy' = NHS Terminology Proxy (no user token needed)
   // 'token' = direct server with a bearer JWT
   const [mode, setMode] = useState<'proxy' | 'token'>(saved.token ? 'token' : 'proxy')
@@ -135,7 +138,7 @@ function ConfigModal({ onClose, onSaved }: ConfigModalProps) {
             className={inputCls}
             value={serverUrl}
             onChange={e => setServerUrl(e.target.value)}
-            placeholder="http://localhost:3001"
+            placeholder={DEFAULT_SERVER_URL}
           />
         </div>
 
