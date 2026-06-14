@@ -57,7 +57,7 @@ function CommentText({ text, className }: { text: string; className?: string }) 
   const cleaned = text.replace(/\r\n?/g, '\n').trim()
   if (!cleaned) return null
   return (
-    <pre className={`whitespace-pre-wrap font-sans text-xs text-nhs-grey-2 leading-relaxed ${className ?? ''}`}>
+    <pre className={`whitespace-pre-wrap break-words font-sans text-xs text-nhs-grey-2 leading-relaxed ${className ?? ''}`}>
       {cleaned}
     </pre>
   )

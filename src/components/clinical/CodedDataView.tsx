@@ -124,7 +124,7 @@ function CodedDataDetail({ item, bundle, onJumpToSource, onJumpToRecord }: { ite
       {item.comment && (
         <div className="pt-1 border-t border-nhs-blue/20">
           <span className="text-xs text-nhs-grey-3 uppercase tracking-wide">Comment</span>
-          <p className="mt-0.5 text-xs text-nhs-grey-1">{item.comment}</p>
+          <p className="mt-0.5 text-xs text-nhs-grey-1 break-words">{item.comment}</p>
         </div>
       )}
       {hasComponents && (

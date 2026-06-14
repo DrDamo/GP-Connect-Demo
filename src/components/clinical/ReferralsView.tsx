@@ -16,14 +16,14 @@ interface Props {
 
 const COLUMNS: DomainColumn<GpConnectReferral>[] = [
   { label: 'Date', render: item => item.date ?? 'Unknown' },
-  { label: 'Recipient service', render: item => item.recipient ?? '—' },
+  { label: 'Reason', render: item => item.reason ?? '—' },
   {
     label: 'Priority',
     render: item => item.priority
       ? <StatusBadge value={item.priority} />
       : <span className="text-nhs-grey-3">—</span>,
   },
-  { label: 'Reason', render: item => item.reason ?? '—' },
+  { label: 'Recipient service', render: item => item.recipient ?? '—' },
   { label: 'Status', render: item => <StatusBadge value={item.status} /> },
 ]
 

@@ -450,6 +450,10 @@ export interface GpConnectList {
   entries: GpConnectListEntry[]
   category: ListCategory
   encounterId?: string
+  /** SNOMED / classification code from list.code.coding[0] — used for domain mapping */
+  listCode?: string
+  /** Value from Extension-CareConnect-GPC-ListWarningCode-1, e.g. 'data-in-transit' */
+  warningCode?: string
 }
 
 export interface GpConnectBundle {

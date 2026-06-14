@@ -30,6 +30,7 @@ type ActiveTab = 'clinical' | 'raw' | 'validation' | 'inspector' | 'training' | 
 interface LoadedBundle {
   source: string
   filename: string
+  label: string
   format: 'json' | 'xml'
   validation: ValidationResult
   record: GpConnectMedicationsRecord
@@ -78,7 +79,7 @@ export default function App() {
 
   const cycleTheme = () => setThemeMode(m => m === 'light' ? 'dark' : m === 'dark' ? 'system' : 'light')
 
-  const handleLoad = useCallback((text: string, filename: string) => {
+  const handleLoad = useCallback((text: string, filename: string, label?: string) => {
     setParseError(null)
     const parsed = parseBundle(text)
     if (!parsed.ok) {
@@ -106,13 +107,13 @@ export default function App() {
       locations: extractLocations(parsed.data),
       lists: extractLists(parsed.data),
     }
-    setLoaded({ source: text, filename, format: parsed.format, validation, record })
+    setLoaded({ source: text, filename, label: label ?? filename, format: parsed.format, validation, record })
     setTab('clinical')
   }, [])
 
   const handleLoadSample = useCallback(() => {
     const text = JSON.stringify(sampleBundle, null, 2)
-    handleLoad(text, 'medications-bundle.json')
+    handleLoad(text, 'medications-bundle.json', 'Sample Data')
   }, [handleLoad])
 
   const handleLoadFullSample = useCallback(async () => {
@@ -121,7 +122,7 @@ export default function App() {
       const res = await fetch(import.meta.env.BASE_URL + 'gpc-sample-bundle.json')
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const text = await res.text()
-      handleLoad(text, 'gpc-sample-bundle.json')
+      handleLoad(text, 'gpc-sample-bundle.json', 'Sample Data')
     } catch (err) {
       setParseError('Failed to load full sample bundle: ' + (err instanceof Error ? err.message : String(err)))
     }
@@ -135,7 +136,7 @@ export default function App() {
       setParseError(normalized.error)
       return
     }
-    handleLoad(JSON.stringify(normalized.data, null, 2), 'pasted-bundle.json')
+    handleLoad(JSON.stringify(normalized.data, null, 2), 'pasted-bundle.json', 'Pasted JSON')
     setPasteText('')
     setShowPaste(false)
   }, [pasteText, handleLoad])
@@ -155,7 +156,10 @@ export default function App() {
             <div className="bg-white text-nhs-blue font-extrabold text-sm px-2 py-1 rounded leading-tight">NHS</div>
             <div>
               <h1 className="text-base font-semibold leading-tight">GP Connect Demonstrator</h1>
-              <p className="text-xs opacity-75 leading-tight">Access Record Structured · FHIR STU3</p>
+              <p className="text-xs opacity-75 leading-tight">
+                Access Record Structured · FHIR STU3
+                {loaded && <span className="ml-1 opacity-100 font-medium">· {loaded.label}</span>}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -207,7 +211,7 @@ export default function App() {
             </button>
           </div>
           <div className="flex-1 min-h-0 bg-white rounded-lg border border-nhs-grey-4 overflow-hidden">
-            <BuilderView onLoad={(json, filename) => { handleLoad(json, filename) }} />
+            <BuilderView onLoad={(json, filename) => { handleLoad(json, filename, 'Built Patient Record') }} />
           </div>
         </main>
       ) : tab === 'training' ? (

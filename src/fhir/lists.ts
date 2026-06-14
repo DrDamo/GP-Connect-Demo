@@ -63,6 +63,11 @@ export function extractLists(bundle: fhir3.Bundle): GpConnectList[] {
       const orderedBy = list.orderedBy?.coding?.[0]?.display ?? list.orderedBy?.text
       const emptyReason = list.emptyReason?.coding?.[0]?.display ?? list.emptyReason?.text
       const note = list.note?.map(n => n.text).filter(Boolean).join('; ') || undefined
+      const listCode = list.code?.coding?.[0]?.code
+      const warningExt = (list.extension ?? []).find(e =>
+        e.url?.includes('Extension-CareConnect-GPC-ListWarningCode-1')
+      )
+      const warningCode = (warningExt as { valueCode?: string } | undefined)?.valueCode
 
       const entries: GpConnectListEntry[] = (list.entry ?? []).map(e => {
         const ref = e.item.reference
@@ -102,6 +107,8 @@ export function extractLists(bundle: fhir3.Bundle): GpConnectList[] {
         entries,
         category,
         encounterId,
+        listCode,
+        warningCode,
       }
     })
     .filter(l => !INTERNAL_CATEGORIES.has(l.category))

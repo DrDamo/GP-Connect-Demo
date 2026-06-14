@@ -44,9 +44,11 @@ function extractPrescribingAgency(stmt: fhir3.MedicationStatement): string | und
 }
 
 function extractMedicationRequestIds(stmt: fhir3.MedicationStatement): string[] {
-  const basedOn = stmt.basedOn as fhir3.Reference[] | undefined
-  return (basedOn ?? [])
-    .map(ref => ref.reference)
+  const basedOn = stmt.basedOn
+  if (!basedOn) return []
+  const refs = Array.isArray(basedOn) ? basedOn : [basedOn]
+  return refs
+    .map(ref => (ref as fhir3.Reference).reference)
     .filter((r): r is string => Boolean(r))
 }
 
@@ -155,7 +157,11 @@ export function extractMedications(bundle: fhir3.Bundle): GpConnectMedication[] 
               b.reference?.endsWith(`/${planId}`) || b.reference === `MedicationRequest/${planId}`
             )
           })
-          .sort((a, b) => (a.authoredOn ?? '').localeCompare(b.authoredOn ?? ''))
+          .sort((a, b) => {
+            const primary = (b.authoredOn ?? '').localeCompare(a.authoredOn ?? '')
+            if (primary !== 0) return primary
+            return (b.dispenseRequest?.validityPeriod?.start ?? '').localeCompare(a.dispenseRequest?.validityPeriod?.start ?? '')
+          })
       : []
 
     const issues: GpConnectMedicationIssue[] = orderRequests.map(req => {
@@ -341,7 +347,11 @@ export function extractMedications(bundle: fhir3.Bundle): GpConnectMedication[] 
           b.reference?.endsWith(`/${planReq.id}`) || b.reference === `MedicationRequest/${planReq.id}`
         )
       })
-      .sort((a, b) => (a.authoredOn ?? '').localeCompare(b.authoredOn ?? ''))
+      .sort((a, b) => {
+        const primary = (b.authoredOn ?? '').localeCompare(a.authoredOn ?? '')
+        if (primary !== 0) return primary
+        return (b.dispenseRequest?.validityPeriod?.start ?? '').localeCompare(a.dispenseRequest?.validityPeriod?.start ?? '')
+      })
 
     const issues: GpConnectMedicationIssue[] = orderRequests.map(req => {
       const oqty = req.dispenseRequest?.quantity

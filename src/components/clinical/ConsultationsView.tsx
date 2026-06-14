@@ -274,7 +274,7 @@ function ConsultationItemCard({
           {content.badge}
         </span>
         {item.narrativeText !== undefined ? (
-          <span className="text-xs text-nhs-grey-1 min-w-0 whitespace-pre-wrap">{content.label}</span>
+          <span className="text-xs text-nhs-grey-1 min-w-0 whitespace-pre-wrap break-words">{content.label}</span>
         ) : (
           <span className="text-xs font-medium text-nhs-grey-1 min-w-0">{content.label}</span>
         )}

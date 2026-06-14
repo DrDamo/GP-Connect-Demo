@@ -25,6 +25,7 @@ export function extractImmunisations(bundle: fhir3.Bundle): GpConnectImmunisatio
     const parentPresent = parentPresentExt?.valueBoolean as boolean | undefined
 
     const vaccineCodings = resource.vaccineCode?.coding
+    const vaccineCodeIsNullFlavor = vaccineCodings?.every(c => c.system === 'http://hl7.org/fhir/v3/NullFlavor')
     const vaccineSnomedCode = extractSnomedCode(vaccineCodings)
     // Fall back to vaccination procedure code when vaccineCode is UNK
     const snomedCode = vaccineSnomedCode ?? vaccinationProcedureCode
@@ -60,7 +61,11 @@ export function extractImmunisations(bundle: fhir3.Bundle): GpConnectImmunisatio
 
     return {
       id: resource.id ?? crypto.randomUUID(),
-      vaccine: resource.vaccineCode?.text ?? vaccineCodings?.[0]?.display ?? 'Unknown',
+      vaccine: resource.vaccineCode?.text
+        ?? (vaccineCodeIsNullFlavor ? undefined : vaccineCodings?.[0]?.display)
+        ?? vaccinationProcedureDisplay
+        ?? vaccinationProcedureText
+        ?? 'Unknown',
       snomedCode,
       vaccinationProcedureCode,
       vaccinationProcedureDisplay,
