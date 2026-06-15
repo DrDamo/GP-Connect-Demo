@@ -60,6 +60,24 @@ export function BuilderView({ onLoad, onDirtyChange }: BuilderViewProps) {
   // Hidden file input ref for Load Draft
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // In production: auto-seed the SNOMED proxy config and show copyright notice once per session
+  const [showCopyright, setShowCopyright] = useState(() =>
+    !import.meta.env.DEV && !sessionStorage.getItem('snomed-copyright-seen')
+  )
+
+  useEffect(() => {
+    if (import.meta.env.DEV) return
+    const key = 'gpc-snomed-config'
+    if (!localStorage.getItem(key)) {
+      localStorage.setItem(key, JSON.stringify({ serverUrl: window.location.origin, token: '' }))
+    }
+  }, [])
+
+  const dismissCopyright = () => {
+    sessionStorage.setItem('snomed-copyright-seen', '1')
+    setShowCopyright(false)
+  }
+
   // Notify parent when dirty state changes
   useEffect(() => {
     onDirtyChange?.(isDirty)
@@ -225,6 +243,53 @@ export function BuilderView({ onLoad, onDirtyChange }: BuilderViewProps) {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
+      {/* SNOMED CT copyright notice — shown once per session in production */}
+      {showCopyright && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl border border-nhs-grey-4 dark:border-nhs-grey-2 w-full max-w-lg mx-4 p-6">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="shrink-0 w-8 h-8 rounded-full bg-nhs-blue/10 dark:bg-blue-900/30 flex items-center justify-center">
+                <svg className="w-4 h-4 text-nhs-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-sm font-semibold text-nhs-grey-1 dark:text-gray-100 mb-0.5">
+                  SNOMED CT — Terminology Search Active
+                </h2>
+                <p className="text-xs text-green-700 dark:text-green-400 font-medium">
+                  Connected to NHS Terminology Server
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2 text-xs text-nhs-grey-3 dark:text-gray-400 leading-relaxed mb-5">
+              <p>
+                This application uses <strong className="text-nhs-grey-2 dark:text-gray-300">SNOMED Clinical Terms®</strong> (SNOMED CT®)
+                to support clinical coding in the record builder. SNOMED CT® terminology searches are
+                handled through the NHS Terminology Server — no credentials are stored in your browser.
+              </p>
+              <p>
+                SNOMED CT® is the intellectual property of SNOMED International. All rights reserved.
+                SNOMED CT® was originally created by the College of American Pathologists.
+                "SNOMED" and "SNOMED CT" are registered trademarks of SNOMED International.
+              </p>
+              <p>
+                NHS Digital is the National Release Centre (NRC) for SNOMED CT® in the United Kingdom.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={dismissCopyright}
+              className="w-full py-2 bg-nhs-blue text-white rounded text-sm font-medium hover:opacity-90 transition-opacity"
+            >
+              Acknowledge &amp; Continue
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Hidden file input for Load Draft */}
       <input
         type="file"

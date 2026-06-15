@@ -38,10 +38,15 @@ const CONFIG_KEY = 'gpc-snomed-config'
 function loadConfig(): Partial<SnomedConfig> {
   try {
     const raw = localStorage.getItem(CONFIG_KEY)
-    return raw ? JSON.parse(raw) : {}
-  } catch {
-    return {}
+    if (raw) return JSON.parse(raw)
+  } catch {}
+  // In production the Vercel API proxy is on the same origin — auto-connect with no token
+  if (!import.meta.env.DEV) {
+    const cfg: SnomedConfig = { serverUrl: DEFAULT_SERVER_URL, token: '' }
+    saveConfig(cfg)
+    return cfg
   }
+  return {}
 }
 
 function saveConfig(cfg: Partial<SnomedConfig>): void {
@@ -55,7 +60,59 @@ function saveConfig(cfg: Partial<SnomedConfig>): void {
 const DEFAULT_SERVER_URL = import.meta.env.DEV ? 'http://localhost:3001' : window.location.origin
 
 // ---------------------------------------------------------------------------
-// Config modal
+// Info modal (production) — copyright notice + connection status
+// ---------------------------------------------------------------------------
+
+function SnomedInfoModal({ serverUrl, onClose }: { serverUrl: string; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl border border-nhs-grey-4 dark:border-nhs-grey-2 w-full max-w-md mx-4 p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-semibold text-nhs-grey-1 dark:text-gray-100">
+            SNOMED CT — Connection Status
+          </h2>
+          <button onClick={onClose} className="text-nhs-grey-3 hover:text-nhs-grey-1 dark:hover:text-gray-200">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2 mb-4 text-xs font-medium text-green-700 dark:text-green-400">
+          <svg className="w-3.5 h-3.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+          </svg>
+          Connected via NHS Terminology Server proxy
+        </div>
+
+        <p className="text-xs text-nhs-grey-3 dark:text-gray-400 leading-relaxed">
+          This application uses SNOMED Clinical Terms® (SNOMED CT®). SNOMED CT® is the intellectual
+          property of SNOMED International. All rights reserved. SNOMED CT® was originally created
+          by the College of American Pathologists. "SNOMED" and "SNOMED CT" are registered
+          trademarks of SNOMED International.
+        </p>
+        <p className="text-xs text-nhs-grey-3 dark:text-gray-400 mt-2 leading-relaxed">
+          SNOMED CT content is licensed through the NHS Terminology Server. Terminology searches are
+          proxied server-side; no credentials are stored in your browser.
+        </p>
+
+        <div className="mt-3 pt-3 border-t border-nhs-grey-4 dark:border-gray-700">
+          <p className="text-xs text-nhs-grey-3 dark:text-gray-500 font-mono truncate">{serverUrl}/api/snomed</p>
+        </div>
+
+        <button
+          onClick={onClose}
+          className="mt-4 w-full py-1.5 bg-nhs-blue text-white rounded text-sm font-medium hover:opacity-90 transition-opacity"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Config modal (dev only) — full server URL + token configuration
 // ---------------------------------------------------------------------------
 
 interface ConfigModalProps {
@@ -75,7 +132,6 @@ function ConfigModal({ onClose, onSaved }: ConfigModalProps) {
 
   const url = serverUrl.replace(/\/$/, '')
 
-  // Proxy mode: verify by hitting /api/health
   const handleProxyConnect = async () => {
     setBusy(true)
     setStatus(null)
@@ -92,7 +148,6 @@ function ConfigModal({ onClose, onSaved }: ConfigModalProps) {
     }
   }
 
-  // Token mode: verify by attempting a test search with the supplied JWT
   const handleTokenConnect = async () => {
     if (!pastedToken.trim()) { setStatus('Enter a token first'); return }
     setBusy(true)
@@ -428,10 +483,17 @@ export function SnomedPicker({ code, display, onSelect, label = 'SNOMED CT', sem
       </FormField>
 
       {showConfig && (
-        <ConfigModal
-          onClose={() => setShowConfig(false)}
-          onSaved={cfg => { setConfig(cfg); setShowConfig(false) }}
-        />
+        import.meta.env.DEV ? (
+          <ConfigModal
+            onClose={() => setShowConfig(false)}
+            onSaved={cfg => { setConfig(cfg); setShowConfig(false) }}
+          />
+        ) : (
+          <SnomedInfoModal
+            serverUrl={config.serverUrl ?? DEFAULT_SERVER_URL}
+            onClose={() => setShowConfig(false)}
+          />
+        )
       )}
     </>
   )
