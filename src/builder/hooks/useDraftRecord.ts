@@ -75,6 +75,8 @@ export type DraftAction =
   | { type: 'UPDATE_MEDICATION'; payload: { _tempId: string; updates: Partial<DraftMedication> } }
   | { type: 'REMOVE_MEDICATION'; payload: string }
   | { type: 'ADD_MEDICATION_ISSUE'; payload: string }
+  | { type: 'ADD_MEDICATION_ISSUE_WITH_ID'; payload: { medTempId: string; issueTempId: string } }
+  | { type: 'REAUTHORISE_MEDICATION'; payload: { oldTempId: string; newTempId: string } }
   | { type: 'UPDATE_MEDICATION_ISSUE'; payload: { medTempId: string; issueTempId: string; updates: Partial<DraftMedicationIssue> } }
   | { type: 'REMOVE_MEDICATION_ISSUE'; payload: { medTempId: string; issueTempId: string } }
   // Allergies
@@ -245,6 +247,46 @@ function draftReducer(state: DraftRecord, action: DraftAction): DraftRecord {
             ? { ...med, issues: [...(med.issues ?? []), { _tempId: newTempId() }] }
             : med,
         ),
+      }
+    }
+
+    case 'ADD_MEDICATION_ISSUE_WITH_ID': {
+      const { medTempId, issueTempId } = action.payload
+      return {
+        ...state,
+        medications: state.medications.map(med =>
+          med._tempId === medTempId
+            ? { ...med, issues: [...(med.issues ?? []), { _tempId: issueTempId }] }
+            : med,
+        ),
+      }
+    }
+
+    case 'REAUTHORISE_MEDICATION': {
+      const { oldTempId, newTempId: newId } = action.payload
+      const today = new Date().toISOString().split('T')[0]
+      const oldMed = state.medications.find(m => m._tempId === oldTempId)
+      if (!oldMed) return state
+      const newMed = {
+        ...oldMed,
+        _tempId: newId,
+        startDate: today,
+        endDate: undefined,
+        status: 'active',
+        stopReason: undefined,
+        issues: [],
+        reauthorisedFromTempId: oldTempId,
+      }
+      return {
+        ...state,
+        medications: [
+          ...state.medications.map(m =>
+            m._tempId === oldTempId
+              ? { ...m, status: 'stopped', endDate: today, stopReason: 'reauthorisation' as const }
+              : m,
+          ),
+          newMed,
+        ],
       }
     }
 
@@ -688,7 +730,12 @@ function draftReducer(state: DraftRecord, action: DraftAction): DraftRecord {
     case 'ADD_ALLERGY_WITH_ID':
       return {
         ...state,
-        allergies: [...state.allergies, { _tempId: action.payload, notes: [] }],
+        allergies: [...state.allergies, {
+          _tempId: action.payload,
+          notes: [],
+          status: 'active' as const,
+          assertedDate: new Date().toISOString().split('T')[0],
+        }],
       }
 
     case 'ADD_PROBLEM_WITH_ID':

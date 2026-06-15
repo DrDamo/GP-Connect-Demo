@@ -100,7 +100,7 @@ function AllergyCard({
           <SnomedPicker
             code={allergy.snomedCode}
             display={allergy.causativeAgent}
-            semanticTag="substance,product"
+            semanticTag="substance,product,allergy"
             onSelect={({ code, display }) => upd({
               snomedCode: code || undefined,
               ...(display ? { causativeAgent: display } : {}),
@@ -132,7 +132,16 @@ function AllergyCard({
             />
           </div>
 
-          <Field label="Reaction" value={allergy.reaction ?? ''} onChange={v => upd({ reaction: v })} placeholder="Anaphylaxis" />
+          <SnomedPicker
+            label="Reaction"
+            code={allergy.reactionCode}
+            display={allergy.reaction}
+            semanticTag="finding,disorder"
+            onSelect={({ code, display }) => upd({
+              reactionCode: code || undefined,
+              reaction: display || undefined,
+            })}
+          />
 
           <div className="grid grid-cols-2 gap-2">
             <Field label="Asserted date" type="date" value={allergy.assertedDate ?? ''} onChange={v => upd({ assertedDate: v })} />

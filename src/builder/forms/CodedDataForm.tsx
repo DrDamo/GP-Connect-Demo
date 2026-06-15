@@ -154,8 +154,8 @@ function CodedDataCard({
 
           <div className="grid grid-cols-3 gap-2">
             <Field label="Date" type="date" value={item.date ?? ''} onChange={v => upd({ date: v })} />
-            <Field label="Value" value={item.value ?? ''} onChange={v => upd({ value: v })} placeholder="120" />
-            <Field label="Unit" value={item.unit ?? ''} onChange={v => upd({ unit: v })} placeholder="mmHg" />
+            <Field label="Value" value={item.value ?? ''} onChange={v => upd({ value: v })} />
+            <Field label="Unit" value={item.unit ?? ''} onChange={v => upd({ unit: v })} />
           </div>
 
           <div className="grid grid-cols-3 gap-2">
@@ -164,7 +164,6 @@ function CodedDataCard({
               value={item.status ?? ''}
               onChange={v => upd({ status: v })}
               options={OBS_STATUS_OPTS}
-              placeholder="— Select —"
               required
             />
             <SelectField
@@ -172,7 +171,6 @@ function CodedDataCard({
               value={item.interpretation ?? ''}
               onChange={v => upd({ interpretation: v })}
               options={INTERPRETATION_OPTS}
-              placeholder="— Select —"
             />
             <Field label="Comment" value={item.comment ?? ''} onChange={v => upd({ comment: v })} />
           </div>

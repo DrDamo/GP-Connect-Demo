@@ -89,7 +89,6 @@ function ConsultationItemRow({
                 value={item.narrativeText ?? ''}
                 onChange={e => upd({ narrativeText: e.target.value })}
                 rows={2}
-                placeholder="Enter clinical narrative…"
                 className="w-full rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-2 py-1.5 text-sm text-nhs-grey-1 dark:bg-gray-800 focus:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue resize-none"
               />
             </div>
@@ -99,14 +98,13 @@ function ConsultationItemRow({
               label="Linked resource type"
               value={item.linkedResourceType ?? ''}
               onChange={v => upd({ linkedResourceType: v })}
-              placeholder="MedicationStatement"
             />
           )}
           {item.itemType === 'coded' && (
             <div className="grid grid-cols-3 gap-1">
-              <Field label="SNOMED code" value={item.snomedCode ?? ''} onChange={v => upd({ snomedCode: v })} placeholder="386661006" />
+              <Field label="SNOMED code" value={item.snomedCode ?? ''} onChange={v => upd({ snomedCode: v })} />
               <Field label="Description" value={item.description ?? ''} onChange={v => upd({ description: v })} />
-              <Field label="Value" value={item.value ?? ''} onChange={v => upd({ value: v })} placeholder="37.5" />
+              <Field label="Value" value={item.value ?? ''} onChange={v => upd({ value: v })} />
             </div>
           )}
         </div>
@@ -274,7 +272,6 @@ function TopicBlock({
                 payload: { consTempId, topicTempId: topic._tempId, updates: { title: v } },
               })
             }
-            placeholder="e.g. Type 2 diabetes review"
           />
 
           {/* Categories */}
@@ -369,7 +366,6 @@ function ConsultationCard({
           label="Type"
           value={consultation.typeDisplay ?? ''}
           onChange={v => upd({ typeDisplay: v })}
-          placeholder="Face to face consultation"
           className="col-span-2"
           required
         />
@@ -387,7 +383,6 @@ function ConsultationCard({
           value={consultation.encounterClass ?? ''}
           onChange={v => upd({ encounterClass: v })}
           options={ENCOUNTER_CLASS_OPTS}
-          placeholder="— Select —"
         />
       </div>
 

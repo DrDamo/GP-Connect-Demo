@@ -133,7 +133,7 @@ function DocumentCard({
       {expanded && (
         <div className="p-3 bg-white dark:bg-gray-900 space-y-3">
           <div className="grid grid-cols-2 gap-2">
-            <Field label="Document type" value={doc.type ?? ''} onChange={v => upd({ type: v })} placeholder="Discharge summary" required />
+            <Field label="Document type" value={doc.type ?? ''} onChange={v => upd({ type: v })} required />
             <Field label="Date" type="date" value={doc.date ?? ''} onChange={v => upd({ date: v })} />
           </div>
 
@@ -145,7 +145,6 @@ function DocumentCard({
               value={doc.status ?? ''}
               onChange={v => upd({ status: v })}
               options={STATUS_OPTS}
-              placeholder="— Select —"
               required
             />
             <SelectField
@@ -153,11 +152,10 @@ function DocumentCard({
               value={doc.mimeType ?? ''}
               onChange={v => upd({ mimeType: v })}
               options={MIME_TYPE_OPTS}
-              placeholder="— Select —"
             />
           </div>
 
-          <Field label="URL" value={doc.url ?? ''} onChange={v => upd({ url: v })} placeholder="https://example.com/document.pdf" />
+          <Field label="URL" value={doc.url ?? ''} onChange={v => upd({ url: v })} />
 
           <PractitionerSelect
             label="Author"

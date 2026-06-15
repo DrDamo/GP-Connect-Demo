@@ -5,11 +5,38 @@ const PRESCRIPTION_TYPE_URL = 'https://fhir.nhs.uk/STU3/StructureDefinition/Exte
 const PRESCRIPTION_TYPE_SYSTEM = 'https://fhir.nhs.uk/STU3/CodeSystem/CareConnect-PrescriptionType-1'
 const REPEAT_INFO_URL = 'https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-MedicationRepeatInformation-1'
 const LAST_ISSUE_DATE_URL = 'https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-MedicationStatementLastIssueDate-1'
+const PRESCRIPTION_STATUS_REASON_URL = 'https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-PrescriptionStatusReason-1'
+const PRESCRIPTION_STATUS_REASON_SYSTEM = 'https://fhir.nhs.uk/STU3/CodeSystem/CareConnect-MedicationRequestStatusReason-1'
 
 const PRESCRIPTION_TYPE_MAP: Record<string, { code: string; display: string }> = {
   acute: { code: 'acute', display: 'Acute' },
   repeat: { code: 'repeat', display: 'Repeat' },
   'repeat-dispensing': { code: 'repeat-dispensing', display: 'Repeat dispensing' },
+  'prescribed-elsewhere': { code: 'prescribed-elsewhere', display: 'Prescribed elsewhere' },
+}
+
+const STOP_REASON_MAP: Record<string, { code: string; display: string }> = {
+  reauthorisation: { code: '0001', display: 'Reauthorisation' },
+}
+
+function prescriptionStatusReasonExt(stopReason: string, changeDate: string): fhir3.Extension {
+  const coding = STOP_REASON_MAP[stopReason] ?? { code: stopReason, display: stopReason }
+  return {
+    url: PRESCRIPTION_STATUS_REASON_URL,
+    extension: [
+      {
+        url: 'statusReason',
+        valueCodeableConcept: {
+          coding: [{ system: PRESCRIPTION_STATUS_REASON_SYSTEM, code: coding.code, display: coding.display }],
+          text: coding.display,
+        },
+      },
+      {
+        url: 'statusChangeDate',
+        valueDateTime: changeDate,
+      },
+    ],
+  }
 }
 
 function prescriptionTypeExt(type?: string): fhir3.Extension {
@@ -98,6 +125,9 @@ function makeMedicationStatement(
     ...(lastIssueDate
       ? [{ url: LAST_ISSUE_DATE_URL, valueDateTime: lastIssueDate }]
       : []),
+    ...(draft.stopReason
+      ? [prescriptionStatusReasonExt(draft.stopReason, draft.endDate ?? new Date().toISOString().split('T')[0])]
+      : []),
   ]
 
   const resource: fhir3.MedicationStatement = {
@@ -150,7 +180,13 @@ function makePlanRequest(
   const resource = {
     resourceType: 'MedicationRequest' as const,
     id,
-    extension: [repeatInfoExt, prescriptionTypeExt(draft.prescriptionType)],
+    extension: [
+      repeatInfoExt,
+      prescriptionTypeExt(draft.prescriptionType),
+      ...(draft.stopReason
+        ? [prescriptionStatusReasonExt(draft.stopReason, draft.endDate ?? new Date().toISOString().split('T')[0])]
+        : []),
+    ],
     status: (draft.status as fhir3.MedicationRequest['status']) ?? 'active',
     intent: 'plan' as const,
     medicationReference: { reference: `Medication/${medId}` },

@@ -84,7 +84,6 @@ function ImmunisationCard({
           value={imm.status ?? ''}
           onChange={v => upd({ status: v })}
           options={STATUS_OPTS}
-          placeholder="— Select —"
           required
         />
         <div className="flex items-end pb-1">
@@ -101,8 +100,8 @@ function ImmunisationCard({
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        <Field label="Site" value={imm.site ?? ''} onChange={v => upd({ site: v })} placeholder="Left arm" />
-        <Field label="Route" value={imm.route ?? ''} onChange={v => upd({ route: v })} placeholder="Subcutaneous" />
+        <Field label="Site" value={imm.site ?? ''} onChange={v => upd({ site: v })} />
+        <Field label="Route" value={imm.route ?? ''} onChange={v => upd({ route: v })} />
       </div>
 
       <div className="grid grid-cols-2 gap-2">

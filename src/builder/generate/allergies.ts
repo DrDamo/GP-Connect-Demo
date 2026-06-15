@@ -52,7 +52,14 @@ function makeAllergyResource(
           reaction: [
             {
               manifestation: [
-                { coding: [{ display: draft.reaction }], text: draft.reaction },
+                {
+                  coding: [{
+                    system: 'http://snomed.info/sct',
+                    ...(draft.reactionCode ? { code: draft.reactionCode } : {}),
+                    ...(draft.reaction ? { display: draft.reaction } : {}),
+                  }],
+                  ...(draft.reaction ? { text: draft.reaction } : {}),
+                },
               ],
             },
           ],

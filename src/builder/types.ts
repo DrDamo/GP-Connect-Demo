@@ -64,7 +64,7 @@ export interface DraftMedication {
   dmdCode?: string
   dmdDisplay?: string
   dmdType?: 'VMP' | 'AMP'
-  prescriptionType?: 'acute' | 'repeat' | 'repeat-dispensing'
+  prescriptionType?: 'acute' | 'repeat' | 'repeat-dispensing' | 'prescribed-elsewhere'
   status?: string
   dose?: string
   frequency?: string
@@ -82,6 +82,8 @@ export interface DraftMedication {
   pharmacyInstructions?: string
   additionalInformation?: string
   issues?: DraftMedicationIssue[]
+  stopReason?: 'reauthorisation' | string
+  reauthorisedFromTempId?: string
   linkedProblemTempIds?: string[]
   linkedConsultationTempId?: string
 }
@@ -93,6 +95,7 @@ export interface DraftAllergy {
   category?: 'food' | 'medication' | 'environment' | 'biologic'
   criticality?: 'low' | 'high' | 'unable-to-assess'
   reaction?: string
+  reactionCode?: string
   status?: 'active' | 'resolved'
   assertedDate?: string
   onsetDate?: string

@@ -79,7 +79,7 @@ function OrganisationCard({
       {expanded && (
         <div className="p-3 bg-white dark:bg-gray-900 grid grid-cols-2 gap-2">
           <Field label="Organisation name" value={org.name ?? ''} onChange={v => upd({ name: v })} className="col-span-2" />
-          <Field label="ODS code" value={org.odsCode ?? ''} onChange={v => upd({ odsCode: v })} placeholder="A81001" />
+          <Field label="ODS code" value={org.odsCode ?? ''} onChange={v => upd({ odsCode: v })} />
           <Field label="Phone" type="tel" value={org.phone ?? ''} onChange={v => upd({ phone: v })} />
           <Field label="Address" value={org.address ?? ''} onChange={v => upd({ address: v })} className="col-span-2" />
         </div>
@@ -167,17 +167,16 @@ function PractitionerCard({
       )}
       {expanded && (
         <div className="p-3 bg-white dark:bg-gray-900 grid grid-cols-2 gap-2 sm:grid-cols-3">
-          <Field label="Prefix" value={prac.prefix ?? ''} onChange={v => upd({ prefix: v })} placeholder="Dr" />
+          <Field label="Prefix" value={prac.prefix ?? ''} onChange={v => upd({ prefix: v })} />
           <Field label="Given name" value={prac.givenName ?? ''} onChange={v => upd({ givenName: v })} />
           <Field label="Family name" value={prac.familyName ?? ''} onChange={v => upd({ familyName: v })} required />
-          <Field label="SDS User ID" value={prac.sdsUserId ?? ''} onChange={v => upd({ sdsUserId: v })} placeholder="G12345" />
-          <Field label="SDS Role Profile ID" value={prac.sdsRoleProfileId ?? ''} onChange={v => upd({ sdsRoleProfileId: v })} placeholder="R12345" />
+          <Field label="SDS User ID" value={prac.sdsUserId ?? ''} onChange={v => upd({ sdsUserId: v })} />
+          <Field label="SDS Role Profile ID" value={prac.sdsRoleProfileId ?? ''} onChange={v => upd({ sdsRoleProfileId: v })} />
           <SelectField
             label="Gender"
             value={prac.gender ?? ''}
             onChange={v => upd({ gender: v })}
             options={GENDER_OPTS}
-            placeholder="— Select —"
           />
         </div>
       )}
@@ -441,7 +440,6 @@ export function AdminForm({ draft, dispatch, onAutoPopulate }: Props) {
             label="NHS Number"
             value={p.nhsNumber ?? ''}
             onChange={v => setPatient({ nhsNumber: v })}
-            placeholder="9990000018"
             required
           />
           <div className="flex items-end gap-2">
@@ -456,7 +454,7 @@ export function AdminForm({ draft, dispatch, onAutoPopulate }: Props) {
             </label>
           </div>
           <div />
-          <Field label="Prefix" value={p.prefix ?? ''} onChange={v => setPatient({ prefix: v })} placeholder="Mrs" />
+          <Field label="Prefix" value={p.prefix ?? ''} onChange={v => setPatient({ prefix: v })} />
           <Field label="Given name" value={p.givenName ?? ''} onChange={v => setPatient({ givenName: v })} />
           <Field label="Family name" value={p.familyName ?? ''} onChange={v => setPatient({ familyName: v })} required />
           <Field label="Date of birth" type="date" value={p.dateOfBirth ?? ''} onChange={v => setPatient({ dateOfBirth: v })} required />
@@ -465,7 +463,6 @@ export function AdminForm({ draft, dispatch, onAutoPopulate }: Props) {
             value={p.gender ?? ''}
             onChange={v => setPatient({ gender: v as DraftRecord['patient']['gender'] })}
             options={GENDER_OPTS}
-            placeholder="— Select —"
           />
           <div className="flex items-end gap-2">
             <label className="flex items-center gap-1.5 text-xs text-nhs-grey-2 pb-1">
@@ -478,7 +475,7 @@ export function AdminForm({ draft, dispatch, onAutoPopulate }: Props) {
               Active registration
             </label>
           </div>
-          <Field label="Registration type" value={p.registrationType ?? ''} onChange={v => setPatient({ registrationType: v })} placeholder="Regular" />
+          <Field label="Registration type" value={p.registrationType ?? ''} onChange={v => setPatient({ registrationType: v })} />
           <Field label="Registration start" type="date" value={p.registrationStart ?? ''} onChange={v => setPatient({ registrationStart: v })} />
           <div />
           <Field label="Address" value={p.address ?? ''} onChange={v => setPatient({ address: v })} className="col-span-2 sm:col-span-3" />
@@ -491,7 +488,7 @@ export function AdminForm({ draft, dispatch, onAutoPopulate }: Props) {
       <FormSection title="GP Practice" defaultOpen>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           <Field label="Practice name" value={o.name ?? ''} onChange={v => setOrg({ name: v })} className="col-span-2" />
-          <Field label="ODS code" value={o.odsCode ?? ''} onChange={v => setOrg({ odsCode: v })} placeholder="A81001" />
+          <Field label="ODS code" value={o.odsCode ?? ''} onChange={v => setOrg({ odsCode: v })} />
           <Field label="Phone" type="tel" value={o.phone ?? ''} onChange={v => setOrg({ phone: v })} />
           <Field label="Address" value={o.address ?? ''} onChange={v => setOrg({ address: v })} className="col-span-2 sm:col-span-3" />
         </div>
