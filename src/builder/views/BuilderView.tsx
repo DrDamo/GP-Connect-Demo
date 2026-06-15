@@ -1,10 +1,11 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useDraftRecord } from '../hooks/useDraftRecord'
 import { createSampleDraft } from '../sampleData'
 import { buildBundle } from '../generate/index'
 import { validateBundle } from '../../fhir/validator'
 import { BuilderDomainNav, type BuilderDomain } from './BuilderDomainNav'
 import { BuilderPreviewPanel } from './BuilderPreviewPanel'
+import { ListsSection } from '../components/ListsSection'
 import { AdminForm } from '../forms/AdminForm'
 import { MedicationForm } from '../forms/MedicationForm'
 import { AllergyForm } from '../forms/AllergyForm'
@@ -17,6 +18,7 @@ import { DiaryEntryForm } from '../forms/DiaryEntryForm'
 import { CodedDataForm } from '../forms/CodedDataForm'
 import { DocumentForm } from '../forms/DocumentForm'
 import type { ValidationIssue } from '../../fhir/types'
+import type { DraftRecord } from '../types'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -40,15 +42,39 @@ function downloadJson(json: string, filename: string) {
 
 export interface BuilderViewProps {
   onLoad: (json: string, filename: string) => void
+  onDirtyChange?: (isDirty: boolean) => void
 }
 
-export function BuilderView({ onLoad }: BuilderViewProps) {
+export function BuilderView({ onLoad, onDirtyChange }: BuilderViewProps) {
   const { draft, dispatch } = useDraftRecord()
   const [activeDomain, setActiveDomain] = useState<BuilderDomain>('admin')
   const [showPreview, setShowPreview] = useState(false)
   const [previewJson, setPreviewJson] = useState('')
   const [previewIssues, setPreviewIssues] = useState<ValidationIssue[]>([])
   const [buildError, setBuildError] = useState<string | null>(null)
+
+  // Dirty tracking: saveMarker holds JSON string at last save/load/clear
+  const [saveMarker, setSaveMarker] = useState<string>(() => JSON.stringify(draft))
+  const isDirty = saveMarker !== JSON.stringify(draft)
+
+  // Hidden file input ref for Load Draft
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Notify parent when dirty state changes
+  useEffect(() => {
+    onDirtyChange?.(isDirty)
+  }, [isDirty, onDirtyChange])
+
+  // Browser unload warning when dirty
+  useEffect(() => {
+    if (!isDirty) return
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [isDirty])
 
   // ---------------------------------------------------------------------------
   // Bundle generation (shared, throws on error)
@@ -69,11 +95,23 @@ export function BuilderView({ onLoad }: BuilderViewProps) {
     dispatch({ type: 'AUTO_POPULATE', payload: createSampleDraft() })
   }, [dispatch])
 
-  const handleClearAll = useCallback(() => {
+  // clearedRef lets us sync saveMarker after CLEAR_ALL without needing to
+  // call setSaveMarker inside the callback (draft hasn't updated yet then).
+  const clearedRef = useRef(false)
+  const handleClearAllFinal = useCallback(() => {
     if (window.confirm('Clear all draft data? This cannot be undone.')) {
+      clearedRef.current = true
       dispatch({ type: 'CLEAR_ALL' })
     }
   }, [dispatch])
+
+  // Sync saveMarker after clear
+  useEffect(() => {
+    if (clearedRef.current) {
+      clearedRef.current = false
+      setSaveMarker(JSON.stringify(draft))
+    }
+  }, [draft])
 
   const handlePreview = useCallback(() => {
     setBuildError(null)
@@ -97,8 +135,6 @@ export function BuilderView({ onLoad }: BuilderViewProps) {
     }
   }, [generateBundle, onLoad])
 
-  // Save JSON: validate first. If errors → show preview with Validation tab so
-  // the user can review issues before deciding to download. If clean → download.
   const handleSaveJson = useCallback(() => {
     setBuildError(null)
     try {
@@ -116,6 +152,41 @@ export function BuilderView({ onLoad }: BuilderViewProps) {
     }
   }, [generateBundle])
 
+  // Save Draft — downloads current draft as JSON
+  const handleSaveDraft = useCallback(() => {
+    const json = JSON.stringify(draft, null, 2)
+    downloadJson(json, 'draft-record.json')
+    setSaveMarker(JSON.stringify(draft))
+  }, [draft])
+
+  // Load Draft — triggers hidden file input
+  const handleLoadDraftClick = useCallback(() => {
+    fileInputRef.current?.click()
+  }, [])
+
+  const handleLoadDraftFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      try {
+        const text = ev.target?.result as string
+        const loaded = JSON.parse(text) as DraftRecord
+        // Ensure organisations array exists (backwards compat)
+        if (!Array.isArray(loaded.organisations)) {
+          loaded.organisations = []
+        }
+        dispatch({ type: 'LOAD_DRAFT', payload: loaded })
+        setSaveMarker(JSON.stringify(loaded))
+      } catch {
+        setBuildError('Failed to parse draft file — ensure it is a valid draft-record.json')
+      }
+    }
+    reader.readAsText(file)
+    // Reset input so the same file can be loaded again
+    e.target.value = ''
+  }, [dispatch])
+
   const handleDownloadFromPreview = useCallback(() => {
     downloadJson(previewJson, 'gp-connect-bundle.json')
   }, [previewJson])
@@ -132,18 +203,19 @@ export function BuilderView({ onLoad }: BuilderViewProps) {
 
   function renderForm() {
     switch (activeDomain) {
-      case 'admin':        return <AdminForm {...formProps} onAutoPopulate={handleAutoPopulate} />
-      case 'medications':  return <MedicationForm {...formProps} />
-      case 'allergies':    return <AllergyForm {...formProps} />
-      case 'problems':     return <ProblemForm {...formProps} />
-      case 'consultations':return <ConsultationForm {...formProps} />
-      case 'immunisations':return <ImmunisationForm {...formProps} />
+      case 'admin':         return <AdminForm {...formProps} onAutoPopulate={handleAutoPopulate} />
+      case 'medications':   return <MedicationForm {...formProps} />
+      case 'allergies':     return <AllergyForm {...formProps} />
+      case 'problems':      return <ProblemForm {...formProps} />
+      case 'consultations': return <ConsultationForm {...formProps} />
+      case 'immunisations': return <ImmunisationForm {...formProps} />
       case 'investigations':return <InvestigationForm {...formProps} />
-      case 'referrals':    return <ReferralForm {...formProps} />
-      case 'diaryEntries': return <DiaryEntryForm {...formProps} />
-      case 'codedData':    return <CodedDataForm {...formProps} />
-      case 'documents':    return <DocumentForm {...formProps} />
-      default:             return null
+      case 'referrals':     return <ReferralForm {...formProps} />
+      case 'diaryEntries':  return <DiaryEntryForm {...formProps} />
+      case 'codedData':     return <CodedDataForm {...formProps} />
+      case 'documents':     return <DocumentForm {...formProps} />
+      case 'lists':         return <ListsSection draft={draft} />
+      default:              return null
     }
   }
 
@@ -153,8 +225,18 @@ export function BuilderView({ onLoad }: BuilderViewProps) {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
+      {/* Hidden file input for Load Draft */}
+      <input
+        type="file"
+        accept=".json"
+        ref={fileInputRef}
+        className="hidden"
+        onChange={handleLoadDraftFile}
+      />
+
       {/* Toolbar */}
       <div className="shrink-0 flex items-center justify-between px-4 py-2 border-b border-nhs-grey-4 dark:border-nhs-grey-2 bg-white dark:bg-gray-900">
+        {/* Left: auto-populate | clear | load-draft | save-draft */}
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -165,12 +247,43 @@ export function BuilderView({ onLoad }: BuilderViewProps) {
           </button>
           <button
             type="button"
-            onClick={handleClearAll}
+            onClick={handleClearAllFinal}
             className="border border-nhs-grey-4 dark:border-nhs-grey-2 text-nhs-grey-2 px-3 py-1.5 rounded text-sm hover:border-nhs-red hover:text-nhs-red transition-colors"
           >
             Clear all
           </button>
+          <button
+            type="button"
+            onClick={handleLoadDraftClick}
+            className="border border-nhs-grey-4 dark:border-nhs-grey-2 text-nhs-grey-2 px-3 py-1.5 rounded text-sm hover:border-nhs-blue hover:text-nhs-blue transition-colors flex items-center gap-1"
+            title="Load a previously saved draft-record.json"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+            Load Draft
+          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={handleSaveDraft}
+              className="border border-nhs-grey-4 dark:border-nhs-grey-2 text-nhs-grey-2 px-3 py-1.5 rounded text-sm hover:border-nhs-blue hover:text-nhs-blue transition-colors flex items-center gap-1"
+              title="Save current draft as draft-record.json"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              Save Draft
+            </button>
+            {isDirty && (
+              <span className="text-xs px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded font-medium">
+                Unsaved
+              </span>
+            )}
+          </div>
         </div>
+
+        {/* Right: preview-fhir | save-json (FHIR) | load-into-viewer */}
         <div className="flex items-center gap-2">
           <button
             type="button"

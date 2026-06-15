@@ -1,10 +1,14 @@
 import { useState } from 'react'
 import type { DraftRecord, DraftInvestigation, DraftInvestigationResult } from '../types'
 import type { DraftAction } from '../hooks/useDraftRecord'
+import { newTempId } from '../hooks/useDraftRecord'
 import { Field } from './shared/FormField'
 import { SelectField } from './shared/SelectField'
 import { PractitionerSelect } from './shared/PractitionerSelect'
 import { SnomedPicker } from './shared/SnomedPicker'
+import { BuilderModal } from '../components/BuilderModal'
+import { DeleteConfirmDialog } from '../components/DeleteConfirmDialog'
+import { LinkSection } from './shared/LinkSection'
 
 // ---------------------------------------------------------------------------
 // InvestigationForm
@@ -32,6 +36,10 @@ const INTERPRETATION_OPTS = [
   { value: 'low', label: 'Low' },
   { value: 'critical', label: 'Critical' },
 ]
+
+// ---------------------------------------------------------------------------
+// ResultRow
+// ---------------------------------------------------------------------------
 
 function ResultRow({
   result,
@@ -96,18 +104,90 @@ function ResultRow({
   )
 }
 
+// ---------------------------------------------------------------------------
+// InvestigationCard
+// ---------------------------------------------------------------------------
+
 function InvestigationCard({
   inv,
   draft,
   dispatch,
+  isModal,
 }: {
   inv: DraftInvestigation
   draft: DraftRecord
   dispatch: React.Dispatch<DraftAction>
+  isModal?: boolean
 }) {
   const [open, setOpen] = useState(true)
   const upd = (updates: Partial<DraftInvestigation>) =>
     dispatch({ type: 'UPDATE_INVESTIGATION', payload: { _tempId: inv._tempId, updates } })
+
+  const body = (
+    <div className="p-3 bg-white dark:bg-gray-900 space-y-3">
+      <Field label="Test name" value={inv.name ?? ''} onChange={v => upd({ name: v })} required />
+      <SnomedPicker
+        code={inv.snomedCode}
+        display={inv.name}
+        semanticTag="observable entity"
+        onSelect={({ code, display }) => upd({
+          snomedCode: code || undefined,
+          ...(display ? { name: display } : {}),
+        })}
+      />
+
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <SelectField
+          label="Status"
+          value={inv.status ?? ''}
+          onChange={v => upd({ status: v })}
+          options={DIAG_STATUS_OPTS}
+          placeholder="— Select —"
+          required
+        />
+        <Field label="Date" type="date" value={inv.date ?? ''} onChange={v => upd({ date: v })} required />
+        <PractitionerSelect
+          label="Performer"
+          draft={draft}
+          value={inv.performerTempId}
+          onChange={v => upd({ performerTempId: v })}
+        />
+      </div>
+
+      {/* Results */}
+      <div>
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-xs font-medium text-nhs-grey-3 uppercase tracking-wide">
+            Results ({inv.results.length})
+          </span>
+          <button
+            type="button"
+            onClick={() => dispatch({ type: 'ADD_INVESTIGATION_RESULT', payload: inv._tempId })}
+            className="text-xs text-nhs-blue hover:underline"
+          >
+            + Add result
+          </button>
+        </div>
+        {inv.results.map(result => (
+          <ResultRow key={result._tempId} result={result} invTempId={inv._tempId} dispatch={dispatch} />
+        ))}
+        {inv.results.length === 0 && (
+          <p className="text-xs text-nhs-grey-3">No results added yet.</p>
+        )}
+      </div>
+      <LinkSection
+        draft={draft}
+        linkedProblemTempIds={inv.linkedProblemTempIds ?? []}
+        linkedConsultationTempId={inv.linkedConsultationTempId}
+        onChangeProblemLinks={ids => upd({ linkedProblemTempIds: ids })}
+        onChangeConsultationLink={id => upd({ linkedConsultationTempId: id })}
+      />
+    </div>
+  )
+
+  if (isModal) {
+    return body
+  }
 
   return (
     <div className="border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg overflow-hidden mb-2">
@@ -138,80 +218,163 @@ function InvestigationCard({
         </button>
       </div>
 
-      {open && (
-        <div className="p-3 bg-white dark:bg-gray-900 space-y-3">
-          <Field label="Test name" value={inv.name ?? ''} onChange={v => upd({ name: v })} required />
-          <SnomedPicker
-            code={inv.snomedCode}
-            display={inv.name}
-            semanticTag="observable entity"
-            onSelect={({ code, display }) => upd({
-              snomedCode: code || undefined,
-              ...(display ? { name: display } : {}),
-            })}
-          />
-
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            <SelectField
-              label="Status"
-              value={inv.status ?? ''}
-              onChange={v => upd({ status: v })}
-              options={DIAG_STATUS_OPTS}
-              placeholder="— Select —"
-              required
-            />
-            <Field label="Date" type="date" value={inv.date ?? ''} onChange={v => upd({ date: v })} required />
-            <PractitionerSelect
-              label="Performer"
-              draft={draft}
-              value={inv.performerTempId}
-              onChange={v => upd({ performerTempId: v })}
-            />
-          </div>
-
-          {/* Results */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-medium text-nhs-grey-3 uppercase tracking-wide">
-                Results ({inv.results.length})
-              </span>
-              <button
-                type="button"
-                onClick={() => dispatch({ type: 'ADD_INVESTIGATION_RESULT', payload: inv._tempId })}
-                className="text-xs text-nhs-blue hover:underline"
-              >
-                + Add result
-              </button>
-            </div>
-            {inv.results.map(result => (
-              <ResultRow key={result._tempId} result={result} invTempId={inv._tempId} dispatch={dispatch} />
-            ))}
-            {inv.results.length === 0 && (
-              <p className="text-xs text-nhs-grey-3">No results added yet.</p>
-            )}
-          </div>
-        </div>
-      )}
+      {open && body}
     </div>
   )
 }
 
+// ---------------------------------------------------------------------------
+// InvestigationDisplayRow
+// ---------------------------------------------------------------------------
+
+function invStatusBadge(status: string | undefined) {
+  if (!status) return null
+  const cfg =
+    status === 'final'
+      ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
+      : status === 'preliminary'
+      ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300'
+      : status === 'cancelled' || status === 'entered-in-error'
+      ? 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
+      : status === 'amended'
+      ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
+      : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
+  const label = DIAG_STATUS_OPTS.find(o => o.value === status)?.label ?? status
+  return (
+    <span className={`inline-block text-xs font-medium px-1.5 py-0.5 rounded ${cfg}`}>
+      {label}
+    </span>
+  )
+}
+
+function InvestigationDisplayRow({
+  inv,
+  onEdit,
+  onDelete,
+}: {
+  inv: DraftInvestigation
+  onEdit: () => void
+  onDelete: () => void
+}) {
+  const meta = [
+    inv.date,
+    `${inv.results.length} ${inv.results.length === 1 ? 'result' : 'results'}`,
+  ].filter(Boolean).join(' · ')
+
+  return (
+    <div className="bg-nhs-grey-5 dark:bg-gray-800 border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg mb-2 px-3 py-2 flex items-start justify-between gap-2">
+      <div className="min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <p className="text-sm font-medium text-nhs-grey-1 dark:text-gray-100 truncate">
+            {inv.name || 'New investigation'}
+          </p>
+          {invStatusBadge(inv.status)}
+        </div>
+        {meta && <p className="text-xs text-nhs-grey-3 mt-0.5">{meta}</p>}
+      </div>
+      <div className="flex items-center gap-3 shrink-0 ml-2">
+        <button type="button" onClick={onEdit} className="text-xs text-nhs-blue hover:underline">Edit</button>
+        <button type="button" onClick={onDelete} className="text-xs text-nhs-red hover:opacity-70">Delete</button>
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// InvestigationForm
+// ---------------------------------------------------------------------------
+
 export function InvestigationForm({ draft, dispatch }: Props) {
+  const [modalState, setModalState] = useState<{ tempId: string; snapshot: DraftRecord } | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+
+  function handleAdd() {
+    const id = newTempId()
+    const snap = structuredClone(draft)
+    dispatch({ type: 'ADD_INVESTIGATION_WITH_ID', payload: id })
+    setModalState({ tempId: id, snapshot: snap })
+  }
+
+  function handleEdit(inv: DraftInvestigation) {
+    const snap = structuredClone(draft)
+    setModalState({ tempId: inv._tempId, snapshot: snap })
+  }
+
+  function handleDone() {
+    setModalState(null)
+  }
+
+  function handleCancel() {
+    if (modalState) {
+      dispatch({ type: 'LOAD_DRAFT', payload: modalState.snapshot })
+    }
+    setModalState(null)
+  }
+
+  function handleDeleteConfirm() {
+    if (deleteTarget) {
+      dispatch({ type: 'REMOVE_INVESTIGATION', payload: deleteTarget })
+      setDeleteTarget(null)
+    }
+  }
+
+  const activeInv = modalState
+    ? draft.investigations.find(i => i._tempId === modalState.tempId)
+    : null
+
+  const deleteInv = deleteTarget
+    ? draft.investigations.find(i => i._tempId === deleteTarget)
+    : null
+
   return (
     <div>
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-sm font-medium text-nhs-grey-2">Investigations</span>
+        <button
+          type="button"
+          onClick={handleAdd}
+          className="bg-nhs-blue text-white px-3 py-1.5 rounded text-sm font-medium hover:opacity-90 transition-opacity"
+        >
+          + Add investigation
+        </button>
+      </div>
+
       {draft.investigations.length === 0 && (
         <p className="text-sm text-nhs-grey-3 mb-3">No investigations added yet.</p>
       )}
+
       {draft.investigations.map(inv => (
-        <InvestigationCard key={inv._tempId} inv={inv} draft={draft} dispatch={dispatch} />
+        <InvestigationDisplayRow
+          key={inv._tempId}
+          inv={inv}
+          onEdit={() => handleEdit(inv)}
+          onDelete={() => setDeleteTarget(inv._tempId)}
+        />
       ))}
-      <button
-        type="button"
-        onClick={() => dispatch({ type: 'ADD_INVESTIGATION' })}
-        className="border border-nhs-grey-4 dark:border-nhs-grey-2 text-nhs-grey-2 px-3 py-1.5 rounded text-sm hover:border-nhs-blue hover:text-nhs-blue transition-colors"
-      >
-        + Add investigation
-      </button>
+
+      {modalState && activeInv && (
+        <BuilderModal
+          title={activeInv.name || 'Add Investigation'}
+          onDone={handleDone}
+          onCancel={handleCancel}
+          size="lg"
+        >
+          <InvestigationCard
+            inv={activeInv}
+            draft={draft}
+            dispatch={dispatch}
+            isModal
+          />
+        </BuilderModal>
+      )}
+
+      {deleteTarget && (
+        <DeleteConfirmDialog
+          label={deleteInv?.name || 'this investigation'}
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => setDeleteTarget(null)}
+        />
+      )}
     </div>
   )
 }

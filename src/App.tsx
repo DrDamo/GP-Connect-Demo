@@ -45,6 +45,11 @@ export default function App() {
   const [pasteText, setPasteText] = useState('')
   const [showPaste, setShowPaste] = useState(false)
   const prevTabRef = useRef<ActiveTab>('clinical')
+  const builderDirtyRef = useRef(false)
+
+  const handleBuilderDirtyChange = useCallback((isDirty: boolean) => {
+    builderDirtyRef.current = isDirty
+  }, [])
 
   const handleJumpToSource = useCallback((id: string) => {
     setJumpToId(id)
@@ -201,7 +206,13 @@ export default function App() {
         <main className="flex-1 flex flex-col min-h-0 max-w-screen-2xl mx-auto w-full px-4 pt-3 pb-4 gap-3">
           <div className="flex items-center gap-1 border-b border-nhs-grey-4">
             <button
-              onClick={() => setTab('clinical')}
+              onClick={() => {
+                if (
+                  builderDirtyRef.current &&
+                  !window.confirm('You have unsaved changes in the Record Builder. Leave without saving your draft?')
+                ) return
+                setTab('clinical')
+              }}
               className="px-4 py-2 text-sm font-medium rounded-t transition-colors text-nhs-grey-2 hover:text-nhs-blue"
             >
               ← {loaded ? 'Clinical view' : 'Load a bundle'}
@@ -211,7 +222,10 @@ export default function App() {
             </button>
           </div>
           <div className="flex-1 min-h-0 bg-white rounded-lg border border-nhs-grey-4 overflow-hidden">
-            <BuilderView onLoad={(json, filename) => { handleLoad(json, filename, 'Built Patient Record') }} />
+            <BuilderView
+              onLoad={(json, filename) => { handleLoad(json, filename, 'Built Patient Record') }}
+              onDirtyChange={handleBuilderDirtyChange}
+            />
           </div>
         </main>
       ) : tab === 'training' ? (

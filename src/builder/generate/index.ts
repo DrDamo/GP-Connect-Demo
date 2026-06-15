@@ -15,7 +15,7 @@ import { generateReferrals } from './referrals'
 import { generateDiaryEntries } from './diaryEntries'
 import { generateCodedData } from './codedData'
 import { generateDocuments } from './documents'
-import { generateDomainLists } from './lists'
+import { generateDomainLists, generateSecondaryLists } from './lists'
 import type { DomainEntries } from './lists'
 
 export function buildBundle(draft: DraftRecord): fhir3.Bundle {
@@ -24,6 +24,38 @@ export function buildBundle(draft: DraftRecord): fhir3.Bundle {
 
   // Allergies returns { activeEntries, endedListEntry } — handled separately
   const allergyResult = generateAllergies(draft, idMap, patientRef)
+
+  // Build relatedClinicalContent map: problem _tempId → array of FHIR references
+  const relatedContent = new Map<string, string[]>(
+    draft.problems.map(p => [p._tempId, []])
+  )
+
+  function linkToProblems(
+    items: Array<{ _tempId: string; linkedProblemTempIds?: string[] }>,
+    fhirType: string,
+  ) {
+    for (const item of items) {
+      for (const probId of item.linkedProblemTempIds ?? []) {
+        relatedContent.get(probId)?.push(idMap.ref(item._tempId, fhirType))
+      }
+    }
+  }
+
+  linkToProblems(draft.medications, 'MedicationStatement')
+  linkToProblems(draft.allergies, 'AllergyIntolerance')
+  linkToProblems(draft.consultations, 'Encounter')
+  linkToProblems(draft.immunisations, 'Immunization')
+  linkToProblems(draft.investigations, 'DiagnosticReport')
+  linkToProblems(draft.referrals, 'ReferralRequest')
+  linkToProblems(draft.diaryEntries, 'ProcedureRequest')
+  linkToProblems(draft.codedData, 'Observation')
+  linkToProblems(draft.documents, 'DocumentReference')
+  // Problem-to-problem links: if Problem B links to Problem A, add B as relatedContent on A
+  for (const p of draft.problems) {
+    for (const probId of p.linkedProblemTempIds ?? []) {
+      relatedContent.get(probId)?.push(idMap.ref(p._tempId, 'Condition'))
+    }
+  }
 
   // Build the reference lists for the 10 primary domain Lists
   const domainEntries: DomainEntries = {
@@ -45,7 +77,7 @@ export function buildBundle(draft: DraftRecord): fhir3.Bundle {
     ...generateAdmin(draft, idMap),
     ...generateMedications(draft, idMap, patientRef),
     ...allergyResult.activeEntries,
-    ...generateProblems(draft, idMap, patientRef),
+    ...generateProblems(draft, idMap, patientRef, relatedContent),
     ...generateConsultations(draft, idMap, patientRef),
     ...generateImmunisations(draft, idMap, patientRef),
     ...generateInvestigations(draft, idMap, patientRef),
@@ -55,6 +87,7 @@ export function buildBundle(draft: DraftRecord): fhir3.Bundle {
     ...generateDocuments(draft, idMap, patientRef),
     ...(allergyResult.endedListEntry ? [allergyResult.endedListEntry] : []),
     ...generateDomainLists(patientRef, domainEntries),
+    ...generateSecondaryLists(draft, idMap, patientRef),
   ]
 
   return {

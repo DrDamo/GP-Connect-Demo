@@ -1,10 +1,14 @@
 import { useState } from 'react'
 import type { DraftRecord, DraftReferral } from '../types'
 import type { DraftAction } from '../hooks/useDraftRecord'
+import { newTempId } from '../hooks/useDraftRecord'
 import { Field } from './shared/FormField'
 import { SelectField } from './shared/SelectField'
 import { PractitionerSelect } from './shared/PractitionerSelect'
 import { NotesList } from './shared/NotesList'
+import { BuilderModal } from '../components/BuilderModal'
+import { DeleteConfirmDialog } from '../components/DeleteConfirmDialog'
+import { LinkSection } from './shared/LinkSection'
 
 // ---------------------------------------------------------------------------
 // ReferralForm
@@ -34,50 +38,98 @@ const STATUS_OPTS = [
   { value: 'cancelled', label: 'Cancelled' },
 ]
 
+function priorityBadgeClass(priority: string | undefined): string {
+  if (!priority) return 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
+  if (['urgent', 'asap', 'stat'].includes(priority))
+    return 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
+  return 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+}
+
+function ReferralDisplayRow({
+  referral,
+  onEdit,
+  onDelete,
+}: {
+  referral: DraftReferral
+  onEdit: () => void
+  onDelete: () => void
+}) {
+  return (
+    <div className="bg-nhs-grey-5 dark:bg-gray-800 border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg mb-2 px-3 py-2 flex items-start justify-between gap-2">
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm font-medium text-nhs-grey-1 dark:text-gray-100 truncate">
+            {referral.recipientName || 'Unnamed referral'}
+          </span>
+          {referral.priority && (
+            <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${priorityBadgeClass(referral.priority)}`}>
+              {referral.priority}
+            </span>
+          )}
+        </div>
+        <div className="text-xs text-nhs-grey-3 mt-0.5 flex items-center gap-2">
+          {referral.date && <span>{referral.date}</span>}
+          {referral.status && <span>{referral.status}</span>}
+        </div>
+      </div>
+      <div className="flex items-center gap-3 shrink-0 ml-2">
+        <button type="button" onClick={onEdit} className="text-xs text-nhs-blue hover:underline">Edit</button>
+        <button type="button" onClick={onDelete} className="text-xs text-nhs-red hover:opacity-70">Delete</button>
+      </div>
+    </div>
+  )
+}
+
 function ReferralCard({
   referral,
   draft,
   dispatch,
+  isModal,
 }: {
   referral: DraftReferral
   draft: DraftRecord
   dispatch: React.Dispatch<DraftAction>
+  isModal?: boolean
 }) {
   const [open, setOpen] = useState(true)
   const upd = (updates: Partial<DraftReferral>) =>
     dispatch({ type: 'UPDATE_REFERRAL', payload: { _tempId: referral._tempId, updates } })
 
+  const expanded = isModal ? true : open
+
   return (
     <div className="border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg overflow-hidden mb-2">
-      <div className="flex items-center justify-between px-3 py-2 bg-nhs-grey-5 dark:bg-gray-800">
-        <button
-          type="button"
-          onClick={() => setOpen(o => !o)}
-          className="flex items-center gap-2 flex-1 text-left"
-        >
-          <svg
-            className={`w-3.5 h-3.5 text-nhs-grey-3 transition-transform ${open ? 'rotate-180' : ''}`}
-            fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+      {!isModal && (
+        <div className="flex items-center justify-between px-3 py-2 bg-nhs-grey-5 dark:bg-gray-800">
+          <button
+            type="button"
+            onClick={() => setOpen(o => !o)}
+            className="flex items-center gap-2 flex-1 text-left"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-          </svg>
-          <span className="text-sm font-medium text-nhs-grey-1">
-            {referral.recipientName || 'New referral'}
-          </span>
-          {referral.priority && (
-            <span className="text-xs text-nhs-grey-3">{referral.priority}</span>
-          )}
-        </button>
-        <button
-          type="button"
-          onClick={() => dispatch({ type: 'REMOVE_REFERRAL', payload: referral._tempId })}
-          className="text-xs text-nhs-red hover:opacity-70 transition-opacity ml-2"
-        >
-          Remove
-        </button>
-      </div>
+            <svg
+              className={`w-3.5 h-3.5 text-nhs-grey-3 transition-transform ${open ? 'rotate-180' : ''}`}
+              fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+            <span className="text-sm font-medium text-nhs-grey-1">
+              {referral.recipientName || 'New referral'}
+            </span>
+            {referral.priority && (
+              <span className="text-xs text-nhs-grey-3">{referral.priority}</span>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => dispatch({ type: 'REMOVE_REFERRAL', payload: referral._tempId })}
+            className="text-xs text-nhs-red hover:opacity-70 transition-opacity ml-2"
+          >
+            Remove
+          </button>
+        </div>
+      )}
 
-      {open && (
+      {expanded && (
         <div className="p-3 bg-white dark:bg-gray-900 space-y-3">
           <div className="grid grid-cols-2 gap-2">
             <Field label="Date" type="date" value={referral.date ?? ''} onChange={v => upd({ date: v })} />
@@ -124,6 +176,13 @@ function ReferralCard({
             notes={referral.notes ?? []}
             onChange={notes => upd({ notes })}
           />
+          <LinkSection
+            draft={draft}
+            linkedProblemTempIds={referral.linkedProblemTempIds ?? []}
+            linkedConsultationTempId={referral.linkedConsultationTempId}
+            onChangeProblemLinks={ids => upd({ linkedProblemTempIds: ids })}
+            onChangeConsultationLink={id => upd({ linkedConsultationTempId: id })}
+          />
         </div>
       )}
     </div>
@@ -131,21 +190,91 @@ function ReferralCard({
 }
 
 export function ReferralForm({ draft, dispatch }: Props) {
+  const [modalState, setModalState] = useState<{ tempId: string; snapshot: DraftRecord } | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+
+  const handleAdd = () => {
+    const id = newTempId()
+    const snap = structuredClone(draft)
+    dispatch({ type: 'ADD_REFERRAL_WITH_ID', payload: id })
+    setModalState({ tempId: id, snapshot: snap })
+  }
+
+  const handleEdit = (referral: DraftReferral) => {
+    const snap = structuredClone(draft)
+    setModalState({ tempId: referral._tempId, snapshot: snap })
+  }
+
+  const handleDone = () => setModalState(null)
+
+  const handleCancel = () => {
+    if (modalState) dispatch({ type: 'LOAD_DRAFT', payload: modalState.snapshot })
+    setModalState(null)
+  }
+
+  const handleDeleteConfirm = () => {
+    if (deleteTarget) {
+      dispatch({ type: 'REMOVE_REFERRAL', payload: deleteTarget })
+      setDeleteTarget(null)
+    }
+  }
+
+  const activeReferral = modalState
+    ? draft.referrals.find(r => r._tempId === modalState.tempId) ?? null
+    : null
+
+  const deleteReferral = deleteTarget
+    ? draft.referrals.find(r => r._tempId === deleteTarget) ?? null
+    : null
+
   return (
     <div>
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-sm font-medium text-nhs-grey-2">Referrals</span>
+        <button
+          type="button"
+          onClick={handleAdd}
+          className="bg-nhs-blue text-white px-3 py-1.5 rounded text-sm font-medium hover:opacity-90 transition-opacity"
+        >
+          + Add referral
+        </button>
+      </div>
+
       {draft.referrals.length === 0 && (
         <p className="text-sm text-nhs-grey-3 mb-3">No referrals added yet.</p>
       )}
+
       {draft.referrals.map(referral => (
-        <ReferralCard key={referral._tempId} referral={referral} draft={draft} dispatch={dispatch} />
+        <ReferralDisplayRow
+          key={referral._tempId}
+          referral={referral}
+          onEdit={() => handleEdit(referral)}
+          onDelete={() => setDeleteTarget(referral._tempId)}
+        />
       ))}
-      <button
-        type="button"
-        onClick={() => dispatch({ type: 'ADD_REFERRAL' })}
-        className="border border-nhs-grey-4 dark:border-nhs-grey-2 text-nhs-grey-2 px-3 py-1.5 rounded text-sm hover:border-nhs-blue hover:text-nhs-blue transition-colors"
-      >
-        + Add referral
-      </button>
+
+      {modalState && activeReferral && (
+        <BuilderModal
+          title={activeReferral.recipientName ? `Edit: ${activeReferral.recipientName}` : 'Add Referral'}
+          onDone={handleDone}
+          onCancel={handleCancel}
+        >
+          <ReferralCard
+            referral={activeReferral}
+            draft={draft}
+            dispatch={dispatch}
+            isModal
+          />
+        </BuilderModal>
+      )}
+
+      {deleteTarget && deleteReferral && (
+        <DeleteConfirmDialog
+          label={deleteReferral.recipientName || 'this referral'}
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => setDeleteTarget(null)}
+        />
+      )}
     </div>
   )
 }

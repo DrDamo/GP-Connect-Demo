@@ -80,9 +80,8 @@ function makePatient(draft: DraftRecord, map: TempIdMap): fhir3.BundleEntry {
   return { fullUrl, resource }
 }
 
-function makeOrganisation(draft: DraftRecord, map: TempIdMap): fhir3.BundleEntry {
-  const { id, fullUrl } = map.entry(draft.organisation._tempId)
-  const o = draft.organisation
+function makeOrg(o: DraftRecord['organisation'], map: TempIdMap): fhir3.BundleEntry {
+  const { id, fullUrl } = map.entry(o._tempId)
 
   const resource: fhir3.Organization = {
     resourceType: 'Organization',
@@ -144,7 +143,8 @@ function makeLocation(l: DraftRecord['locations'][number], map: TempIdMap): fhir
 export function generateAdmin(draft: DraftRecord, map: TempIdMap): fhir3.BundleEntry[] {
   return [
     makePatient(draft, map),
-    makeOrganisation(draft, map),
+    makeOrg(draft.organisation, map),
+    ...(draft.organisations ?? []).map(o => makeOrg(o, map)),
     ...draft.practitioners.map(p => makePractitioner(p, map)),
     ...draft.locations.map(l => makeLocation(l, map)),
   ]

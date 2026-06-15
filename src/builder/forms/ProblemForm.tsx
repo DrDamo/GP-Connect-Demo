@@ -1,11 +1,15 @@
 import { useState } from 'react'
 import type { DraftRecord, DraftProblem } from '../types'
 import type { DraftAction } from '../hooks/useDraftRecord'
+import { newTempId } from '../hooks/useDraftRecord'
 import { Field } from './shared/FormField'
 import { SelectField } from './shared/SelectField'
 import { PractitionerSelect } from './shared/PractitionerSelect'
 import { NotesList } from './shared/NotesList'
 import { SnomedPicker } from './shared/SnomedPicker'
+import { BuilderModal } from '../components/BuilderModal'
+import { DeleteConfirmDialog } from '../components/DeleteConfirmDialog'
+import { LinkSection } from './shared/LinkSection'
 
 // ---------------------------------------------------------------------------
 // ProblemForm
@@ -31,46 +35,58 @@ function ProblemCard({
   problem,
   draft,
   dispatch,
+  isModal,
 }: {
   problem: DraftProblem
   draft: DraftRecord
   dispatch: React.Dispatch<DraftAction>
+  isModal?: boolean
 }) {
   const [open, setOpen] = useState(true)
   const upd = (updates: Partial<DraftProblem>) =>
     dispatch({ type: 'UPDATE_PROBLEM', payload: { _tempId: problem._tempId, updates } })
 
+  const expanded = isModal ? true : open
+
   return (
     <div className="border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg overflow-hidden mb-2">
       <div className="flex items-center justify-between px-3 py-2 bg-nhs-grey-5 dark:bg-gray-800">
-        <button
-          type="button"
-          onClick={() => setOpen(o => !o)}
-          className="flex items-center gap-2 flex-1 text-left"
-        >
-          <svg
-            className={`w-3.5 h-3.5 text-nhs-grey-3 transition-transform ${open ? 'rotate-180' : ''}`}
-            fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-          </svg>
-          <span className="text-sm font-medium text-nhs-grey-1">
+        {isModal ? (
+          <span className="text-sm font-medium text-nhs-grey-1 flex-1">
             {problem.problem || 'New problem'}
           </span>
-          {problem.clinicalStatus && (
-            <span className="text-xs text-nhs-grey-3">{problem.clinicalStatus}</span>
-          )}
-        </button>
-        <button
-          type="button"
-          onClick={() => dispatch({ type: 'REMOVE_PROBLEM', payload: problem._tempId })}
-          className="text-xs text-nhs-red hover:opacity-70 transition-opacity ml-2"
-        >
-          Remove
-        </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setOpen(o => !o)}
+            className="flex items-center gap-2 flex-1 text-left"
+          >
+            <svg
+              className={`w-3.5 h-3.5 text-nhs-grey-3 transition-transform ${open ? 'rotate-180' : ''}`}
+              fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+            <span className="text-sm font-medium text-nhs-grey-1">
+              {problem.problem || 'New problem'}
+            </span>
+            {problem.clinicalStatus && (
+              <span className="text-xs text-nhs-grey-3">{problem.clinicalStatus}</span>
+            )}
+          </button>
+        )}
+        {!isModal && (
+          <button
+            type="button"
+            onClick={() => dispatch({ type: 'REMOVE_PROBLEM', payload: problem._tempId })}
+            className="text-xs text-nhs-red hover:opacity-70 transition-opacity ml-2"
+          >
+            Remove
+          </button>
+        )}
       </div>
 
-      {open && (
+      {expanded && (
         <div className="p-3 bg-white dark:bg-gray-900 space-y-3">
           <Field label="Problem description" value={problem.problem ?? ''} onChange={v => upd({ problem: v })} required />
           <SnomedPicker
@@ -119,28 +135,164 @@ function ProblemCard({
             notes={problem.notes ?? []}
             onChange={notes => upd({ notes })}
           />
+          <LinkSection
+            draft={draft}
+            linkedProblemTempIds={problem.linkedProblemTempIds ?? []}
+            linkedConsultationTempId={problem.linkedConsultationTempId}
+            onChangeProblemLinks={ids => upd({ linkedProblemTempIds: ids })}
+            onChangeConsultationLink={id => upd({ linkedConsultationTempId: id })}
+            excludeProblemTempId={problem._tempId}
+          />
         </div>
       )}
     </div>
   )
 }
 
+function ProblemDisplayRow({
+  problem,
+  onEdit,
+  onDelete,
+}: {
+  problem: DraftProblem
+  onEdit: () => void
+  onDelete: () => void
+}) {
+  const status = problem.clinicalStatus ?? ''
+  const significance = problem.significance ?? ''
+
+  const statusBadge = (
+    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+      status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
+      'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+    }`}>{status || 'no status'}</span>
+  )
+
+  const significancePill = significance ? (
+    <span className={`text-xs px-2 py-0.5 rounded font-medium ${
+      significance === 'major' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
+      'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
+    }`}>{significance}</span>
+  ) : null
+
+  const datePart = [
+    problem.startDate ? `from ${problem.startDate}` : null,
+    problem.endDate ? `to ${problem.endDate}` : null,
+  ].filter(Boolean).join(' ')
+
+  return (
+    <div className="bg-nhs-grey-5 dark:bg-gray-800 border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg mb-2 px-3 py-2 flex items-start justify-between gap-2">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm font-medium text-nhs-grey-1 dark:text-gray-100">
+            {problem.problem || 'Unnamed problem'}
+          </span>
+          {statusBadge}
+          {significancePill}
+        </div>
+        {datePart && (
+          <div className="mt-0.5">
+            <span className="text-xs text-nhs-grey-3">{datePart}</span>
+          </div>
+        )}
+      </div>
+      <div className="flex items-center shrink-0">
+        <button onClick={onEdit} className="text-xs text-nhs-blue hover:underline mr-3">Edit</button>
+        <button onClick={onDelete} className="text-xs text-nhs-red hover:opacity-70">Delete</button>
+      </div>
+    </div>
+  )
+}
+
 export function ProblemForm({ draft, dispatch }: Props) {
+  const [modalState, setModalState] = useState<{ tempId: string; snapshot: DraftRecord } | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+
+  const handleAdd = () => {
+    const id = newTempId()
+    const snap = structuredClone(draft)
+    dispatch({ type: 'ADD_PROBLEM_WITH_ID', payload: id })
+    setModalState({ tempId: id, snapshot: snap })
+  }
+
+  const handleEdit = (problem: DraftProblem) => {
+    const snap = structuredClone(draft)
+    setModalState({ tempId: problem._tempId, snapshot: snap })
+  }
+
+  const handleDone = () => {
+    setModalState(null)
+  }
+
+  const handleCancel = () => {
+    if (modalState) {
+      dispatch({ type: 'LOAD_DRAFT', payload: modalState.snapshot })
+    }
+    setModalState(null)
+  }
+
+  const handleDeleteConfirm = () => {
+    if (deleteTarget) {
+      dispatch({ type: 'REMOVE_PROBLEM', payload: deleteTarget })
+      setDeleteTarget(null)
+    }
+  }
+
+  const activeProblem = modalState
+    ? draft.problems.find(p => p._tempId === modalState.tempId)
+    : null
+
+  const deleteTargetProblem = deleteTarget
+    ? draft.problems.find(p => p._tempId === deleteTarget)
+    : null
+
+  const modalTitle = activeProblem
+    ? (activeProblem.problem ? `Edit: ${activeProblem.problem}` : 'Edit Problem')
+    : 'Add Problem'
+
   return (
     <div>
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-sm font-medium text-nhs-grey-2">Problems</span>
+        <button
+          onClick={handleAdd}
+          className="bg-nhs-blue text-white px-3 py-1.5 rounded text-sm font-medium hover:opacity-90 transition-opacity"
+        >
+          + Add problem
+        </button>
+      </div>
+
       {draft.problems.length === 0 && (
         <p className="text-sm text-nhs-grey-3 mb-3">No problems added yet.</p>
       )}
+
       {draft.problems.map(problem => (
-        <ProblemCard key={problem._tempId} problem={problem} draft={draft} dispatch={dispatch} />
+        <ProblemDisplayRow
+          key={problem._tempId}
+          problem={problem}
+          onEdit={() => handleEdit(problem)}
+          onDelete={() => setDeleteTarget(problem._tempId)}
+        />
       ))}
-      <button
-        type="button"
-        onClick={() => dispatch({ type: 'ADD_PROBLEM' })}
-        className="border border-nhs-grey-4 dark:border-nhs-grey-2 text-nhs-grey-2 px-3 py-1.5 rounded text-sm hover:border-nhs-blue hover:text-nhs-blue transition-colors"
-      >
-        + Add problem
-      </button>
+
+      {modalState && activeProblem && (
+        <BuilderModal title={modalTitle} onDone={handleDone} onCancel={handleCancel}>
+          <ProblemCard
+            problem={activeProblem}
+            draft={draft}
+            dispatch={dispatch}
+            isModal
+          />
+        </BuilderModal>
+      )}
+
+      {deleteTarget && deleteTargetProblem && (
+        <DeleteConfirmDialog
+          label={deleteTargetProblem.problem || 'this problem'}
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => setDeleteTarget(null)}
+        />
+      )}
     </div>
   )
 }

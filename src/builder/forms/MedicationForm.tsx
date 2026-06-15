@@ -1,11 +1,15 @@
 import { useState } from 'react'
 import type { DraftRecord, DraftMedication, DraftMedicationIssue } from '../types'
 import type { DraftAction } from '../hooks/useDraftRecord'
+import { newTempId } from '../hooks/useDraftRecord'
 import { Field } from './shared/FormField'
 import { SelectField } from './shared/SelectField'
 import { PractitionerSelect } from './shared/PractitionerSelect'
 import { SnomedPicker } from './shared/SnomedPicker'
 import { DmdPicker } from './shared/DmdPicker'
+import { BuilderModal } from '../components/BuilderModal'
+import { DeleteConfirmDialog } from '../components/DeleteConfirmDialog'
+import { LinkSection } from './shared/LinkSection'
 
 // ---------------------------------------------------------------------------
 // MedicationForm
@@ -103,49 +107,60 @@ function MedicationCard({
   med,
   draft,
   dispatch,
+  isModal,
 }: {
   med: DraftMedication
   draft: DraftRecord
   dispatch: React.Dispatch<DraftAction>
+  isModal?: boolean
 }) {
   const [open, setOpen] = useState(true)
   const upd = (updates: Partial<DraftMedication>) =>
     dispatch({ type: 'UPDATE_MEDICATION', payload: { _tempId: med._tempId, updates } })
 
   const issues = med.issues ?? []
+  const expanded = isModal ? true : open
 
   return (
     <div className="border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg overflow-hidden mb-2">
       {/* Card header */}
       <div className="flex items-center justify-between px-3 py-2 bg-nhs-grey-5 dark:bg-gray-800">
-        <button
-          type="button"
-          onClick={() => setOpen(o => !o)}
-          className="flex items-center gap-2 flex-1 text-left"
-        >
-          <svg
-            className={`w-3.5 h-3.5 text-nhs-grey-3 transition-transform ${open ? 'rotate-180' : ''}`}
-            fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-          </svg>
-          <span className="text-sm font-medium text-nhs-grey-1">
+        {isModal ? (
+          <span className="text-sm font-medium text-nhs-grey-1 flex-1">
             {med.drugName || 'New medication'}
           </span>
-          {med.status && (
-            <span className="text-xs text-nhs-grey-3">{med.status}</span>
-          )}
-        </button>
-        <button
-          type="button"
-          onClick={() => dispatch({ type: 'REMOVE_MEDICATION', payload: med._tempId })}
-          className="text-xs text-nhs-red hover:opacity-70 transition-opacity ml-2"
-        >
-          Remove
-        </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setOpen(o => !o)}
+            className="flex items-center gap-2 flex-1 text-left"
+          >
+            <svg
+              className={`w-3.5 h-3.5 text-nhs-grey-3 transition-transform ${open ? 'rotate-180' : ''}`}
+              fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+            <span className="text-sm font-medium text-nhs-grey-1">
+              {med.drugName || 'New medication'}
+            </span>
+            {med.status && (
+              <span className="text-xs text-nhs-grey-3">{med.status}</span>
+            )}
+          </button>
+        )}
+        {!isModal && (
+          <button
+            type="button"
+            onClick={() => dispatch({ type: 'REMOVE_MEDICATION', payload: med._tempId })}
+            className="text-xs text-nhs-red hover:opacity-70 transition-opacity ml-2"
+          >
+            Remove
+          </button>
+        )}
       </div>
 
-      {open && (
+      {expanded && (
         <div className="p-3 bg-white dark:bg-gray-900 space-y-3">
           {/* Drug name */}
           <Field label="Drug name" value={med.drugName ?? ''} onChange={v => upd({ drugName: v })} required />
@@ -264,28 +279,165 @@ function MedicationCard({
               </div>
             )}
           </div>
+          <LinkSection
+            draft={draft}
+            linkedProblemTempIds={med.linkedProblemTempIds ?? []}
+            linkedConsultationTempId={med.linkedConsultationTempId}
+            onChangeProblemLinks={ids => upd({ linkedProblemTempIds: ids })}
+            onChangeConsultationLink={id => upd({ linkedConsultationTempId: id })}
+          />
         </div>
       )}
     </div>
   )
 }
 
+function MedicationDisplayRow({
+  med,
+  onEdit,
+  onDelete,
+}: {
+  med: DraftMedication
+  onEdit: () => void
+  onDelete: () => void
+}) {
+  const status = med.status ?? ''
+  const prescriptionType = med.prescriptionType ?? ''
+
+  const statusBadge = (
+    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+      status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
+      status === 'stopped' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400' :
+      'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+    }`}>{status || 'no status'}</span>
+  )
+
+  const typePill = prescriptionType ? (
+    <span className={`text-xs px-2 py-0.5 rounded font-medium ${
+      prescriptionType === 'acute' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
+      prescriptionType === 'repeat' ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400' :
+      'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'
+    }`}>{prescriptionType}</span>
+  ) : null
+
+  const doseParts = [med.dose, med.frequency, med.route].filter(Boolean).join(' · ')
+
+  return (
+    <div className="bg-nhs-grey-5 dark:bg-gray-800 border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg mb-2 px-3 py-2 flex items-start justify-between gap-2">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm font-medium text-nhs-grey-1 dark:text-gray-100">
+            {med.drugName || 'Unnamed medication'}
+          </span>
+          {statusBadge}
+        </div>
+        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+          {typePill}
+          {doseParts && (
+            <span className="text-xs text-nhs-grey-3">{doseParts}</span>
+          )}
+          {med.startDate && (
+            <span className="text-xs text-nhs-grey-3">from {med.startDate}</span>
+          )}
+        </div>
+      </div>
+      <div className="flex items-center shrink-0">
+        <button onClick={onEdit} className="text-xs text-nhs-blue hover:underline mr-3">Edit</button>
+        <button onClick={onDelete} className="text-xs text-nhs-red hover:opacity-70">Delete</button>
+      </div>
+    </div>
+  )
+}
+
 export function MedicationForm({ draft, dispatch }: Props) {
+  const [modalState, setModalState] = useState<{ tempId: string; snapshot: DraftRecord } | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+
+  const handleAdd = () => {
+    const id = newTempId()
+    const snap = structuredClone(draft)
+    dispatch({ type: 'ADD_MEDICATION_WITH_ID', payload: id })
+    setModalState({ tempId: id, snapshot: snap })
+  }
+
+  const handleEdit = (med: DraftMedication) => {
+    const snap = structuredClone(draft)
+    setModalState({ tempId: med._tempId, snapshot: snap })
+  }
+
+  const handleDone = () => {
+    setModalState(null)
+  }
+
+  const handleCancel = () => {
+    if (modalState) {
+      dispatch({ type: 'LOAD_DRAFT', payload: modalState.snapshot })
+    }
+    setModalState(null)
+  }
+
+  const handleDeleteConfirm = () => {
+    if (deleteTarget) {
+      dispatch({ type: 'REMOVE_MEDICATION', payload: deleteTarget })
+      setDeleteTarget(null)
+    }
+  }
+
+  const activeMed = modalState
+    ? draft.medications.find(m => m._tempId === modalState.tempId)
+    : null
+
+  const deleteTargetMed = deleteTarget
+    ? draft.medications.find(m => m._tempId === deleteTarget)
+    : null
+
+  const modalTitle = activeMed
+    ? (activeMed.drugName ? `Edit: ${activeMed.drugName}` : 'Edit Medication')
+    : 'Add Medication'
+
   return (
     <div>
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-sm font-medium text-nhs-grey-2">Medications</span>
+        <button
+          onClick={handleAdd}
+          className="bg-nhs-blue text-white px-3 py-1.5 rounded text-sm font-medium hover:opacity-90 transition-opacity"
+        >
+          + Add medication
+        </button>
+      </div>
+
       {draft.medications.length === 0 && (
         <p className="text-sm text-nhs-grey-3 mb-3">No medications added yet.</p>
       )}
+
       {draft.medications.map(med => (
-        <MedicationCard key={med._tempId} med={med} draft={draft} dispatch={dispatch} />
+        <MedicationDisplayRow
+          key={med._tempId}
+          med={med}
+          onEdit={() => handleEdit(med)}
+          onDelete={() => setDeleteTarget(med._tempId)}
+        />
       ))}
-      <button
-        type="button"
-        onClick={() => dispatch({ type: 'ADD_MEDICATION' })}
-        className="border border-nhs-grey-4 dark:border-nhs-grey-2 text-nhs-grey-2 px-3 py-1.5 rounded text-sm hover:border-nhs-blue hover:text-nhs-blue transition-colors"
-      >
-        + Add medication
-      </button>
+
+      {modalState && activeMed && (
+        <BuilderModal title={modalTitle} onDone={handleDone} onCancel={handleCancel} size="xl">
+          <MedicationCard
+            med={activeMed}
+            draft={draft}
+            dispatch={dispatch}
+            isModal
+          />
+        </BuilderModal>
+      )}
+
+      {deleteTarget && deleteTargetMed && (
+        <DeleteConfirmDialog
+          label={deleteTargetMed.drugName || 'this medication'}
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => setDeleteTarget(null)}
+        />
+      )}
     </div>
   )
 }

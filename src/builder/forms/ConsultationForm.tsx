@@ -8,9 +8,13 @@ import type {
   DraftConsultationItemType,
 } from '../types'
 import type { DraftAction } from '../hooks/useDraftRecord'
+import { newTempId } from '../hooks/useDraftRecord'
 import { Field } from './shared/FormField'
 import { SelectField } from './shared/SelectField'
 import { PractitionerSelect } from './shared/PractitionerSelect'
+import { BuilderModal } from '../components/BuilderModal'
+import { DeleteConfirmDialog } from '../components/DeleteConfirmDialog'
+import { LinkSection } from './shared/LinkSection'
 
 // ---------------------------------------------------------------------------
 // ConsultationForm — three-level nested structure
@@ -340,10 +344,12 @@ function ConsultationCard({
   consultation,
   draft,
   dispatch,
+  isModal,
 }: {
   consultation: DraftConsultation
   draft: DraftRecord
   dispatch: React.Dispatch<DraftAction>
+  isModal?: boolean
 }) {
   const [open, setOpen] = useState(true)
   const upd = (updates: Partial<DraftConsultation>) =>
@@ -352,6 +358,76 @@ function ConsultationCard({
   const label = consultation.date
     ? `${consultation.date}${consultation.typeDisplay ? ' — ' + consultation.typeDisplay : ''}`
     : consultation.typeDisplay || 'New consultation'
+
+  const body = (
+    <div className="p-3 bg-white dark:bg-gray-900 space-y-3">
+      {/* Header fields */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <Field label="Date" type="date" value={consultation.date ?? ''} onChange={v => upd({ date: v })} required />
+        <Field label="End date" type="date" value={consultation.endDate ?? ''} onChange={v => upd({ endDate: v })} />
+        <Field
+          label="Type"
+          value={consultation.typeDisplay ?? ''}
+          onChange={v => upd({ typeDisplay: v })}
+          placeholder="Face to face consultation"
+          className="col-span-2"
+          required
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <PractitionerSelect
+          label="Clinician"
+          draft={draft}
+          value={consultation.clinicianTempId}
+          onChange={v => upd({ clinicianTempId: v })}
+        />
+        <SelectField
+          label="Encounter class"
+          value={consultation.encounterClass ?? ''}
+          onChange={v => upd({ encounterClass: v })}
+          options={ENCOUNTER_CLASS_OPTS}
+          placeholder="— Select —"
+        />
+      </div>
+
+      {/* Topics */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs font-semibold text-nhs-grey-2 uppercase tracking-wide">
+            Topics
+          </span>
+          <button
+            type="button"
+            onClick={() => dispatch({ type: 'ADD_CONSULTATION_TOPIC', payload: consultation._tempId })}
+            className="text-xs text-nhs-blue hover:underline"
+          >
+            + Add topic
+          </button>
+        </div>
+        {consultation.topics.length === 0 && (
+          <p className="text-xs text-nhs-grey-3">No topics yet — add one above.</p>
+        )}
+        {consultation.topics.map(topic => (
+          <TopicBlock
+            key={topic._tempId}
+            topic={topic}
+            consTempId={consultation._tempId}
+            dispatch={dispatch}
+          />
+        ))}
+      </div>
+      <LinkSection
+        draft={draft}
+        linkedProblemTempIds={consultation.linkedProblemTempIds ?? []}
+        onChangeProblemLinks={ids => upd({ linkedProblemTempIds: ids })}
+      />
+    </div>
+  )
+
+  if (isModal) {
+    return body
+  }
 
   return (
     <div className="border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg overflow-hidden mb-3">
@@ -375,66 +451,48 @@ function ConsultationCard({
         </button>
       </div>
 
-      {open && (
-        <div className="p-3 bg-white dark:bg-gray-900 space-y-3">
-          {/* Header fields */}
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <Field label="Date" type="date" value={consultation.date ?? ''} onChange={v => upd({ date: v })} required />
-            <Field label="End date" type="date" value={consultation.endDate ?? ''} onChange={v => upd({ endDate: v })} />
-            <Field
-              label="Type"
-              value={consultation.typeDisplay ?? ''}
-              onChange={v => upd({ typeDisplay: v })}
-              placeholder="Face to face consultation"
-              className="col-span-2"
-              required
-            />
-          </div>
+      {open && body}
+    </div>
+  )
+}
 
-          <div className="grid grid-cols-2 gap-2">
-            <PractitionerSelect
-              label="Clinician"
-              draft={draft}
-              value={consultation.clinicianTempId}
-              onChange={v => upd({ clinicianTempId: v })}
-            />
-            <SelectField
-              label="Encounter class"
-              value={consultation.encounterClass ?? ''}
-              onChange={v => upd({ encounterClass: v })}
-              options={ENCOUNTER_CLASS_OPTS}
-              placeholder="— Select —"
-            />
-          </div>
+// ---------------------------------------------------------------------------
+// ConsultationDisplayRow
+// ---------------------------------------------------------------------------
 
-          {/* Topics */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-nhs-grey-2 uppercase tracking-wide">
-                Topics
-              </span>
-              <button
-                type="button"
-                onClick={() => dispatch({ type: 'ADD_CONSULTATION_TOPIC', payload: consultation._tempId })}
-                className="text-xs text-nhs-blue hover:underline"
-              >
-                + Add topic
-              </button>
-            </div>
-            {consultation.topics.length === 0 && (
-              <p className="text-xs text-nhs-grey-3">No topics yet — add one above.</p>
-            )}
-            {consultation.topics.map(topic => (
-              <TopicBlock
-                key={topic._tempId}
-                topic={topic}
-                consTempId={consultation._tempId}
-                dispatch={dispatch}
-              />
-            ))}
-          </div>
-        </div>
-      )}
+function ConsultationDisplayRow({
+  consultation,
+  draft,
+  onEdit,
+  onDelete,
+}: {
+  consultation: DraftConsultation
+  draft: DraftRecord
+  onEdit: () => void
+  onDelete: () => void
+}) {
+  const practitioner = draft.practitioners.find(p => p._tempId === consultation.clinicianTempId)
+  const clinicianName = practitioner
+    ? [practitioner.prefix, practitioner.givenName, practitioner.familyName].filter(Boolean).join(' ')
+    : null
+
+  const title = consultation.date
+    ? `${consultation.date}${consultation.typeDisplay ? ' — ' + consultation.typeDisplay : ''}`
+    : consultation.typeDisplay || 'New consultation'
+
+  return (
+    <div className="bg-nhs-grey-5 dark:bg-gray-800 border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg mb-2 px-3 py-2 flex items-start justify-between gap-2">
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-nhs-grey-1 dark:text-gray-100 truncate">{title}</p>
+        <p className="text-xs text-nhs-grey-3 mt-0.5">
+          {clinicianName && <span>{clinicianName} · </span>}
+          {consultation.topics.length} {consultation.topics.length === 1 ? 'topic' : 'topics'}
+        </p>
+      </div>
+      <div className="flex items-center gap-3 shrink-0 ml-2">
+        <button type="button" onClick={onEdit} className="text-xs text-nhs-blue hover:underline">Edit</button>
+        <button type="button" onClick={onDelete} className="text-xs text-nhs-red hover:opacity-70">Delete</button>
+      </div>
     </div>
   )
 }
@@ -444,26 +502,104 @@ function ConsultationCard({
 // ---------------------------------------------------------------------------
 
 export function ConsultationForm({ draft, dispatch }: Props) {
+  const [modalState, setModalState] = useState<{ tempId: string; snapshot: DraftRecord } | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+
+  function handleAdd() {
+    const id = newTempId()
+    const snap = structuredClone(draft)
+    dispatch({ type: 'ADD_CONSULTATION_WITH_ID', payload: id })
+    setModalState({ tempId: id, snapshot: snap })
+  }
+
+  function handleEdit(consultation: DraftConsultation) {
+    const snap = structuredClone(draft)
+    setModalState({ tempId: consultation._tempId, snapshot: snap })
+  }
+
+  function handleDone() {
+    setModalState(null)
+  }
+
+  function handleCancel() {
+    if (modalState) {
+      dispatch({ type: 'LOAD_DRAFT', payload: modalState.snapshot })
+    }
+    setModalState(null)
+  }
+
+  function handleDeleteConfirm() {
+    if (deleteTarget) {
+      dispatch({ type: 'REMOVE_CONSULTATION', payload: deleteTarget })
+      setDeleteTarget(null)
+    }
+  }
+
+  const activeConsultation = modalState
+    ? draft.consultations.find(c => c._tempId === modalState.tempId)
+    : null
+
+  const deleteConsultation = deleteTarget
+    ? draft.consultations.find(c => c._tempId === deleteTarget)
+    : null
+
+  const modalTitle = activeConsultation
+    ? (activeConsultation.date
+        ? `${activeConsultation.date}${activeConsultation.typeDisplay ? ' — ' + activeConsultation.typeDisplay : ''}`
+        : 'Add Consultation')
+    : 'Add Consultation'
+
+  const deleteLabel = deleteConsultation
+    ? (deleteConsultation.date
+        ? `${deleteConsultation.date}${deleteConsultation.typeDisplay ? ' — ' + deleteConsultation.typeDisplay : ''}`
+        : 'this consultation')
+    : 'this consultation'
+
   return (
     <div>
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-sm font-medium text-nhs-grey-2">Consultations</span>
+        <button
+          type="button"
+          onClick={handleAdd}
+          className="bg-nhs-blue text-white px-3 py-1.5 rounded text-sm font-medium hover:opacity-90 transition-opacity"
+        >
+          + Add consultation
+        </button>
+      </div>
+
       {draft.consultations.length === 0 && (
         <p className="text-sm text-nhs-grey-3 mb-3">No consultations added yet.</p>
       )}
+
       {draft.consultations.map(consultation => (
-        <ConsultationCard
+        <ConsultationDisplayRow
           key={consultation._tempId}
           consultation={consultation}
           draft={draft}
-          dispatch={dispatch}
+          onEdit={() => handleEdit(consultation)}
+          onDelete={() => setDeleteTarget(consultation._tempId)}
         />
       ))}
-      <button
-        type="button"
-        onClick={() => dispatch({ type: 'ADD_CONSULTATION' })}
-        className="border border-nhs-grey-4 dark:border-nhs-grey-2 text-nhs-grey-2 px-3 py-1.5 rounded text-sm hover:border-nhs-blue hover:text-nhs-blue transition-colors"
-      >
-        + Add consultation
-      </button>
+
+      {modalState && activeConsultation && (
+        <BuilderModal title={modalTitle} onDone={handleDone} onCancel={handleCancel} size="xl">
+          <ConsultationCard
+            consultation={activeConsultation}
+            draft={draft}
+            dispatch={dispatch}
+            isModal
+          />
+        </BuilderModal>
+      )}
+
+      {deleteTarget && (
+        <DeleteConfirmDialog
+          label={deleteLabel}
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => setDeleteTarget(null)}
+        />
+      )}
     </div>
   )
 }

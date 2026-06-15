@@ -27,6 +27,7 @@ export function createSampleDraft(): DraftRecord {
       phone: '0113 2468100',
       address: '1 Wellbrook Parade, Leeds, LS7 3PQ',
     },
+    organisations: [],
     practitioners: [
       {
         _tempId: 'prac-1',

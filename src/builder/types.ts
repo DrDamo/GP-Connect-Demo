@@ -82,6 +82,8 @@ export interface DraftMedication {
   pharmacyInstructions?: string
   additionalInformation?: string
   issues?: DraftMedicationIssue[]
+  linkedProblemTempIds?: string[]
+  linkedConsultationTempId?: string
 }
 
 export interface DraftAllergy {
@@ -98,6 +100,8 @@ export interface DraftAllergy {
   endReason?: string
   recorderTempId?: string
   notes?: string[]
+  linkedProblemTempIds?: string[]
+  linkedConsultationTempId?: string
 }
 
 export interface DraftProblem {
@@ -111,6 +115,8 @@ export interface DraftProblem {
   assertedDate?: string
   asserterTempId?: string
   notes?: string[]
+  linkedProblemTempIds?: string[]
+  linkedConsultationTempId?: string
 }
 
 export type DraftConsultationItemType = 'note' | 'linked' | 'coded'
@@ -148,6 +154,7 @@ export interface DraftConsultation {
   orgTempId?: string
   encounterClass?: string
   topics: DraftConsultationTopic[]
+  linkedProblemTempIds?: string[]
 }
 
 export interface DraftImmunisation {
@@ -168,6 +175,8 @@ export interface DraftImmunisation {
   enteringPractitionerTempId?: string
   locationTempId?: string
   notes?: string[]
+  linkedProblemTempIds?: string[]
+  linkedConsultationTempId?: string
 }
 
 export interface DraftInvestigationResult {
@@ -190,6 +199,8 @@ export interface DraftInvestigation {
   status?: string
   performerTempId?: string
   results: DraftInvestigationResult[]
+  linkedProblemTempIds?: string[]
+  linkedConsultationTempId?: string
 }
 
 export interface DraftReferral {
@@ -203,6 +214,8 @@ export interface DraftReferral {
   status?: string
   intent?: string
   notes?: string[]
+  linkedProblemTempIds?: string[]
+  linkedConsultationTempId?: string
 }
 
 export interface DraftDiaryEntry {
@@ -217,6 +230,8 @@ export interface DraftDiaryEntry {
   status?: string
   intent?: string
   notes?: string[]
+  linkedProblemTempIds?: string[]
+  linkedConsultationTempId?: string
 }
 
 export interface DraftCodedDataItem {
@@ -230,6 +245,8 @@ export interface DraftCodedDataItem {
   comment?: string
   interpretation?: string
   performerTempId?: string
+  linkedProblemTempIds?: string[]
+  linkedConsultationTempId?: string
 }
 
 export interface DraftDocument {
@@ -242,11 +259,14 @@ export interface DraftDocument {
   authorTempId?: string
   custodianOrgTempId?: string
   status?: string
+  linkedProblemTempIds?: string[]
+  linkedConsultationTempId?: string
 }
 
 export interface DraftRecord {
   patient: DraftPatient
   organisation: DraftOrganisation
+  organisations: DraftOrganisation[]
   practitioners: DraftPractitioner[]
   locations: DraftLocation[]
   medications: DraftMedication[]

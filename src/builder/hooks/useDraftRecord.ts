@@ -26,7 +26,7 @@ import type {
 // Temp ID generation
 // ---------------------------------------------------------------------------
 
-function newTempId(): string {
+export function newTempId(): string {
   return crypto.randomUUID().slice(0, 8)
 }
 
@@ -38,6 +38,7 @@ function createEmptyDraft(): DraftRecord {
   return {
     patient: { _tempId: 'patient-1' },
     organisation: { _tempId: 'org-1' },
+    organisations: [],
     practitioners: [],
     locations: [],
     medications: [],
@@ -124,7 +125,26 @@ export type DraftAction =
   | { type: 'ADD_DOCUMENT' }
   | { type: 'UPDATE_DOCUMENT'; payload: { _tempId: string; updates: Partial<DraftDocument> } }
   | { type: 'REMOVE_DOCUMENT'; payload: string }
+  // WITH_ID variants
+  | { type: 'ADD_MEDICATION_WITH_ID'; payload: string }
+  | { type: 'ADD_ALLERGY_WITH_ID'; payload: string }
+  | { type: 'ADD_PROBLEM_WITH_ID'; payload: string }
+  | { type: 'ADD_CONSULTATION_WITH_ID'; payload: string }
+  | { type: 'ADD_IMMUNISATION_WITH_ID'; payload: string }
+  | { type: 'ADD_INVESTIGATION_WITH_ID'; payload: string }
+  | { type: 'ADD_REFERRAL_WITH_ID'; payload: string }
+  | { type: 'ADD_DIARY_ENTRY_WITH_ID'; payload: string }
+  | { type: 'ADD_CODED_DATA_WITH_ID'; payload: string }
+  | { type: 'ADD_DOCUMENT_WITH_ID'; payload: string }
+  | { type: 'ADD_PRACTITIONER_WITH_ID'; payload: string }
+  | { type: 'ADD_LOCATION_WITH_ID'; payload: string }
+  // Organisations (additional)
+  | { type: 'ADD_ORGANISATION' }
+  | { type: 'ADD_ORGANISATION_WITH_ID'; payload: string }
+  | { type: 'UPDATE_ORGANISATION'; payload: { _tempId: string; updates: Partial<DraftOrganisation> } }
+  | { type: 'REMOVE_ORGANISATION'; payload: string }
   // Global
+  | { type: 'LOAD_DRAFT'; payload: DraftRecord }
   | { type: 'AUTO_POPULATE'; payload: DraftRecord }
   | { type: 'CLEAR_ALL' }
 
@@ -652,9 +672,114 @@ function draftReducer(state: DraftRecord, action: DraftAction): DraftRecord {
         documents: removeById(state.documents, action.payload),
       }
 
+    // --- WITH_ID variants ---
+    case 'ADD_MEDICATION_WITH_ID':
+      return {
+        ...state,
+        medications: [...state.medications, { _tempId: action.payload, issues: [] }],
+      }
+
+    case 'ADD_ALLERGY_WITH_ID':
+      return {
+        ...state,
+        allergies: [...state.allergies, { _tempId: action.payload, notes: [] }],
+      }
+
+    case 'ADD_PROBLEM_WITH_ID':
+      return {
+        ...state,
+        problems: [...state.problems, { _tempId: action.payload, notes: [] }],
+      }
+
+    case 'ADD_CONSULTATION_WITH_ID':
+      return {
+        ...state,
+        consultations: [...state.consultations, { _tempId: action.payload, topics: [] }],
+      }
+
+    case 'ADD_IMMUNISATION_WITH_ID':
+      return {
+        ...state,
+        immunisations: [...state.immunisations, { _tempId: action.payload, notes: [] }],
+      }
+
+    case 'ADD_INVESTIGATION_WITH_ID':
+      return {
+        ...state,
+        investigations: [...state.investigations, { _tempId: action.payload, results: [] }],
+      }
+
+    case 'ADD_REFERRAL_WITH_ID':
+      return {
+        ...state,
+        referrals: [...state.referrals, { _tempId: action.payload, notes: [] }],
+      }
+
+    case 'ADD_DIARY_ENTRY_WITH_ID':
+      return {
+        ...state,
+        diaryEntries: [...state.diaryEntries, { _tempId: action.payload, notes: [] }],
+      }
+
+    case 'ADD_CODED_DATA_WITH_ID':
+      return {
+        ...state,
+        codedData: [...state.codedData, { _tempId: action.payload }],
+      }
+
+    case 'ADD_DOCUMENT_WITH_ID':
+      return {
+        ...state,
+        documents: [...state.documents, { _tempId: action.payload }],
+      }
+
+    case 'ADD_PRACTITIONER_WITH_ID':
+      return {
+        ...state,
+        practitioners: [...state.practitioners, { _tempId: action.payload }],
+      }
+
+    case 'ADD_LOCATION_WITH_ID':
+      return {
+        ...state,
+        locations: [...state.locations, { _tempId: action.payload }],
+      }
+
+    // --- Organisations (additional) ---
+    case 'ADD_ORGANISATION':
+      return {
+        ...state,
+        organisations: [...state.organisations, { _tempId: newTempId() }],
+      }
+
+    case 'ADD_ORGANISATION_WITH_ID':
+      return {
+        ...state,
+        organisations: [...state.organisations, { _tempId: action.payload }],
+      }
+
+    case 'UPDATE_ORGANISATION':
+      return {
+        ...state,
+        organisations: updateById(state.organisations, action.payload._tempId, action.payload.updates),
+      }
+
+    case 'REMOVE_ORGANISATION':
+      return {
+        ...state,
+        organisations: removeById(state.organisations, action.payload),
+      }
+
     // --- Global ---
-    case 'AUTO_POPULATE':
-      return action.payload
+    case 'LOAD_DRAFT': {
+      const loaded = action.payload
+      return { ...loaded, organisations: loaded.organisations ?? [] }
+    }
+
+    case 'AUTO_POPULATE': {
+      const populated = action.payload
+      return { ...populated, organisations: populated.organisations ?? [] }
+    }
 
     case 'CLEAR_ALL':
       return createEmptyDraft()
@@ -672,7 +797,13 @@ export function useDraftRecord() {
   const [draft, dispatch] = useReducer(draftReducer, undefined, () => {
     try {
       const stored = localStorage.getItem('gpc-builder-draft')
-      if (stored) return JSON.parse(stored) as DraftRecord
+      if (stored) {
+        const parsed = JSON.parse(stored) as DraftRecord
+        if (!Array.isArray(parsed.organisations)) {
+          parsed.organisations = []
+        }
+        return parsed
+      }
     } catch {}
     return createEmptyDraft()
   })
