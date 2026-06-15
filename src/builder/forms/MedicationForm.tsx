@@ -5,7 +5,6 @@ import { newTempId } from '../hooks/useDraftRecord'
 import { Field } from './shared/FormField'
 import { SelectField } from './shared/SelectField'
 import { PractitionerSelect } from './shared/PractitionerSelect'
-import { SnomedPicker } from './shared/SnomedPicker'
 import { DmdPicker } from './shared/DmdPicker'
 import { BuilderModal } from '../components/BuilderModal'
 import { DeleteConfirmDialog } from '../components/DeleteConfirmDialog'
@@ -165,22 +164,11 @@ function MedicationCard({
           {/* Drug name */}
           <Field label="Drug name" value={med.drugName ?? ''} onChange={v => upd({ drugName: v })} required />
 
-          {/* SNOMED picker — clinical code; selecting a concept also fills drug name */}
-          <SnomedPicker
-            code={med.snomedCode}
-            display={med.drugName}
-            semanticTag="product"
-            onSelect={({ code, display }) => upd({
-              snomedCode: code || undefined,
-              ...(display ? { drugName: display } : {}),
-            })}
-          />
-
-          {/* dm+d picker — prescribing code (VMP preferred; AMP for branded) */}
+          {/* dm+d picker — AMP preferred for branded prescribing */}
           <DmdPicker
             code={med.dmdCode}
             display={med.dmdDisplay}
-            dmdType={med.dmdType ?? 'VMP'}
+            dmdType={med.dmdType ?? 'AMP'}
             onSelect={({ code, display, dmdType }) => upd({
               dmdCode: code || undefined,
               dmdDisplay: display || undefined,

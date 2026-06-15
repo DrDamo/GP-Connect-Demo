@@ -676,7 +676,13 @@ function draftReducer(state: DraftRecord, action: DraftAction): DraftRecord {
     case 'ADD_MEDICATION_WITH_ID':
       return {
         ...state,
-        medications: [...state.medications, { _tempId: action.payload, issues: [] }],
+        medications: [...state.medications, {
+          _tempId: action.payload,
+          issues: [],
+          status: 'active',
+          route: 'oral',
+          startDate: new Date().toISOString().split('T')[0],
+        }],
       }
 
     case 'ADD_ALLERGY_WITH_ID':
