@@ -28,9 +28,12 @@ export function DeleteConfirmDialog({ label, onConfirm, onCancel }: DeleteConfir
           <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">Delete item?</h2>
         </div>
 
-        <div className="px-5 py-4">
+        <div className="px-5 py-4 space-y-2">
           <p className="text-sm text-gray-700 dark:text-gray-300">
             Are you sure you want to delete &ldquo;{label}&rdquo;? This cannot be undone.
+          </p>
+          <p className="text-sm text-[var(--nhs-red,#DA291C)] dark:text-red-400 font-medium">
+            This is not a normal GP system function - it will leave no trace.
           </p>
         </div>
 

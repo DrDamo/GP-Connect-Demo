@@ -6,6 +6,11 @@ import { RawSourceViewer } from './components/RawSourceViewer'
 import { ClinicalView } from './components/clinical/ClinicalView'
 import { InspectorView } from './components/InspectorView'
 import { BuilderView } from './builder/views/BuilderView'
+import { AuthProvider, useAuth } from './auth/AuthContext'
+import { LoginPage } from './auth/LoginPage'
+import { SharedPatientsView } from './shared/SharedPatientsView'
+import { isSupabaseConfigured } from './lib/supabase'
+import type { DraftRecord } from './builder/types'
 import { parseBundle, normalizePastedJson } from './fhir/parser'
 import { validateMedicationsBundle, cleanDanglingRefs } from './fhir/validator'
 import { extractMedications } from './fhir/medications'
@@ -25,7 +30,7 @@ import type { ValidationResult, GpConnectMedicationsRecord } from './fhir/types'
 import type { DomainId } from './components/clinical/domains'
 import sampleBundle from './sample-data/medications-bundle.json'
 
-type ActiveTab = 'clinical' | 'raw' | 'validation' | 'inspector' | 'training' | 'builder'
+type ActiveTab = 'clinical' | 'raw' | 'validation' | 'inspector' | 'training' | 'builder' | 'patients'
 
 interface LoadedBundle {
   source: string
@@ -36,7 +41,8 @@ interface LoadedBundle {
   record: GpConnectMedicationsRecord
 }
 
-export default function App() {
+function AppContent() {
+  const { user, profile, isLoading, logout } = useAuth()
   const [loaded, setLoaded] = useState<LoadedBundle | null>(null)
   const [tab, setTab] = useState<ActiveTab>('clinical')
   const [trainingPage, setTrainingPage] = useState<DomainId | null>(null)
@@ -44,11 +50,17 @@ export default function App() {
   const [jumpToId, setJumpToId] = useState<string | null>(null)
   const [pasteText, setPasteText] = useState('')
   const [showPaste, setShowPaste] = useState(false)
+  const [pendingSharedDraft, setPendingSharedDraft] = useState<DraftRecord | null>(null)
   const prevTabRef = useRef<ActiveTab>('clinical')
   const builderDirtyRef = useRef(false)
 
   const handleBuilderDirtyChange = useCallback((isDirty: boolean) => {
     builderDirtyRef.current = isDirty
+  }, [])
+
+  const handleLoadSharedDraft = useCallback((draft: DraftRecord) => {
+    setPendingSharedDraft(draft)
+    setTab('builder')
   }, [])
 
   const handleJumpToSource = useCallback((id: string) => {
@@ -151,6 +163,18 @@ export default function App() {
     setParseError(null)
   }, [])
 
+  if (isSupabaseConfigured && isLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-nhs-grey-5 dark:bg-gray-950">
+        <div className="text-sm text-nhs-grey-3 dark:text-gray-500">Loading…</div>
+      </div>
+    )
+  }
+
+  if (isSupabaseConfigured && !user) {
+    return <LoginPage />
+  }
+
   return (
     <div className="h-screen flex flex-col bg-nhs-grey-5 overflow-hidden">
       {/* NHS-style header */}
@@ -198,6 +222,17 @@ export default function App() {
                 ← Load different file
               </button>
             )}
+            {profile && (
+              <>
+                <span className="text-xs text-white/70 border-l border-white/20 pl-2">{profile.display_name ?? profile.username}</span>
+                <button
+                  onClick={logout}
+                  className="text-xs text-white opacity-70 hover:opacity-100 border border-white/40 hover:border-white/80 px-2 py-1.5 rounded transition-all"
+                >
+                  Sign out
+                </button>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -225,7 +260,26 @@ export default function App() {
             <BuilderView
               onLoad={(json, filename) => { handleLoad(json, filename, 'Built Patient Record') }}
               onDirtyChange={handleBuilderDirtyChange}
+              pendingDraft={pendingSharedDraft}
+              onPendingDraftConsumed={() => setPendingSharedDraft(null)}
             />
+          </div>
+        </main>
+      ) : tab === 'patients' ? (
+        <main className="flex-1 flex flex-col min-h-0 max-w-screen-2xl mx-auto w-full px-4 pt-3 pb-4 gap-3">
+          <div className="flex items-center gap-1 border-b border-nhs-grey-4">
+            <button
+              onClick={() => setTab('clinical')}
+              className="px-4 py-2 text-sm font-medium rounded-t transition-colors text-nhs-grey-2 hover:text-nhs-blue"
+            >
+              ← {loaded ? 'Clinical view' : 'Load a bundle'}
+            </button>
+            <button className="px-4 py-2 text-sm font-medium rounded-t bg-white border border-b-white border-nhs-grey-4 text-nhs-blue -mb-px">
+              Shared Patients
+            </button>
+          </div>
+          <div className="flex-1 min-h-0 bg-white rounded-lg border border-nhs-grey-4 overflow-hidden">
+            <SharedPatientsView onLoadDraft={handleLoadSharedDraft} />
           </div>
         </main>
       ) : tab === 'training' ? (
@@ -358,6 +412,17 @@ export default function App() {
                 </button>
                 <p className="text-xs text-nhs-grey-3 mt-1">Compose a record from scratch and generate FHIR JSON</p>
               </div>
+              {isSupabaseConfigured && (
+                <div className="text-center">
+                  <button
+                    onClick={() => setTab('patients')}
+                    className="w-full py-2.5 px-4 border-2 border-nhs-green text-nhs-green rounded-lg text-sm font-medium hover:bg-nhs-green hover:text-white transition-colors"
+                  >
+                    Shared patients →
+                  </button>
+                  <p className="text-xs text-nhs-grey-3 mt-1">Load a saved patient record from your organisation</p>
+                </div>
+              )}
               <div className="text-center">
                 <button
                   onClick={() => { prevTabRef.current = 'clinical'; setTrainingPage(null); setTab('training') }}
@@ -457,5 +522,13 @@ export default function App() {
         </p>
       </footer>
     </div>
+  )
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   )
 }

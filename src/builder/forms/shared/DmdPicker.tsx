@@ -28,10 +28,16 @@ const CONFIG_KEY = 'gpc-snomed-config'
 function loadConfig(): Partial<TerminologyConfig> {
   try {
     const raw = localStorage.getItem(CONFIG_KEY)
-    return raw ? JSON.parse(raw) : {}
-  } catch {
-    return {}
-  }
+    if (raw) {
+      const parsed: Partial<TerminologyConfig> = JSON.parse(raw)
+      if (parsed.serverUrl === 'http://localhost:3000') {
+        parsed.serverUrl = 'http://localhost:3001'
+        localStorage.setItem(CONFIG_KEY, JSON.stringify(parsed))
+      }
+      return parsed
+    }
+  } catch {}
+  return {}
 }
 
 // ---------------------------------------------------------------------------

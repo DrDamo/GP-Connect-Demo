@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import type React from 'react'
 
 // ---------------------------------------------------------------------------
@@ -40,6 +41,7 @@ export interface FieldProps {
   placeholder?: string
   required?: boolean
   className?: string
+  suggestions?: string[]
 }
 
 export function Field({
@@ -50,7 +52,11 @@ export function Field({
   placeholder,
   required,
   className,
+  suggestions,
 }: FieldProps) {
+  const uid = useId()
+  const listId = suggestions?.length ? `fl-${uid}` : undefined
+
   return (
     <FormField label={label} required={required} className={className}>
       <input
@@ -60,7 +66,14 @@ export function Field({
         placeholder={placeholder}
         required={required}
         className={INPUT_CLS}
+        list={listId}
+        autoComplete="off"
       />
+      {listId && (
+        <datalist id={listId}>
+          {suggestions!.map(s => <option key={s} value={s} />)}
+        </datalist>
+      )}
     </FormField>
   )
 }

@@ -44,6 +44,7 @@ export interface DraftLocation {
 
 export interface DraftMedicationIssue {
   _tempId: string
+  status?: 'cancelled' | string
   issueDate?: string
   startDate?: string
   endDate?: string
@@ -72,6 +73,8 @@ export interface DraftMedication {
   dosageInstruction?: string
   prescribedQuantityValue?: number
   prescribedQuantityUnit?: string
+  supplyDurationValue?: number
+  supplyDurationUnit?: string
   numberOfRepeatsAllowed?: number
   startDate?: string
   endDate?: string

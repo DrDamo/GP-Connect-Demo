@@ -75,10 +75,12 @@ export type DraftAction =
   | { type: 'UPDATE_MEDICATION'; payload: { _tempId: string; updates: Partial<DraftMedication> } }
   | { type: 'REMOVE_MEDICATION'; payload: string }
   | { type: 'ADD_MEDICATION_ISSUE'; payload: string }
-  | { type: 'ADD_MEDICATION_ISSUE_WITH_ID'; payload: { medTempId: string; issueTempId: string } }
+  | { type: 'ADD_MEDICATION_ISSUE_WITH_ID'; payload: { medTempId: string; issueTempId: string; prefill?: Partial<DraftMedicationIssue> } }
+  | { type: 'ADD_ALL_REPEAT_DISPENSING_ISSUES'; payload: { medTempId: string; issues: DraftMedicationIssue[] } }
   | { type: 'REAUTHORISE_MEDICATION'; payload: { oldTempId: string; newTempId: string } }
   | { type: 'UPDATE_MEDICATION_ISSUE'; payload: { medTempId: string; issueTempId: string; updates: Partial<DraftMedicationIssue> } }
   | { type: 'REMOVE_MEDICATION_ISSUE'; payload: { medTempId: string; issueTempId: string } }
+  | { type: 'CANCEL_MEDICATION_ISSUE'; payload: { medTempId: string; issueTempId: string; cascade: boolean } }
   // Allergies
   | { type: 'ADD_ALLERGY' }
   | { type: 'UPDATE_ALLERGY'; payload: { _tempId: string; updates: Partial<DraftAllergy> } }
@@ -251,13 +253,23 @@ function draftReducer(state: DraftRecord, action: DraftAction): DraftRecord {
     }
 
     case 'ADD_MEDICATION_ISSUE_WITH_ID': {
-      const { medTempId, issueTempId } = action.payload
+      const { medTempId, issueTempId, prefill } = action.payload
       return {
         ...state,
         medications: state.medications.map(med =>
           med._tempId === medTempId
-            ? { ...med, issues: [...(med.issues ?? []), { _tempId: issueTempId }] }
+            ? { ...med, issues: [...(med.issues ?? []), { _tempId: issueTempId, ...prefill }] }
             : med,
+        ),
+      }
+    }
+
+    case 'ADD_ALL_REPEAT_DISPENSING_ISSUES': {
+      const { medTempId, issues } = action.payload
+      return {
+        ...state,
+        medications: state.medications.map(med =>
+          med._tempId === medTempId ? { ...med, issues } : med,
         ),
       }
     }
@@ -314,6 +326,28 @@ function draftReducer(state: DraftRecord, action: DraftAction): DraftRecord {
             ? { ...med, issues: removeById(med.issues ?? [], issueTempId) }
             : med,
         ),
+      }
+    }
+
+    case 'CANCEL_MEDICATION_ISSUE': {
+      const { medTempId, issueTempId, cascade } = action.payload
+      return {
+        ...state,
+        medications: state.medications.map(med => {
+          if (med._tempId !== medTempId) return med
+          const issues = med.issues ?? []
+          if (!cascade) {
+            return { ...med, issues: updateById(issues, issueTempId, { status: 'cancelled' }) }
+          }
+          const idx = issues.findIndex(i => i._tempId === issueTempId)
+          if (idx === -1) return med
+          return {
+            ...med,
+            issues: issues.map((issue, i) =>
+              i >= idx ? { ...issue, status: 'cancelled' } : issue,
+            ),
+          }
+        }),
       }
     }
 

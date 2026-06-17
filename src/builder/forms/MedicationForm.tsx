@@ -9,10 +9,33 @@ import { DmdPicker } from './shared/DmdPicker'
 import { BuilderModal } from '../components/BuilderModal'
 import { DeleteConfirmDialog } from '../components/DeleteConfirmDialog'
 import { LinkSection } from './shared/LinkSection'
+import { TrashIcon, PencilIcon } from '../components/Icons'
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
+
+const ROUTE_SUGGESTIONS = ['Oral', 'Topical', 'Rectal', 'Inhaled', 'Sublingual', 'Intramuscular', 'Intravenous', 'Subcutaneous', 'Transdermal', 'Nasal', 'Ocular', 'Otic', 'Vaginal']
+const QTY_UNIT_SUGGESTIONS = ['tablet', 'capsule', 'ml', 'g', 'mg', 'patch', 'sachet', 'suppository', 'ampoule', 'vial', 'unit dose', 'drop', 'puff', 'application']
+const DURATION_UNIT_SUGGESTIONS = ['day', 'days', 'week', 'weeks', 'month', 'months']
+const STOP_REASON_SUGGESTIONS = ['Clinical decision', 'Course completed', 'Side effects', 'Patient request', 'Changed formulation', 'No longer required', 'Duplicate medication', 'Allergy identified']
+
+// ---------------------------------------------------------------------------
+// Repeat dispensing date helpers
+// ---------------------------------------------------------------------------
+
+function durationToDays(value: number, unit?: string): number {
+  const u = (unit ?? 'days').toLowerCase()
+  if (u === 'week' || u === 'weeks') return value * 7
+  if (u === 'month' || u === 'months') return value * 30
+  return value
+}
+
+function addDays(dateStr: string, days: number): string {
+  const d = new Date(dateStr + 'T12:00:00')
+  d.setDate(d.getDate() + days)
+  return d.toISOString().split('T')[0]
+}
 
 const PRESCRIPTION_TYPE_OPTS = [
   { value: 'acute', label: 'Acute' },
@@ -38,63 +61,139 @@ const SECTIONS: { key: DraftMedication['prescriptionType']; label: string }[] = 
 // IssueModal — small modal for adding / editing a single medication issue
 // ---------------------------------------------------------------------------
 
+function ReadOnlyField({ label, value }: { label: string; value: string | number | undefined }) {
+  return (
+    <div>
+      <label className="block text-xs font-medium text-nhs-grey-2 dark:text-gray-400 mb-0.5">{label}</label>
+      <div className="w-full px-2.5 py-1.5 rounded border border-nhs-grey-4 dark:border-gray-600 bg-nhs-grey-5 dark:bg-gray-800 text-sm text-nhs-grey-2 dark:text-gray-400 min-h-[2rem]">
+        {value !== undefined && value !== '' ? String(value) : <span className="text-nhs-grey-3 dark:text-gray-600 italic">—</span>}
+      </div>
+    </div>
+  )
+}
+
 function IssueModal({
   issue,
+  med,
   medTempId,
   dispatch,
   onDone,
   onCancel,
+  title = 'Medication Issue',
 }: {
   issue: DraftMedicationIssue
+  med: DraftMedication
   medTempId: string
   dispatch: React.Dispatch<DraftAction>
   onDone: () => void
   onCancel: () => void
+  title?: string
 }) {
   const upd = (updates: Partial<DraftMedicationIssue>) =>
     dispatch({ type: 'UPDATE_MEDICATION_ISSUE', payload: { medTempId, issueTempId: issue._tempId, updates } })
 
   return (
-    <BuilderModal title="Medication Issue" onDone={onDone} onCancel={onCancel} size="md">
+    <BuilderModal title={title} onDone={onDone} onCancel={onCancel} size="md">
       <div className="space-y-3">
-        <Field
-          label="Issue date"
-          type="date"
-          value={issue.issueDate ?? ''}
-          onChange={v => upd({ issueDate: v })}
-          required
-        />
+        {med.drugName && (
+          <div className="px-3 py-2 rounded bg-nhs-grey-5 dark:bg-gray-800 border border-nhs-grey-4 dark:border-gray-600">
+            <p className="text-xs text-nhs-grey-3 dark:text-gray-500 uppercase tracking-wide mb-0.5">Drug</p>
+            <p className="text-sm font-medium text-nhs-grey-1 dark:text-gray-100">{med.drugName}</p>
+          </div>
+        )}
         <div className="grid grid-cols-2 gap-2">
           <Field
-            label="Quantity"
-            type="number"
-            value={issue.quantityValue ?? ''}
-            onChange={v => upd({ quantityValue: v ? Number(v) : undefined })}
+            label="Asserted date"
+            type="date"
+            value={issue.issueDate ?? ''}
+            onChange={v => upd({ issueDate: v })}
+            required
           />
           <Field
-            label="Quantity unit"
-            value={issue.quantityUnit ?? ''}
-            onChange={v => upd({ quantityUnit: v })}
+            label="Start date"
+            type="date"
+            value={issue.startDate ?? ''}
+            onChange={v => upd({ startDate: v })}
           />
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <Field
-            label="Supply duration"
-            type="number"
-            value={issue.supplyDurationValue ?? ''}
-            onChange={v => upd({ supplyDurationValue: v ? Number(v) : undefined })}
-          />
-          <Field
-            label="Duration unit"
-            value={issue.supplyDurationUnit ?? ''}
-            onChange={v => upd({ supplyDurationUnit: v })}
-          />
+          <ReadOnlyField label="Quantity" value={med.prescribedQuantityValue} />
+          <ReadOnlyField label="Quantity unit" value={med.prescribedQuantityUnit} />
         </div>
+        <div className="grid grid-cols-2 gap-2">
+          <ReadOnlyField label="Supply duration" value={med.supplyDurationValue} />
+          <ReadOnlyField label="Duration unit" value={med.supplyDurationUnit} />
+        </div>
+        <ReadOnlyField label="Dosage instruction" value={med.dosageInstruction} />
         <Field
-          label="Dosage instruction (override)"
-          value={issue.dosageInstruction ?? ''}
-          onChange={v => upd({ dosageInstruction: v })}
+          label="Patient instructions"
+          value={issue.patientInstructions ?? ''}
+          onChange={v => upd({ patientInstructions: v })}
         />
+        <Field
+          label="Pharmacy instructions"
+          value={issue.pharmacyInstructions ?? ''}
+          onChange={v => upd({ pharmacyInstructions: v })}
+        />
+      </div>
+    </BuilderModal>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// RepeatDispensingIssueModal — collects asserted/start dates + instructions
+//   for the whole batch; date cascade is computed on confirm, not per-issue
+// ---------------------------------------------------------------------------
+
+function RepeatDispensingIssueModal({
+  med,
+  onConfirm,
+  onCancel,
+}: {
+  med: DraftMedication
+  onConfirm: (assertedDate: string, startDate: string, patientInstructions: string, pharmacyInstructions: string) => void
+  onCancel: () => void
+}) {
+  const today = new Date().toISOString().split('T')[0]
+  const [assertedDate, setAssertedDate] = useState(today)
+  const [startDate, setStartDate] = useState(today)
+  const [patientInstructions, setPatientInstructions] = useState('')
+  const [pharmacyInstructions, setPharmacyInstructions] = useState('')
+  const count = med.numberOfRepeatsAllowed ?? 0
+
+  return (
+    <BuilderModal
+      title={`Issue all (${count})`}
+      onDone={() => onConfirm(assertedDate, startDate, patientInstructions, pharmacyInstructions)}
+      onCancel={onCancel}
+      size="md"
+    >
+      <div className="space-y-3">
+        {med.drugName && (
+          <div className="px-3 py-2 rounded bg-nhs-grey-5 dark:bg-gray-800 border border-nhs-grey-4 dark:border-gray-600">
+            <p className="text-xs text-nhs-grey-3 dark:text-gray-500 uppercase tracking-wide mb-0.5">Drug</p>
+            <p className="text-sm font-medium text-nhs-grey-1 dark:text-gray-100">{med.drugName}</p>
+          </div>
+        )}
+        <div className="rounded border border-nhs-blue/30 dark:border-blue-700/50 bg-nhs-blue/5 dark:bg-blue-900/20 px-3 py-2 text-xs text-nhs-blue dark:text-blue-300">
+          All {count} issues will be created with the dates and instructions below.
+          Start dates are calculated automatically — each issue begins where the previous ends.
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="Asserted date" type="date" value={assertedDate} onChange={setAssertedDate} required />
+          <Field label="Start date (issue 1)" type="date" value={startDate} onChange={setStartDate} />
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <ReadOnlyField label="Quantity" value={med.prescribedQuantityValue} />
+          <ReadOnlyField label="Quantity unit" value={med.prescribedQuantityUnit} />
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <ReadOnlyField label="Supply duration" value={med.supplyDurationValue} />
+          <ReadOnlyField label="Duration unit" value={med.supplyDurationUnit} />
+        </div>
+        <ReadOnlyField label="Dosage instruction" value={med.dosageInstruction} />
+        <Field label="Patient instructions" value={patientInstructions} onChange={setPatientInstructions} />
+        <Field label="Pharmacy instructions" value={pharmacyInstructions} onChange={setPharmacyInstructions} />
       </div>
     </BuilderModal>
   )
@@ -152,15 +251,35 @@ function MedicationCard({
       <div className="grid grid-cols-3 gap-2">
         <Field label="Dose" value={med.dose ?? ''} onChange={v => upd({ dose: v })} />
         <Field label="Frequency" value={med.frequency ?? ''} onChange={v => upd({ frequency: v })} />
-        <Field label="Route" value={med.route ?? ''} onChange={v => upd({ route: v })} />
+        <Field label="Route" value={med.route ?? ''} onChange={v => upd({ route: v })} suggestions={ROUTE_SUGGESTIONS} />
       </div>
 
       <Field label="Dosage instruction" value={med.dosageInstruction ?? ''} onChange={v => upd({ dosageInstruction: v })} />
 
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 gap-2">
         <Field label="Prescribed qty" type="number" value={med.prescribedQuantityValue ?? ''} onChange={v => upd({ prescribedQuantityValue: v ? Number(v) : undefined })} />
-        <Field label="Qty unit" value={med.prescribedQuantityUnit ?? ''} onChange={v => upd({ prescribedQuantityUnit: v })} />
-        <Field label="Repeats allowed" type="number" value={med.numberOfRepeatsAllowed ?? ''} onChange={v => upd({ numberOfRepeatsAllowed: v ? Number(v) : undefined })} />
+        <Field label="Qty unit" value={med.prescribedQuantityUnit ?? ''} onChange={v => upd({ prescribedQuantityUnit: v })} suggestions={QTY_UNIT_SUGGESTIONS} />
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        <Field label="Supply duration" type="number" value={med.supplyDurationValue ?? ''} onChange={v => upd({ supplyDurationValue: v ? Number(v) : undefined })} required={med.prescriptionType === 'repeat-dispensing'} />
+        <Field label="Duration unit" value={med.supplyDurationUnit ?? ''} onChange={v => upd({ supplyDurationUnit: v })} suggestions={DURATION_UNIT_SUGGESTIONS} required={med.prescriptionType === 'repeat-dispensing'} />
+        <div>
+          <label className="block text-xs font-medium text-nhs-grey-3 uppercase tracking-wide mb-0.5">
+            Repeats allowed{med.prescriptionType === 'repeat-dispensing' && <span className="text-nhs-red ml-0.5">*</span>}
+          </label>
+          {med.prescriptionType === 'acute' ? (
+            <div className="w-full rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-2 py-1.5 text-sm bg-nhs-grey-5 dark:bg-gray-800 text-nhs-grey-3 dark:text-gray-600 italic">
+              N/A — acute
+            </div>
+          ) : (
+            <input
+              type="number"
+              value={med.numberOfRepeatsAllowed ?? ''}
+              onChange={e => upd({ numberOfRepeatsAllowed: e.target.value ? Number(e.target.value) : undefined })}
+              className="w-full rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-2 py-1.5 text-sm text-nhs-grey-1 dark:bg-gray-800 focus:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue"
+            />
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-2">
@@ -207,13 +326,23 @@ function MedicationDisplayRow({
   onEdit: () => void
   onDelete: () => void
 }) {
-  const [issueModal, setIssueModal] = useState<{ issueTempId: string; snapshot: DraftRecord } | null>(null)
+  const [issueModal, setIssueModal] = useState<{ issueTempId: string; snapshot: DraftRecord; mode: 'add' | 'edit' } | null>(null)
+  const [showRdModal, setShowRdModal] = useState(false)
   const [confirmReauth, setConfirmReauth] = useState(false)
+  const [confirmOverLimit, setConfirmOverLimit] = useState(false)
+  const [confirmStop, setConfirmStop] = useState<string | null>(null)
+  const [deleteIssueTarget, setDeleteIssueTarget] = useState<{ issueTempId: string; label: string } | null>(null)
 
   const status = med.status ?? ''
   const issues = med.issues ?? []
   const isStopped = status === 'stopped'
   const isReauthStopped = isStopped && med.stopReason === 'reauthorisation'
+  const isRepeat = med.prescriptionType === 'repeat'
+  const isRepeatDispensing = med.prescriptionType === 'repeat-dispensing'
+  const maxIssues = (isRepeat || isRepeatDispensing) ? med.numberOfRepeatsAllowed : undefined
+  const overLimit = isRepeat && maxIssues !== undefined && issues.length >= maxIssues
+  const allIssued = isRepeatDispensing && maxIssues !== undefined && issues.length >= maxIssues
+  const rdMissingData = isRepeatDispensing && (!med.numberOfRepeatsAllowed || !med.supplyDurationValue)
 
   const statusBadge = status ? (
     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
@@ -223,13 +352,51 @@ function MedicationDisplayRow({
     }`}>{isReauthStopped ? 'Stopped — Reauthorised' : status}</span>
   ) : null
 
-  const doseParts = [med.dose, med.frequency, med.route].filter(Boolean).join(' · ')
 
-  const handleAddIssue = () => {
+  const qtyParts = [
+    med.prescribedQuantityValue !== undefined ? String(med.prescribedQuantityValue) : null,
+    med.prescribedQuantityUnit || null,
+  ].filter(Boolean).join(' ')
+  const supplyParts = [
+    med.supplyDurationValue !== undefined ? String(med.supplyDurationValue) : null,
+    med.supplyDurationUnit || null,
+  ].filter(Boolean).join(' ')
+  const prescriber = med.prescriberTempId
+    ? draft.practitioners.find(p => p._tempId === med.prescriberTempId)
+    : null
+  const prescriberName = prescriber
+    ? [prescriber.prefix, prescriber.givenName, prescriber.familyName].filter(Boolean).join(' ')
+    : null
+
+  const doAddIssue = () => {
     const issueTempId = newTempId()
     const snapshot = structuredClone(draft)
-    dispatch({ type: 'ADD_MEDICATION_ISSUE_WITH_ID', payload: { medTempId: med._tempId, issueTempId } })
-    setIssueModal({ issueTempId, snapshot })
+    const today = new Date().toISOString().split('T')[0]
+    dispatch({
+      type: 'ADD_MEDICATION_ISSUE_WITH_ID',
+      payload: {
+        medTempId: med._tempId,
+        issueTempId,
+        prefill: {
+          issueDate: today,
+          startDate: today,
+          quantityValue: med.prescribedQuantityValue,
+          quantityUnit: med.prescribedQuantityUnit,
+          supplyDurationValue: med.supplyDurationValue,
+          supplyDurationUnit: med.supplyDurationUnit,
+          dosageInstruction: med.dosageInstruction,
+        },
+      },
+    })
+    setIssueModal({ issueTempId, snapshot, mode: 'add' })
+  }
+
+  const handleAddIssue = () => {
+    if (overLimit) {
+      setConfirmOverLimit(true)
+    } else {
+      doAddIssue()
+    }
   }
 
   const handleIssueCancel = () => {
@@ -239,9 +406,47 @@ function MedicationDisplayRow({
     setIssueModal(null)
   }
 
+  const handleIssueAll = () => setShowRdModal(true)
+
+  const handleRdConfirm = (assertedDate: string, startDate: string, patientInstructions: string, pharmacyInstructions: string) => {
+    const count = med.numberOfRepeatsAllowed!
+    const durationDays = durationToDays(med.supplyDurationValue!, med.supplyDurationUnit)
+    const allIssues: DraftMedicationIssue[] = []
+    let start = startDate || assertedDate
+    for (let i = 0; i < count; i++) {
+      const end = addDays(start, durationDays)
+      allIssues.push({
+        _tempId: newTempId(),
+        issueDate: assertedDate,
+        startDate: start,
+        endDate: end,
+        quantityValue: med.prescribedQuantityValue,
+        quantityUnit: med.prescribedQuantityUnit,
+        supplyDurationValue: med.supplyDurationValue,
+        supplyDurationUnit: med.supplyDurationUnit,
+        dosageInstruction: med.dosageInstruction,
+        ...(patientInstructions ? { patientInstructions } : {}),
+        ...(pharmacyInstructions ? { pharmacyInstructions } : {}),
+      })
+      start = end
+    }
+    dispatch({ type: 'ADD_ALL_REPEAT_DISPENSING_ISSUES', payload: { medTempId: med._tempId, issues: allIssues } })
+    setShowRdModal(false)
+  }
+
   const handleReauthorise = () => {
     dispatch({ type: 'REAUTHORISE_MEDICATION', payload: { oldTempId: med._tempId, newTempId: newTempId() } })
     setConfirmReauth(false)
+  }
+
+  const handleStop = () => {
+    if (!confirmStop?.trim()) return
+    const today = new Date().toISOString().split('T')[0]
+    dispatch({
+      type: 'UPDATE_MEDICATION',
+      payload: { _tempId: med._tempId, updates: { status: 'stopped', stopReason: confirmStop.trim(), endDate: today } },
+    })
+    setConfirmStop(null)
   }
 
   const activeIssue = issueModal
@@ -249,7 +454,7 @@ function MedicationDisplayRow({
     : null
 
   return (
-    <div className={`border rounded-lg mb-2 overflow-hidden ${isReauthStopped ? 'border-amber-200 dark:border-amber-800 opacity-75' : 'border-nhs-grey-4 dark:border-nhs-grey-2'}`}>
+    <div className={`border rounded-lg mb-2 overflow-hidden border-nhs-grey-4 dark:border-nhs-grey-2 ${isReauthStopped ? 'opacity-75' : ''}`}>
       {/* Medication header row */}
       <div className="bg-nhs-grey-5 dark:bg-gray-800 px-3 py-2 flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
@@ -264,21 +469,78 @@ function MedicationDisplayRow({
               </span>
             )}
           </div>
-          {doseParts && (
-            <p className="text-xs text-nhs-grey-3 dark:text-gray-400 mt-0.5">{doseParts}</p>
+          {med.dosageInstruction && (
+            <p className="text-xs text-nhs-grey-3 dark:text-gray-400 mt-0.5">
+              <span className="opacity-70">Dosage instruction:</span> {med.dosageInstruction}
+            </p>
           )}
-          {med.startDate && (
-            <p className="text-xs text-nhs-grey-3 dark:text-gray-400">from {med.startDate}{med.endDate ? ` to ${med.endDate}` : ''}</p>
+          {(med.dose || med.frequency || med.route) && (
+            <p className="text-xs text-nhs-grey-3 dark:text-gray-400 flex flex-wrap gap-x-3">
+              {med.dose && <span><span className="opacity-70">Dose:</span> {med.dose}</span>}
+              {med.frequency && <span><span className="opacity-70">Frequency:</span> {med.frequency}</span>}
+              {med.route && <span><span className="opacity-70">Route:</span> {med.route}</span>}
+            </p>
           )}
+          <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
+            {(med.startDate || med.endDate) && (
+              <span className="text-xs text-nhs-grey-3 dark:text-gray-400">
+                {med.startDate && <><span className="opacity-70">Start:</span> {med.startDate}</>}
+                {med.endDate && <><span className="opacity-70 ml-1.5">End:</span> {med.endDate}</>}
+              </span>
+            )}
+            {qtyParts && (
+              <span className="text-xs text-nhs-grey-3 dark:text-gray-400">
+                <span className="opacity-70">Qty:</span> {qtyParts}
+              </span>
+            )}
+            {supplyParts && (
+              <span className="text-xs text-nhs-grey-3 dark:text-gray-400">
+                <span className="opacity-70">Supply:</span> {supplyParts}
+              </span>
+            )}
+            {isStopped && med.stopReason && med.stopReason !== 'reauthorisation' && (
+              <span className="text-xs text-amber-700 dark:text-amber-400">
+                <span className="opacity-70">Stopped:</span> {med.stopReason}
+              </span>
+            )}
+            {prescriberName && (
+              <span className="text-xs text-nhs-grey-3 dark:text-gray-400">
+                <span className="opacity-70">Prescriber:</span> {prescriberName}
+              </span>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           {!isStopped && (
-            <button onClick={() => setConfirmReauth(true)} className="text-xs text-purple-600 dark:text-purple-400 hover:underline">
+            <button
+              onClick={() => setConfirmReauth(true)}
+              className="text-xs border border-purple-400 dark:border-purple-600 text-purple-600 dark:text-purple-400 px-2 py-0.5 rounded hover:bg-purple-50 dark:hover:bg-purple-900/20"
+            >
               Reauthorise
             </button>
           )}
-          <button onClick={onEdit} className="text-xs text-nhs-blue hover:underline">Edit</button>
-          <button onClick={onDelete} className="text-xs text-nhs-red hover:opacity-70">Delete</button>
+          {!isStopped && (
+            <button
+              onClick={() => setConfirmStop('')}
+              className="text-xs border border-amber-500 dark:border-amber-600 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded hover:bg-amber-50 dark:hover:bg-amber-900/20"
+            >
+              Stop
+            </button>
+          )}
+          <button
+            onClick={onEdit}
+            className="text-xs border border-nhs-blue text-nhs-blue px-2 py-0.5 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
+          >
+            Edit
+          </button>
+          <span className="w-px h-4 bg-nhs-grey-4 dark:bg-gray-600 mx-1 shrink-0" />
+          <button
+            onClick={onDelete}
+            className="text-nhs-red hover:opacity-70 p-0.5"
+            title="Delete medication"
+          >
+            <TrashIcon />
+          </button>
         </div>
       </div>
 
@@ -307,53 +569,218 @@ function MedicationDisplayRow({
         </div>
       )}
 
+      {/* Stop confirmation */}
+      {confirmStop !== null && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border-t border-amber-200 dark:border-amber-800 px-3 py-2">
+          <p className="text-xs text-amber-800 dark:text-amber-200 mb-2 font-medium">
+            Stop medication — please provide a reason:
+          </p>
+          <input
+            type="text"
+            list={`stop-reasons-${med._tempId}`}
+            value={confirmStop}
+            onChange={e => setConfirmStop(e.target.value)}
+            placeholder="Reason for stopping…"
+            autoFocus
+            className="w-full rounded border border-amber-300 dark:border-amber-700 px-2 py-1.5 text-sm bg-white dark:bg-gray-800 text-nhs-grey-1 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-amber-500 mb-2"
+          />
+          <datalist id={`stop-reasons-${med._tempId}`}>
+            {STOP_REASON_SUGGESTIONS.map(r => <option key={r} value={r} />)}
+          </datalist>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleStop}
+              disabled={!confirmStop.trim()}
+              className="text-xs bg-amber-600 text-white px-2.5 py-1 rounded hover:bg-amber-700 disabled:opacity-40"
+            >
+              Confirm stop
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmStop(null)}
+              className="text-xs text-nhs-grey-2 dark:text-gray-400 hover:underline"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Issues */}
       <div className="bg-white dark:bg-gray-900 px-3 py-2">
+        {/* Issue counter summary */}
+        <div className="flex items-center gap-2 mb-2">
+          <span className={`text-xs font-medium ${overLimit ? 'text-amber-600 dark:text-amber-400' : 'text-nhs-grey-3 dark:text-gray-500'}`}>
+            {maxIssues !== undefined
+              ? `${issues.length} of ${maxIssues} issued${overLimit ? ' — limit reached' : ''}`
+              : `${issues.length} issued`}
+          </span>
+        </div>
+
         {issues.length > 0 && (
           <div className="mb-2 space-y-1">
-            {issues.map(issue => (
-              <div
-                key={issue._tempId}
-                className="flex items-center justify-between text-xs text-nhs-grey-2 dark:text-gray-400 bg-nhs-grey-5 dark:bg-gray-800 rounded px-2 py-1"
-              >
-                <span>
-                  {issue.issueDate ?? 'No date'}
-                  {issue.quantityValue ? ` · ${issue.quantityValue} ${issue.quantityUnit ?? ''}`.trimEnd() : ''}
-                  {issue.supplyDurationValue ? ` · ${issue.supplyDurationValue} ${issue.supplyDurationUnit ?? ''}`.trimEnd() : ''}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => dispatch({ type: 'REMOVE_MEDICATION_ISSUE', payload: { medTempId: med._tempId, issueTempId: issue._tempId } })}
-                  className="text-nhs-red hover:opacity-70 ml-3"
+            {issues.map((issue, idx) => {
+              const isCancelled = issue.status === 'cancelled'
+              return (
+                <div
+                  key={issue._tempId}
+                  className={`flex items-center justify-between text-xs rounded px-2 py-1 ${
+                    isCancelled
+                      ? 'bg-nhs-grey-5 dark:bg-gray-800 text-nhs-grey-3 dark:text-gray-600 opacity-70'
+                      : 'bg-nhs-grey-5 dark:bg-gray-800 text-nhs-grey-2 dark:text-gray-400'
+                  }`}
                 >
-                  Remove
-                </button>
-              </div>
-            ))}
+                  <span className="flex items-center gap-2 flex-wrap">
+                    <span className={`font-medium ${isCancelled ? 'line-through text-nhs-grey-3 dark:text-gray-600' : 'text-nhs-grey-1 dark:text-gray-300'}`}>
+                      #{idx + 1}
+                    </span>
+                    {issue.issueDate && (
+                      <span><span className="opacity-60">Asserted:</span> {issue.issueDate}</span>
+                    )}
+                    {issue.startDate && (
+                      <span><span className="opacity-60">Start:</span> {issue.startDate}</span>
+                    )}
+                    {issue.endDate && (
+                      <span><span className="opacity-60">End:</span> {issue.endDate}</span>
+                    )}
+                    {isCancelled && (
+                      <span className="px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 font-medium text-[11px]">
+                        Cancelled
+                      </span>
+                    )}
+                  </span>
+                  <span className="flex items-center gap-1 ml-3 shrink-0">
+                    {!isCancelled && (
+                      <button
+                        type="button"
+                        onClick={() => dispatch({
+                          type: 'CANCEL_MEDICATION_ISSUE',
+                          payload: { medTempId: med._tempId, issueTempId: issue._tempId, cascade: isRepeatDispensing },
+                        })}
+                        className="text-amber-600 dark:text-amber-400 hover:opacity-70 text-[11px] font-medium px-1"
+                        title={isRepeatDispensing ? 'Cancel this and all subsequent issues' : 'Cancel issue'}
+                      >
+                        Cancel
+                      </button>
+                    )}
+                    {!isCancelled && !isRepeatDispensing && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const snapshot = structuredClone(draft)
+                          setIssueModal({ issueTempId: issue._tempId, snapshot, mode: 'edit' })
+                        }}
+                        className="text-nhs-blue hover:opacity-70 p-0.5"
+                        title="Edit issue"
+                      >
+                        <PencilIcon />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setDeleteIssueTarget({ issueTempId: issue._tempId, label: `issue #${idx + 1}${med.drugName ? ` of ${med.drugName}` : ''}` })}
+                      className="text-nhs-red hover:opacity-70 p-0.5"
+                      title="Remove issue"
+                    >
+                      <TrashIcon className="w-3.5 h-3.5" />
+                    </button>
+                  </span>
+                </div>
+              )
+            })}
           </div>
         )}
-        <button
-          type="button"
-          onClick={handleAddIssue}
-          className="text-xs text-nhs-blue hover:underline"
-        >
-          + Add issue
-        </button>
-        {issues.length > 0 && (
-          <span className="text-xs text-nhs-grey-3 dark:text-gray-500 ml-2">
-            ({issues.length} issue{issues.length !== 1 ? 's' : ''})
-          </span>
+
+        {/* Over-limit confirmation */}
+        {confirmOverLimit && (
+          <div className="mb-2 rounded border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-3 py-2">
+            <p className="text-xs text-amber-800 dark:text-amber-200 mb-2">
+              Maximum issues reached ({maxIssues}). Add an additional issue anyway?
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => { setConfirmOverLimit(false); doAddIssue() }}
+                className="text-xs bg-amber-600 text-white px-2.5 py-1 rounded hover:bg-amber-700"
+              >
+                Add anyway
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmOverLimit(false)}
+                className="text-xs text-nhs-grey-2 dark:text-gray-400 hover:underline"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Repeat-dispensing footer */}
+        {isRepeatDispensing && !isStopped && (
+          allIssued ? (
+            <p className="text-xs text-nhs-grey-3 dark:text-gray-500 italic">
+              All {maxIssues} issues dispensed — reauthorise to issue again.
+            </p>
+          ) : rdMissingData ? (
+            <p className="text-xs text-amber-600 dark:text-amber-400">
+              Set number of issues and supply duration before issuing.
+            </p>
+          ) : (
+            <button
+              type="button"
+              onClick={handleIssueAll}
+              className="text-xs bg-nhs-blue text-white px-2.5 py-1 rounded hover:opacity-90"
+            >
+              Issue all ({med.numberOfRepeatsAllowed})
+            </button>
+          )
+        )}
+
+        {/* Regular / acute / prescribed-elsewhere footer */}
+        {!isRepeatDispensing && !isStopped && !confirmOverLimit && (
+          <button
+            type="button"
+            onClick={handleAddIssue}
+            className="text-xs text-nhs-blue hover:underline"
+          >
+            + Add issue
+          </button>
         )}
       </div>
 
-      {/* Issue modal */}
+      {/* Issue modal (acute / repeat / prescribed-elsewhere — add or edit) */}
       {issueModal && activeIssue && (
         <IssueModal
           issue={activeIssue}
+          med={med}
           medTempId={med._tempId}
           dispatch={dispatch}
           onDone={() => setIssueModal(null)}
           onCancel={handleIssueCancel}
+          title={issueModal.mode === 'edit' ? 'Edit Issue' : 'Add Issue'}
+        />
+      )}
+
+      {/* Repeat-dispensing batch issue modal */}
+      {showRdModal && (
+        <RepeatDispensingIssueModal
+          med={med}
+          onConfirm={handleRdConfirm}
+          onCancel={() => setShowRdModal(false)}
+        />
+      )}
+
+      {/* Issue delete confirmation */}
+      {deleteIssueTarget && (
+        <DeleteConfirmDialog
+          label={deleteIssueTarget.label}
+          onConfirm={() => {
+            dispatch({ type: 'REMOVE_MEDICATION_ISSUE', payload: { medTempId: med._tempId, issueTempId: deleteIssueTarget.issueTempId } })
+            setDeleteIssueTarget(null)
+          }}
+          onCancel={() => setDeleteIssueTarget(null)}
         />
       )}
     </div>

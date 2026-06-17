@@ -15,6 +15,7 @@ import { PractitionerSelect } from './shared/PractitionerSelect'
 import { BuilderModal } from '../components/BuilderModal'
 import { DeleteConfirmDialog } from '../components/DeleteConfirmDialog'
 import { LinkSection } from './shared/LinkSection'
+import { TrashIcon } from '../components/Icons'
 
 // ---------------------------------------------------------------------------
 // ConsultationForm — three-level nested structure
@@ -116,9 +117,10 @@ function ConsultationItemRow({
               payload: { consTempId, topicTempId, catTempId, itemTempId: item._tempId },
             })
           }
-          className="shrink-0 text-nhs-red hover:opacity-70 text-xs transition-opacity pt-5"
+          className="shrink-0 text-nhs-red hover:opacity-70 p-0.5 pt-5"
+          title="Remove"
         >
-          Remove
+          <TrashIcon className="w-3.5 h-3.5" />
         </button>
       </div>
     </div>
@@ -181,9 +183,10 @@ function CategoryBlock({
                 payload: { consTempId, topicTempId, catTempId: cat._tempId },
               })
             }
-            className="text-nhs-red text-xs hover:opacity-70 transition-opacity"
+            className="text-nhs-red hover:opacity-70 p-0.5"
+            title="Remove"
           >
-            Remove
+            <TrashIcon className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
@@ -255,9 +258,10 @@ function TopicBlock({
           onClick={() =>
             dispatch({ type: 'REMOVE_CONSULTATION_TOPIC', payload: { consTempId, topicTempId: topic._tempId } })
           }
-          className="text-nhs-red text-xs hover:opacity-70 transition-opacity ml-2"
+          className="text-nhs-red hover:opacity-70 p-0.5"
+          title="Remove"
         >
-          Remove
+          <TrashIcon className="w-3.5 h-3.5" />
         </button>
       </div>
 
@@ -440,9 +444,10 @@ function ConsultationCard({
         <button
           type="button"
           onClick={() => dispatch({ type: 'REMOVE_CONSULTATION', payload: consultation._tempId })}
-          className="text-xs text-nhs-red hover:opacity-70 transition-opacity ml-2"
+          className="text-nhs-red hover:opacity-70 p-0.5"
+          title="Remove"
         >
-          Remove
+          <TrashIcon className="w-3.5 h-3.5" />
         </button>
       </div>
 
@@ -484,9 +489,11 @@ function ConsultationDisplayRow({
           {consultation.topics.length} {consultation.topics.length === 1 ? 'topic' : 'topics'}
         </p>
       </div>
-      <div className="flex items-center gap-3 shrink-0 ml-2">
-        <button type="button" onClick={onEdit} className="text-xs text-nhs-blue hover:underline">Edit</button>
-        <button type="button" onClick={onDelete} className="text-xs text-nhs-red hover:opacity-70">Delete</button>
+      <div className="flex items-center gap-2 shrink-0 ml-2">
+        <button type="button" onClick={onEdit} className="text-xs border border-nhs-blue text-nhs-blue px-2 py-0.5 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20">Edit</button>
+        <button type="button" onClick={onDelete} className="text-nhs-red hover:opacity-70 p-0.5" title="Delete">
+          <TrashIcon />
+        </button>
       </div>
     </div>
   )

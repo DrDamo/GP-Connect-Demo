@@ -9,6 +9,7 @@ import { NotesList } from './shared/NotesList'
 import { BuilderModal } from '../components/BuilderModal'
 import { DeleteConfirmDialog } from '../components/DeleteConfirmDialog'
 import { LinkSection } from './shared/LinkSection'
+import { TrashIcon } from '../components/Icons'
 
 // ---------------------------------------------------------------------------
 // ReferralForm
@@ -72,9 +73,11 @@ function ReferralDisplayRow({
           {referral.status && <span>{referral.status}</span>}
         </div>
       </div>
-      <div className="flex items-center gap-3 shrink-0 ml-2">
-        <button type="button" onClick={onEdit} className="text-xs text-nhs-blue hover:underline">Edit</button>
-        <button type="button" onClick={onDelete} className="text-xs text-nhs-red hover:opacity-70">Delete</button>
+      <div className="flex items-center gap-2 shrink-0 ml-2">
+        <button type="button" onClick={onEdit} className="text-xs border border-nhs-blue text-nhs-blue px-2 py-0.5 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20">Edit</button>
+        <button type="button" onClick={onDelete} className="text-nhs-red hover:opacity-70 p-0.5" title="Delete">
+          <TrashIcon />
+        </button>
       </div>
     </div>
   )
@@ -122,9 +125,10 @@ function ReferralCard({
           <button
             type="button"
             onClick={() => dispatch({ type: 'REMOVE_REFERRAL', payload: referral._tempId })}
-            className="text-xs text-nhs-red hover:opacity-70 transition-opacity ml-2"
+            className="text-nhs-red hover:opacity-70 p-0.5"
+            title="Remove"
           >
-            Remove
+            <TrashIcon className="w-3.5 h-3.5" />
           </button>
         </div>
       )}

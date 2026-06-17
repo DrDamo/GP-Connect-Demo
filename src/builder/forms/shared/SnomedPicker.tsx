@@ -38,7 +38,15 @@ const CONFIG_KEY = 'gpc-snomed-config'
 function loadConfig(): Partial<SnomedConfig> {
   try {
     const raw = localStorage.getItem(CONFIG_KEY)
-    if (raw) return JSON.parse(raw)
+    if (raw) {
+      const parsed: Partial<SnomedConfig> = JSON.parse(raw)
+      // Migrate stale localhost:3000 references to :3001
+      if (parsed.serverUrl === 'http://localhost:3000') {
+        parsed.serverUrl = 'http://localhost:3001'
+        localStorage.setItem(CONFIG_KEY, JSON.stringify(parsed))
+      }
+      return parsed
+    }
   } catch {}
   // In production the Vercel API proxy is on the same origin — auto-connect with no token
   if (!import.meta.env.DEV) {

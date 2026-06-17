@@ -8,6 +8,12 @@ const LAST_ISSUE_DATE_URL = 'https://fhir.nhs.uk/STU3/StructureDefinition/Extens
 const PRESCRIPTION_STATUS_REASON_URL = 'https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-PrescriptionStatusReason-1'
 const PRESCRIPTION_STATUS_REASON_SYSTEM = 'https://fhir.nhs.uk/STU3/CodeSystem/CareConnect-MedicationRequestStatusReason-1'
 
+const DURATION_UCUM: Record<string, string> = {
+  day: 'd', days: 'd',
+  week: 'wk', weeks: 'wk',
+  month: 'mo', months: 'mo',
+}
+
 const PRESCRIPTION_TYPE_MAP: Record<string, { code: string; display: string }> = {
   acute: { code: 'acute', display: 'Acute' },
   repeat: { code: 'repeat', display: 'Repeat' },
@@ -163,17 +169,14 @@ function makePlanRequest(
 ): { entry: fhir3.BundleEntry; id: string } {
   const { id, fullUrl } = map.entry(draft._tempId + '_plan')
 
+  const isAcute = draft.prescriptionType === 'acute'
   const repeatInfoExt: fhir3.Extension = {
     url: REPEAT_INFO_URL,
     extension: [
-      {
-        url: 'numberOfRepeatPrescriptionsAllowed',
-        valuePositiveInt: draft.numberOfRepeatsAllowed ?? 0,
-      },
-      {
-        url: 'numberOfRepeatPrescriptionsIssued',
-        valueUnsignedInt: draft.issues?.length ?? 0,
-      },
+      ...(!isAcute
+        ? [{ url: 'numberOfRepeatPrescriptionsAllowed', valuePositiveInt: draft.numberOfRepeatsAllowed ?? 0 }]
+        : []),
+      { url: 'numberOfRepeatPrescriptionsIssued', valueUnsignedInt: draft.issues?.length ?? 0 },
     ],
   }
 
@@ -215,7 +218,17 @@ function makePlanRequest(
             },
           }
         : {}),
-      ...(draft.numberOfRepeatsAllowed !== undefined
+      ...(draft.supplyDurationValue !== undefined
+        ? {
+            expectedSupplyDuration: {
+              value: draft.supplyDurationValue,
+              unit: draft.supplyDurationUnit ?? 'days',
+              system: 'http://unitsofmeasure.org',
+              code: DURATION_UCUM[draft.supplyDurationUnit ?? 'days'] ?? 'd',
+            },
+          }
+        : {}),
+      ...(!isAcute && draft.numberOfRepeatsAllowed !== undefined
         ? { numberOfRepeatsAllowed: draft.numberOfRepeatsAllowed }
         : {}),
     },
@@ -257,7 +270,7 @@ function makeOrderRequest(
             value: issue.supplyDurationValue,
             unit: issue.supplyDurationUnit ?? 'days',
             system: 'http://unitsofmeasure.org',
-            code: 'd',
+            code: DURATION_UCUM[issue.supplyDurationUnit ?? 'days'] ?? 'd',
           },
         }
       : {}),
@@ -269,7 +282,7 @@ function makeOrderRequest(
   const resource: fhir3.MedicationRequest = {
     resourceType: 'MedicationRequest',
     id,
-    status: 'completed',
+    status: (issue.status === 'cancelled' ? 'cancelled' : 'completed') as fhir3.MedicationRequest['status'],
     intent: 'order',
     medicationReference: { reference: `Medication/${medId}` },
     subject: { reference: patientRef },
