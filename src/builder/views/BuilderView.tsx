@@ -61,7 +61,7 @@ export function BuilderView({
   pendingDraftId,
   pendingDraftVersion,
 }: BuilderViewProps) {
-  const { profile } = useAuth()
+  const { user, profile } = useAuth()
   const { draft, dispatch } = useDraftRecord()
   const [activeDomain, setActiveDomain] = useState<BuilderDomain>('admin')
   const [showPreview, setShowPreview] = useState(false)
@@ -204,12 +204,17 @@ export function BuilderView({
 
   // Save to shared — insert (first time) or update (subsequent)
   const doSaveToShared = useCallback(async (name?: string, description?: string) => {
-    if (!supabase || !profile) return
+    if (!supabase) return
     setSaveError(null)
     setSaveSuccess(false)
 
     const patientName = [draft.patient.prefix, draft.patient.givenName, draft.patient.familyName]
       .filter(Boolean).join(' ') || null
+
+    if (!profile) {
+      setSaveError('Your profile has not loaded — try refreshing the page.')
+      return
+    }
 
     if (!currentDraftId) {
       // First save — insert
@@ -385,7 +390,7 @@ export function BuilderView({
           >
             Clear all
           </button>
-          {isSupabaseConfigured && profile && (
+          {isSupabaseConfigured && user && (
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
