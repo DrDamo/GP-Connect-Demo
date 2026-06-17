@@ -34,16 +34,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loadProfile = async (userId: string) => {
     if (!supabase) return
-    const { data } = await supabase
+    // Fetch profile without joining organisations — the join causes a 500 because
+    // the organisations RLS policy reads from profiles, creating a circular dependency.
+    const { data: profileData } = await supabase
       .from('profiles')
-      .select('id, username, display_name, org_id, role, organisations(id, name)')
+      .select('id, username, display_name, org_id, role')
       .eq('id', userId)
       .single()
-    if (data) {
-      const { organisations: org, ...fields } = data as unknown as Profile & { organisations: Organisation }
-      setProfile(fields)
-      setOrganisation(org ?? null)
-    }
+    if (!profileData) return
+    setProfile(profileData as Profile)
+
+    // Fetch organisation separately to avoid the circular RLS issue
+    const { data: orgData } = await supabase
+      .from('organisations')
+      .select('id, name')
+      .eq('id', (profileData as Profile).org_id)
+      .single()
+    if (orgData) setOrganisation(orgData as Organisation)
   }
 
   useEffect(() => {
