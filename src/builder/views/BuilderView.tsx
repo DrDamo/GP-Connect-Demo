@@ -6,6 +6,7 @@ import { validateBundle } from '../../fhir/validator'
 import { BuilderPatientBanner } from '../components/BuilderPatientBanner'
 import { BuilderDomainNav, type BuilderDomain } from './BuilderDomainNav'
 import { BuilderPreviewPanel } from './BuilderPreviewPanel'
+import { SaveToSharedDialog } from '../components/SaveToSharedDialog'
 import { ListsSection } from '../components/ListsSection'
 import { AdminForm } from '../forms/AdminForm'
 import { MedicationForm } from '../forms/MedicationForm'
@@ -48,9 +49,18 @@ export interface BuilderViewProps {
   onDirtyChange?: (isDirty: boolean) => void
   pendingDraft?: DraftRecord | null
   onPendingDraftConsumed?: () => void
+  pendingDraftId?: string | null
+  pendingDraftVersion?: number | null
 }
 
-export function BuilderView({ onLoad, onDirtyChange, pendingDraft, onPendingDraftConsumed }: BuilderViewProps) {
+export function BuilderView({
+  onLoad,
+  onDirtyChange,
+  pendingDraft,
+  onPendingDraftConsumed,
+  pendingDraftId,
+  pendingDraftVersion,
+}: BuilderViewProps) {
   const { profile } = useAuth()
   const { draft, dispatch } = useDraftRecord()
   const [activeDomain, setActiveDomain] = useState<BuilderDomain>('admin')
@@ -58,15 +68,17 @@ export function BuilderView({ onLoad, onDirtyChange, pendingDraft, onPendingDraf
   const [previewJson, setPreviewJson] = useState('')
   const [previewIssues, setPreviewIssues] = useState<ValidationIssue[]>([])
   const [buildError, setBuildError] = useState<string | null>(null)
+
+  // Shared save state
+  const [currentDraftId, setCurrentDraftId] = useState<string | null>(null)
+  const [currentVersion, setCurrentVersion] = useState(0)
+  const [showSaveDialog, setShowSaveDialog] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
 
-  // Dirty tracking: saveMarker holds JSON string at last save/load/clear
+  // Dirty tracking: saveMarker holds JSON at last shared save / load / clear
   const [saveMarker, setSaveMarker] = useState<string>(() => JSON.stringify(draft))
   const isDirty = saveMarker !== JSON.stringify(draft)
-
-  // Hidden file input ref for Load Draft
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // In production: auto-seed the SNOMED proxy config and show copyright notice once per session
   const [showCopyright, setShowCopyright] = useState(() =>
@@ -91,8 +103,10 @@ export function BuilderView({ onLoad, onDirtyChange, pendingDraft, onPendingDraf
     if (!pendingDraft) return
     dispatch({ type: 'LOAD_DRAFT', payload: pendingDraft })
     setSaveMarker(JSON.stringify(pendingDraft))
+    if (pendingDraftId) setCurrentDraftId(pendingDraftId)
+    if (pendingDraftVersion) setCurrentVersion(pendingDraftVersion)
     onPendingDraftConsumed?.()
-  }, [pendingDraft, dispatch, onPendingDraftConsumed])
+  }, [pendingDraft, pendingDraftId, pendingDraftVersion, dispatch, onPendingDraftConsumed])
 
   // Notify parent when dirty state changes
   useEffect(() => {
@@ -135,6 +149,8 @@ export function BuilderView({ onLoad, onDirtyChange, pendingDraft, onPendingDraf
   const handleClearAllFinal = useCallback(() => {
     if (window.confirm('Clear all draft data? This cannot be undone.')) {
       clearedRef.current = true
+      setCurrentDraftId(null)
+      setCurrentVersion(0)
       dispatch({ type: 'CLEAR_ALL' })
     }
   }, [dispatch])
@@ -186,62 +202,77 @@ export function BuilderView({ onLoad, onDirtyChange, pendingDraft, onPendingDraf
     }
   }, [generateBundle])
 
-  // Save to shared area — upsert to Supabase patient_drafts
-  const handleSaveToShared = useCallback(async () => {
+  // Save to shared — insert (first time) or update (subsequent)
+  const doSaveToShared = useCallback(async (name?: string, description?: string) => {
     if (!supabase || !profile) return
     setSaveError(null)
     setSaveSuccess(false)
+
     const patientName = [draft.patient.prefix, draft.patient.givenName, draft.patient.familyName]
       .filter(Boolean).join(' ') || null
-    const { error } = await supabase.from('patient_drafts').insert({
-      org_id: profile.org_id,
-      created_by: profile.id,
-      patient_name: patientName,
-      nhs_number: draft.patient.nhsNumber || null,
-      draft_data: draft,
-    })
-    if (error) {
-      setSaveError(error.message)
+
+    if (!currentDraftId) {
+      // First save — insert
+      const { data, error } = await supabase
+        .from('patient_drafts')
+        .insert({
+          org_id: profile.org_id,
+          created_by: profile.id,
+          patient_name: patientName,
+          nhs_number: draft.patient.nhsNumber || null,
+          name: name ?? null,
+          description: description ?? null,
+          version: 1,
+          draft_data: draft,
+        })
+        .select('id')
+        .single()
+
+      if (error) {
+        setSaveError(error.message)
+      } else {
+        setCurrentDraftId(data.id)
+        setCurrentVersion(1)
+        setSaveMarker(JSON.stringify(draft))
+        setSaveSuccess(true)
+        setTimeout(() => setSaveSuccess(false), 3000)
+      }
     } else {
-      setSaveSuccess(true)
-      setTimeout(() => setSaveSuccess(false), 3000)
-    }
-  }, [draft, profile])
+      // Subsequent save — update existing record, bump version
+      const newVersion = currentVersion + 1
+      const { error } = await supabase
+        .from('patient_drafts')
+        .update({
+          patient_name: patientName,
+          nhs_number: draft.patient.nhsNumber || null,
+          draft_data: draft,
+          version: newVersion,
+        })
+        .eq('id', currentDraftId)
 
-  // Save Draft — downloads current draft as JSON
-  const handleSaveDraft = useCallback(() => {
-    const json = JSON.stringify(draft, null, 2)
-    downloadJson(json, 'draft-record.json')
-    setSaveMarker(JSON.stringify(draft))
-  }, [draft])
-
-  // Load Draft — triggers hidden file input
-  const handleLoadDraftClick = useCallback(() => {
-    fileInputRef.current?.click()
-  }, [])
-
-  const handleLoadDraftFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = (ev) => {
-      try {
-        const text = ev.target?.result as string
-        const loaded = JSON.parse(text) as DraftRecord
-        // Ensure organisations array exists (backwards compat)
-        if (!Array.isArray(loaded.organisations)) {
-          loaded.organisations = []
-        }
-        dispatch({ type: 'LOAD_DRAFT', payload: loaded })
-        setSaveMarker(JSON.stringify(loaded))
-      } catch {
-        setBuildError('Failed to parse draft file — ensure it is a valid draft-record.json')
+      if (error) {
+        setSaveError(error.message)
+      } else {
+        setCurrentVersion(newVersion)
+        setSaveMarker(JSON.stringify(draft))
+        setSaveSuccess(true)
+        setTimeout(() => setSaveSuccess(false), 3000)
       }
     }
-    reader.readAsText(file)
-    // Reset input so the same file can be loaded again
-    e.target.value = ''
-  }, [dispatch])
+  }, [draft, profile, currentDraftId, currentVersion])
+
+  const handleSaveToSharedClick = useCallback(() => {
+    if (!currentDraftId) {
+      setShowSaveDialog(true)
+    } else {
+      doSaveToShared()
+    }
+  }, [currentDraftId, doSaveToShared])
+
+  const handleSaveDialogConfirm = useCallback((name: string, description: string) => {
+    setShowSaveDialog(false)
+    doSaveToShared(name, description)
+  }, [doSaveToShared])
 
   const handleDownloadFromPreview = useCallback(() => {
     downloadJson(previewJson, 'gp-connect-bundle.json')
@@ -328,18 +359,17 @@ export function BuilderView({ onLoad, onDirtyChange, pendingDraft, onPendingDraf
         </div>
       )}
 
-      {/* Hidden file input for Load Draft */}
-      <input
-        type="file"
-        accept=".json"
-        ref={fileInputRef}
-        className="hidden"
-        onChange={handleLoadDraftFile}
-      />
+      {/* Save to Shared dialog — shown on first save */}
+      {showSaveDialog && (
+        <SaveToSharedDialog
+          onSave={handleSaveDialogConfirm}
+          onCancel={() => setShowSaveDialog(false)}
+        />
+      )}
 
       {/* Toolbar */}
       <div className="shrink-0 flex items-center justify-between px-4 py-2 border-b border-nhs-grey-4 dark:border-nhs-grey-2 bg-white dark:bg-gray-900">
-        {/* Left: auto-populate | clear | load-draft | save-draft */}
+        {/* Left: auto-populate | clear | save-to-shared */}
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -355,51 +385,32 @@ export function BuilderView({ onLoad, onDirtyChange, pendingDraft, onPendingDraf
           >
             Clear all
           </button>
-          <button
-            type="button"
-            onClick={handleLoadDraftClick}
-            className="border border-nhs-grey-4 dark:border-nhs-grey-2 text-nhs-grey-2 px-3 py-1.5 rounded text-sm hover:border-nhs-blue hover:text-nhs-blue transition-colors flex items-center gap-1"
-            title="Load a previously saved draft-record.json"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-            </svg>
-            Load Draft
-          </button>
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={handleSaveDraft}
-              className="border border-nhs-grey-4 dark:border-nhs-grey-2 text-nhs-grey-2 px-3 py-1.5 rounded text-sm hover:border-nhs-blue hover:text-nhs-blue transition-colors flex items-center gap-1"
-              title="Save current draft as draft-record.json"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
-              Save Draft
-            </button>
-            {isDirty && (
-              <span className="text-xs px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded font-medium">
-                Unsaved
-              </span>
-            )}
-          </div>
           {isSupabaseConfigured && profile && (
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
-                onClick={handleSaveToShared}
-                className="border border-nhs-green dark:border-green-500 text-nhs-green dark:text-green-400 px-3 py-1.5 rounded text-sm hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors flex items-center gap-1"
-                title="Save this patient to the shared area for your organisation"
+                onClick={handleSaveToSharedClick}
+                className="border border-nhs-green dark:border-green-500 text-nhs-green dark:text-green-400 px-3 py-1.5 rounded text-sm hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors flex items-center gap-1.5"
+                title={currentDraftId ? `Update shared record (currently v${currentVersion})` : 'Save to shared patients area'}
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
                 Save to shared
               </button>
+              {currentDraftId && !isDirty && !saveSuccess && (
+                <span className="text-xs px-1.5 py-0.5 bg-nhs-grey-5 dark:bg-gray-800 text-nhs-grey-3 dark:text-gray-500 rounded">
+                  v{currentVersion}
+                </span>
+              )}
+              {isDirty && currentDraftId && (
+                <span className="text-xs px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded font-medium">
+                  Unsaved changes
+                </span>
+              )}
               {saveSuccess && (
                 <span className="text-xs px-1.5 py-0.5 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 rounded font-medium">
-                  Saved ✓
+                  Saved v{currentVersion} ✓
                 </span>
               )}
               {saveError && (
@@ -466,19 +477,16 @@ export function BuilderView({ onLoad, onDirtyChange, pendingDraft, onPendingDraf
 
       {/* Body: nav + form + optional preview */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Domain nav */}
         <BuilderDomainNav
           active={activeDomain}
           draft={draft}
           onChange={setActiveDomain}
         />
 
-        {/* Form panel */}
         <div className={`flex-1 overflow-auto p-4 bg-nhs-grey-5 dark:bg-gray-950 ${showPreview ? 'hidden sm:block' : ''}`}>
           {renderForm()}
         </div>
 
-        {/* Preview panel */}
         {showPreview && (
           <div className="w-full sm:w-96 lg:w-[480px] shrink-0 overflow-hidden flex flex-col">
             <BuilderPreviewPanel

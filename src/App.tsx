@@ -51,6 +51,8 @@ function AppContent() {
   const [pasteText, setPasteText] = useState('')
   const [showPaste, setShowPaste] = useState(false)
   const [pendingSharedDraft, setPendingSharedDraft] = useState<DraftRecord | null>(null)
+  const [pendingSharedDraftId, setPendingSharedDraftId] = useState<string | null>(null)
+  const [pendingSharedDraftVersion, setPendingSharedDraftVersion] = useState<number | null>(null)
   const prevTabRef = useRef<ActiveTab>('clinical')
   const builderDirtyRef = useRef(false)
 
@@ -58,8 +60,10 @@ function AppContent() {
     builderDirtyRef.current = isDirty
   }, [])
 
-  const handleLoadSharedDraft = useCallback((draft: DraftRecord) => {
+  const handleLoadSharedDraft = useCallback((draft: DraftRecord, id: string, version: number) => {
     setPendingSharedDraft(draft)
+    setPendingSharedDraftId(id)
+    setPendingSharedDraftVersion(version)
     setTab('builder')
   }, [])
 
@@ -261,7 +265,13 @@ function AppContent() {
               onLoad={(json, filename) => { handleLoad(json, filename, 'Built Patient Record') }}
               onDirtyChange={handleBuilderDirtyChange}
               pendingDraft={pendingSharedDraft}
-              onPendingDraftConsumed={() => setPendingSharedDraft(null)}
+              pendingDraftId={pendingSharedDraftId}
+              pendingDraftVersion={pendingSharedDraftVersion}
+              onPendingDraftConsumed={() => {
+                setPendingSharedDraft(null)
+                setPendingSharedDraftId(null)
+                setPendingSharedDraftVersion(null)
+              }}
             />
           </div>
         </main>

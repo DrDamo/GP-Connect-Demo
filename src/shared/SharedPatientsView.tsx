@@ -7,15 +7,18 @@ import type { DraftRecord } from '../builder/types'
 
 interface PatientRow {
   id: string
+  name: string | null
+  description: string | null
+  version: number
   patient_name: string | null
   nhs_number: string | null
   created_at: string
   updated_at: string
-  profiles: { username: string } | null
+  profiles: { username: string; display_name: string | null } | null
 }
 
 interface Props {
-  onLoadDraft: (draft: DraftRecord) => void
+  onLoadDraft: (draft: DraftRecord, id: string, version: number) => void
 }
 
 export function SharedPatientsView({ onLoadDraft }: Props) {
@@ -32,7 +35,7 @@ export function SharedPatientsView({ onLoadDraft }: Props) {
     setError(null)
     const { data, error: err } = await supabase
       .from('patient_drafts')
-      .select('id, patient_name, nhs_number, created_at, updated_at, profiles(username)')
+      .select('id, name, description, version, patient_name, nhs_number, created_at, updated_at, profiles(username, display_name)')
       .order('updated_at', { ascending: false })
     if (err) setError(err.message)
     else setRows((data ?? []) as unknown as PatientRow[])
@@ -46,12 +49,12 @@ export function SharedPatientsView({ onLoadDraft }: Props) {
     setLoadingId(id)
     const { data, error: err } = await supabase
       .from('patient_drafts')
-      .select('draft_data')
+      .select('draft_data, version')
       .eq('id', id)
       .single()
     setLoadingId(null)
     if (err || !data?.draft_data) return
-    onLoadDraft(data.draft_data as DraftRecord)
+    onLoadDraft(data.draft_data as DraftRecord, id, data.version as number)
   }
 
   const handleDeleteConfirm = async () => {
@@ -67,10 +70,7 @@ export function SharedPatientsView({ onLoadDraft }: Props) {
         <h2 className="text-sm font-semibold text-nhs-grey-1 dark:text-gray-100">
           Shared Patients
         </h2>
-        <button
-          onClick={fetchRows}
-          className="text-xs text-nhs-blue hover:underline"
-        >
+        <button onClick={fetchRows} className="text-xs text-nhs-blue hover:underline">
           Refresh
         </button>
       </div>
@@ -87,43 +87,58 @@ export function SharedPatientsView({ onLoadDraft }: Props) {
           </div>
         ) : (
           <div className="space-y-2">
-            {rows.map(row => (
-              <div
-                key={row.id}
-                className="flex items-center justify-between bg-white dark:bg-gray-900 border border-nhs-grey-4 dark:border-gray-700 rounded-lg px-4 py-3 gap-4"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-nhs-grey-1 dark:text-gray-100 truncate">
-                    {row.patient_name || <span className="italic text-nhs-grey-3">Unnamed patient</span>}
-                  </p>
-                  <p className="text-xs text-nhs-grey-3 dark:text-gray-500 mt-0.5 flex flex-wrap gap-x-3">
+            {rows.map(row => {
+              const creator = row.profiles?.display_name ?? row.profiles?.username ?? null
+              return (
+                <div
+                  key={row.id}
+                  className="bg-white dark:bg-gray-900 border border-nhs-grey-4 dark:border-gray-700 rounded-lg px-4 py-3"
+                >
+                  {/* Name + actions row */}
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-nhs-grey-1 dark:text-gray-100 truncate">
+                        {row.name || <span className="italic font-normal text-nhs-grey-3">Untitled record</span>}
+                      </p>
+                      {row.description && (
+                        <p className="text-xs text-nhs-grey-2 dark:text-gray-300 mt-0.5 line-clamp-2">
+                          {row.description}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => handleLoad(row.id)}
+                        disabled={loadingId === row.id}
+                        className="text-xs border border-nhs-blue text-nhs-blue px-2 py-0.5 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 disabled:opacity-50"
+                      >
+                        {loadingId === row.id ? 'Loading…' : 'Load into builder'}
+                      </button>
+                      <button
+                        onClick={() => setDeleteTarget({ id: row.id, name: row.name || 'this record' })}
+                        className="text-nhs-red hover:opacity-70 p-0.5"
+                        title="Delete record"
+                      >
+                        <TrashIcon />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Meta row */}
+                  <p className="text-xs text-nhs-grey-3 dark:text-gray-500 mt-1.5 flex flex-wrap gap-x-3">
+                    <span className="font-medium text-nhs-grey-2 dark:text-gray-400">v{row.version}</span>
+                    {row.patient_name && <span>Patient: {row.patient_name}</span>}
                     {row.nhs_number && <span>NHS: {row.nhs_number}</span>}
                     <span>
                       {new Date(row.updated_at).toLocaleDateString('en-GB', {
                         day: 'numeric', month: 'short', year: 'numeric',
                       })}
                     </span>
-                    {row.profiles?.username && <span>by {row.profiles.username}</span>}
+                    {creator && <span>by {creator}</span>}
                   </p>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    onClick={() => handleLoad(row.id)}
-                    disabled={loadingId === row.id}
-                    className="text-xs border border-nhs-blue text-nhs-blue px-2 py-0.5 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 disabled:opacity-50"
-                  >
-                    {loadingId === row.id ? 'Loading…' : 'Load into builder'}
-                  </button>
-                  <button
-                    onClick={() => setDeleteTarget({ id: row.id, name: row.patient_name || 'this patient' })}
-                    className="text-nhs-red hover:opacity-70 p-0.5"
-                    title="Delete patient"
-                  >
-                    <TrashIcon />
-                  </button>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
