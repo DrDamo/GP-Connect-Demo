@@ -18,6 +18,38 @@ const COMMENT_NOTE_CODE = '37331000000100'  // Comment note / filing comment
 const SKIP_CODE = '24641000000107'  // Investigation result placeholder — skip
 const TRANSFER_DEGRADED_CODE = '196411000000103'  // Transfer-degraded record entry
 
+const INTERP_CODE_DISPLAY: Record<string, string> = {
+  H:  'Above high reference limit',
+  HH: 'Critically high',
+  L:  'Below low reference limit',
+  LL: 'Critically low',
+  N:  'Normal',
+  A:  'Abnormal',
+  AA: 'Critically abnormal',
+  PA: 'Potentially abnormal',
+  U:  'Unknown',
+}
+
+// Normalises interpretation from FHIR CodeableConcept + optional raw comment.
+// Priority: text (stripping "XX - " prefix) → coding display → code map → TPP comment.
+function normalizeInterpretation(interp: fhir3.CodeableConcept | undefined, rawComment?: string): string | undefined {
+  if (interp?.text) {
+    // Strip leading code prefix e.g. "PA - ", "HI - ", "LO - "
+    const stripped = interp.text.replace(/^[A-Za-z]{1,3}\s*-\s+/i, '').trim()
+    return stripped || interp.text.trim()
+  }
+  const coding = interp?.coding?.[0]
+  if (coding?.display) return coding.display
+  const code = coding?.code?.toUpperCase()
+  if (code) return INTERP_CODE_DISPLAY[code] ?? code
+  // TPP fallback: interpretation buried in comment as "Interpretation Code: X"
+  if (rawComment) {
+    const m = rawComment.match(/^Interpretation Code:\s*([^\n\r]+)/im)
+    if (m) return m[1].trim()
+  }
+  return undefined
+}
+
 function formatRange(rr: fhir3.ObservationReferenceRange | undefined): string | undefined {
   if (!rr) return undefined
   const low = rr.low?.value !== undefined ? String(rr.low.value) : undefined
@@ -184,6 +216,27 @@ export function extractInvestigations(bundle: fhir3.Bundle): GpConnectInvestigat
         performer = resolvedOrg?.name || performerActorDisplay
       }
 
+      // Fallback: if DiagnosticReport carries no performer, take it from the first result Observation
+      if (!performer) {
+        const firstResultRef = ((report.result ?? []) as fhir3.Reference[])[0]
+        if (firstResultRef?.reference) {
+          const firstObs = resolveReference(bundle, firstResultRef.reference) as ObsLike | undefined
+          const obsPerf = (firstObs?.performer as Array<{ reference?: string; display?: string } | undefined> | undefined)?.[0]
+          const obsPerfRef = obsPerf?.reference
+          const obsPerfDisplay = obsPerf?.display
+          if (obsPerfRef?.startsWith('Practitioner/')) {
+            const resolved = resolvePractitionerRef(bundle, obsPerfRef)
+            performer = resolved.name || obsPerfDisplay
+            performerId = resolved.id
+          } else if (obsPerfRef) {
+            const resolvedOrg = resolveReference(bundle, obsPerfRef) as fhir3.Organization | undefined
+            performer = resolvedOrg?.name || obsPerfDisplay
+          } else {
+            performer = obsPerfDisplay
+          }
+        }
+      }
+
       // Resolve specimen from DiagnosticReport
       let specimen: GpConnectSpecimen | undefined
       const drSpecimenRefs = (report as unknown as { specimen?: Array<{ reference?: string }> }).specimen ?? []
@@ -271,21 +324,48 @@ export function extractInvestigations(bundle: fhir3.Bundle): GpConnectInvestigat
         if (obs) resultObs.push(obs)
       }
 
-      // Separate filing comment (37331000000100) from lab observations
+      // Separate filing comment (37331000000100) from lab observations.
+      // COMM notes that carry a derived-from reference to a sibling result are per-result
+      // comments (e.g. EMIS attaches a brief flag text "High"/"Low" to individual analytes).
+      // Only COMM notes without a derived-from link are panel-level filing comments.
       let filingComment: string | undefined
       let filingCommentDate: string | undefined
       let filingCommentPerformer: string | undefined
       const labObs: ObsLike[] = []
+      // Maps parent obs ID → { text, id } from a linked COMM note (derived-from relationship)
+      const resultCommentMap = new Map<string, { text: string; id: string }>()
 
+      type RelatedEntry = { type?: string; target?: { reference?: string } }
       for (const obs of resultObs) {
         if (obs.code?.coding?.[0]?.code === COMMENT_NOTE_CODE) {
-          filingComment = obs.comment || undefined
-          const castObs = obs as unknown as { effectiveDateTime?: string }
-          filingCommentDate = formatDate(castObs.effectiveDateTime ?? obs.issued)
-          const perfs = (Array.isArray(obs.performer) ? obs.performer : obs.performer ? [obs.performer] : []) as Array<{ display?: string }>
-          filingCommentPerformer = perfs[0]?.display ?? undefined
+          const derivedFromRef = ((obs as unknown as { related?: RelatedEntry[] }).related ?? [])
+            .find(r => r.type === 'derived-from')?.target?.reference
+          if (derivedFromRef) {
+            // Per-result comment — store against parent obs ID
+            const parentId = extractId(derivedFromRef)
+            if (parentId && obs.comment) resultCommentMap.set(parentId, { text: obs.comment, id: obs.id ?? '' })
+          } else {
+            // No parent link → panel-level filing comment
+            filingComment = obs.comment || undefined
+            const castObs = obs as unknown as { effectiveDateTime?: string }
+            filingCommentDate = formatDate(castObs.effectiveDateTime ?? obs.issued)
+            const perfs = (Array.isArray(obs.performer) ? obs.performer : obs.performer ? [obs.performer] : []) as Array<{ display?: string }>
+            filingCommentPerformer = perfs[0]?.display ?? undefined
+          }
+          // Either way, COMM notes never go into labObs
         } else {
           labObs.push(obs)
+        }
+      }
+
+      // Helper: spread extractObsResult and merge any linked COMM comment
+      const obsResult = (obs: ObsLike) => {
+        const r = extractObsResult(obs)
+        const linked = obs.id ? resultCommentMap.get(obs.id) : undefined
+        return {
+          ...r,
+          comment: r.comment || linked?.text || undefined,
+          commentObservationId: linked?.id || undefined,
         }
       }
 
@@ -294,9 +374,16 @@ export function extractInvestigations(bundle: fhir3.Bundle): GpConnectInvestigat
       // (3) implicit EMIS groups. Detection order: check for has-member first.
       const testGroups: GpConnectTestGroup[] = []
 
+      // hasMemberPattern is true only when a has-member reference points to a non-COMM
+      // analyte observation. EMIS also uses has-member to link result→comment-note pairs,
+      // which must NOT be mistaken for the "new GP Connect group container" pattern.
       const hasMemberPattern = labObs.some(obs =>
-        ((obs as unknown as { related?: Array<{ type?: string }> }).related ?? [])
-          .some(r => r.type === 'has-member')
+        ((obs as unknown as { related?: RelatedEntry[] }).related ?? [])
+          .filter(r => r.type === 'has-member')
+          .some(r => {
+            const target = resolveReference(bundle, r.target?.reference) as ObsLike | undefined
+            return target && target.code?.coding?.[0]?.code !== COMMENT_NOTE_CODE
+          })
       )
 
       if (hasMemberPattern) {
@@ -321,11 +408,14 @@ export function extractInvestigations(bundle: fhir3.Bundle): GpConnectInvestigat
               comment: cleanGroupComment(obs.comment),
               date: formatDate(castRelated.effectiveDateTime ?? obs.issued),
               isTransferDegraded: isTransferDegradedObs(obs) || undefined,
+              interpretation: normalizeInterpretation(obs.interpretation, obs.comment),
               results: [],
             }
             for (const memberRef of memberRefs) {
               const memberObs = resolveReference(bundle, memberRef) as ObsLike | undefined
               if (!memberObs) continue
+              // Skip comment notes — they annotate the group header, not a result
+              if (memberObs.code?.coding?.[0]?.code === COMMENT_NOTE_CODE) continue
               const memberCoding = memberObs.code?.coding
               group.results.push({
                 id: memberObs.id ?? crypto.randomUUID(),
@@ -333,7 +423,7 @@ export function extractInvestigations(bundle: fhir3.Bundle): GpConnectInvestigat
                 name: resolveObsName(memberObs, 'Result'),
                 snomedCode: extractSnomedCode(memberCoding),
                 isTransferDegraded: isTransferDegradedObs(memberObs) || undefined,
-                ...extractObsResult(memberObs),
+                ...obsResult(memberObs),
               })
             }
             testGroups.push(group)
@@ -351,7 +441,7 @@ export function extractInvestigations(bundle: fhir3.Bundle): GpConnectInvestigat
               name: resolveObsName(obs, 'Result'),
               snomedCode: extractSnomedCode(obsCoding),
               isTransferDegraded: isTransferDegradedObs(obs) || undefined,
-              ...extractObsResult(obs),
+              ...obsResult(obs),
             })
           }
         }
@@ -381,6 +471,7 @@ export function extractInvestigations(bundle: fhir3.Bundle): GpConnectInvestigat
               comment: cleanGroupComment(obs.comment),
               date: formatDate(castObs.effectiveDateTime ?? obs.issued),
               isTransferDegraded: isTransferDegradedObs(obs) || undefined,
+              interpretation: normalizeInterpretation(obs.interpretation, obs.comment),
               results: [],
             }
             testGroups.push(currentGroup)
@@ -399,7 +490,7 @@ export function extractInvestigations(bundle: fhir3.Bundle): GpConnectInvestigat
               snomedCode: extractSnomedCode(obsCoding),
               isSubHeader,
               isTransferDegraded: isTransferDegradedObs(obs) || undefined,
-              ...extractObsResult(obs),
+              ...obsResult(obs),
             }
             currentGroup.results.push(result)
             prevHadValue = hasValue
@@ -441,6 +532,7 @@ export function extractInvestigations(bundle: fhir3.Bundle): GpConnectInvestigat
       // Only surface result shortcuts in the table for single-result tests (no named panel groups)
       const isPanel = testGroups.some(g => g.name)
       const first = isPanel ? undefined : results[0]
+      const panelInterpretation = testGroups.find(g => g.interpretation)?.interpretation
       return {
         id: reportId,
         date: formatDate(report.issued ?? castReport.effectiveDateTime),
@@ -460,7 +552,7 @@ export function extractInvestigations(bundle: fhir3.Bundle): GpConnectInvestigat
         result: first?.value,
         unit: first?.unit,
         referenceRange: first?.referenceRange,
-        interpretation: first?.interpretation,
+        interpretation: first?.interpretation ?? panelInterpretation,
       }
     })
 }

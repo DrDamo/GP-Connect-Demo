@@ -76,6 +76,8 @@ export function extractMedications(bundle: fhir3.Bundle): GpConnectMedication[] 
     const frequency = dosage?.timing?.code?.text ?? dosage?.timing?.code?.coding?.[0]?.display
 
     const route = dosage?.route?.coding?.[0]?.display ?? dosage?.route?.text
+    const site = (dosage?.site as fhir3.CodeableConcept | undefined)?.coding?.[0]?.display
+      ?? (dosage?.site as fhir3.CodeableConcept | undefined)?.text
 
     const effectivePeriod = stmt.effectivePeriod
     const effectiveDateTime = stmt.effectiveDateTime
@@ -225,6 +227,7 @@ export function extractMedications(bundle: fhir3.Bundle): GpConnectMedication[] 
       snomedCode: code,
       dose,
       frequency,
+      site,
       route,
       status: stmt.status ?? 'unknown',
       prescriptionType,
@@ -285,6 +288,8 @@ export function extractMedications(bundle: fhir3.Bundle): GpConnectMedication[] 
         : undefined
     const frequency = dosage?.timing?.code?.text ?? dosage?.timing?.code?.coding?.[0]?.display
     const route = dosage?.route?.coding?.[0]?.display ?? dosage?.route?.text
+    const site = (dosage?.site as fhir3.CodeableConcept | undefined)?.coding?.[0]?.display
+      ?? (dosage?.site as fhir3.CodeableConcept | undefined)?.text
 
     const vp = planReq.dispenseRequest?.validityPeriod
     const startDate = formatDate(vp?.start ?? planReq.authoredOn)
@@ -391,6 +396,7 @@ export function extractMedications(bundle: fhir3.Bundle): GpConnectMedication[] 
       snomedCode: code,
       dose,
       frequency,
+      site,
       route,
       status: planReq.status ?? 'unknown',
       prescriptionType,

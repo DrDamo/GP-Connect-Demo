@@ -60,6 +60,19 @@ function MedicationRow({ med, record, selected, selectedIssueId, onSelect, onSel
   const [openResourceId, setOpenResourceId] = useState<string | null>(null)
   const toggle = (id: string) => setOpenResourceId(prev => prev === id ? null : id)
 
+  const pt = med.prescriptionType?.toLowerCase() ?? ''
+  const isRepeat = pt === 'repeat' || pt.includes('dispensing')
+
+  const summaryPersonLabel = med.prescriber ? 'Prescriber' : 'Recorder'
+  const summaryPersonName  = med.prescriber ?? med.recorder
+  const summaryPersonId    = med.prescriber ? med.prescriberId : med.recorderId
+
+  const issuesToDate = med.numberOfIssued !== undefined
+    ? med.numberOfRepeatsAllowed !== undefined
+      ? `${med.numberOfIssued} of ${med.numberOfRepeatsAllowed}`
+      : String(med.numberOfIssued)
+    : undefined
+
   const refs = [
     med.prescriberId             ? { type: 'Practitioner' as const, id: med.prescriberId,             label: 'Prescriber' } : null,
     med.recorderId               ? { type: 'Practitioner' as const, id: med.recorderId,               label: 'Recorder'   } : null,
@@ -96,18 +109,38 @@ function MedicationRow({ med, record, selected, selectedIssueId, onSelect, onSel
         <tr className="bg-blue-50 border-b border-nhs-grey-5">
           <td colSpan={7} className="px-4 py-3">
 
-            {/* ── Issues section (always shown first) ── */}
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-semibold text-nhs-grey-2 uppercase tracking-wide">
-                Issues ({med.issues.length})
-                {onSelectIssue && med.issues.length > 0 && (
-                  <span className="normal-case font-normal text-nhs-grey-3 ml-1">· click row to inspect FHIR source</span>
+            {/* ── Quick summary strip + Show detail button ── */}
+            <div className="flex items-start justify-between gap-4 mb-3 pb-3 border-b border-nhs-grey-4">
+              <div className="flex flex-wrap gap-x-6 gap-y-1.5">
+                {med.prescribedQuantity && (
+                  <div>
+                    <p className="text-[10px] font-semibold text-nhs-grey-3 uppercase tracking-wide">Quantity</p>
+                    <p className="text-xs text-nhs-grey-1 mt-0.5">{med.prescribedQuantity}</p>
+                  </div>
                 )}
-              </p>
+                {med.expectedSupplyDuration && (
+                  <div>
+                    <p className="text-[10px] font-semibold text-nhs-grey-3 uppercase tracking-wide">Expected supply</p>
+                    <p className="text-xs text-nhs-grey-1 mt-0.5">{med.expectedSupplyDuration}</p>
+                  </div>
+                )}
+                {isRepeat && issuesToDate && (
+                  <div>
+                    <p className="text-[10px] font-semibold text-nhs-grey-3 uppercase tracking-wide">Issues to date</p>
+                    <p className="text-xs text-nhs-grey-1 mt-0.5">{issuesToDate}</p>
+                  </div>
+                )}
+                {summaryPersonName && (
+                  <div>
+                    <p className="text-[10px] font-semibold text-nhs-grey-3 uppercase tracking-wide">{summaryPersonLabel}</p>
+                    <p className="text-xs text-nhs-grey-1 mt-0.5">{summaryPersonName}</p>
+                  </div>
+                )}
+              </div>
               <button
                 type="button"
                 onClick={e => { e.stopPropagation(); setShowDetail(d => !d) }}
-                className={`px-2.5 py-1 text-xs rounded border transition-colors ${
+                className={`shrink-0 px-2.5 py-1 text-xs rounded border transition-colors ${
                   showDetail
                     ? 'bg-nhs-blue text-white border-nhs-blue'
                     : 'bg-white text-nhs-grey-2 border-nhs-grey-4 hover:border-nhs-blue hover:text-nhs-blue'
@@ -117,116 +150,38 @@ function MedicationRow({ med, record, selected, selectedIssueId, onSelect, onSel
               </button>
             </div>
 
-            {med.issues.length > 0 ? (
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="text-nhs-grey-3 uppercase tracking-wide text-left">
-                    <th className="pb-1 pr-4 font-semibold">Issue date</th>
-                    <th className="pb-1 pr-4 font-semibold">Start date</th>
-                    <th className="pb-1 pr-4 font-semibold">End date</th>
-                    <th className="pb-1 pr-4 font-semibold">Quantity</th>
-                    <th className="pb-1 pr-4 font-semibold">Status</th>
-                    <th className="pb-1"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {med.issues.map(issue => {
-                    const detailOpen = detailIssueId === issue.id
-                    return (
-                      <Fragment key={issue.id}>
-                        <tr
-                          onClick={onSelectIssue ? e => { e.stopPropagation(); onSelectIssue(med.id, issue.id) } : undefined}
-                          className={`transition-colors ${onSelectIssue ? 'cursor-pointer' : ''} ${selectedIssueId === issue.id ? 'bg-blue-200' : onSelectIssue ? 'hover:bg-blue-100' : ''}`}
-                        >
-                          <td className="py-0.5 pr-4">{issue.issueDate ?? 'Unknown'}</td>
-                          <td className="py-0.5 pr-4">{issue.startDate ?? 'Unknown'}</td>
-                          <td className="py-0.5 pr-4">{issue.endDate ?? 'Unknown'}</td>
-                          <td className="py-0.5 pr-4">{issue.quantity ?? '—'}</td>
-                          <td className="py-0.5 pr-4"><StatusBadge status={issue.status ?? 'unknown'} /></td>
-                          <td className="py-0.5">
-                            <button
-                              onClick={e => { e.stopPropagation(); setDetailIssueId(prev => prev === issue.id ? null : issue.id) }}
-                              className={`px-1.5 py-0.5 rounded border text-xs transition-colors whitespace-nowrap ${
-                                detailOpen
-                                  ? 'bg-nhs-blue text-white border-nhs-blue'
-                                  : 'bg-white border-nhs-grey-4 text-nhs-grey-2 hover:border-nhs-blue hover:text-nhs-blue'
-                              }`}
-                            >
-                              Detail
-                            </button>
-                          </td>
-                        </tr>
-                        {detailOpen && (
-                          <tr>
-                            <td colSpan={6} className="pb-2 pt-0.5 px-1">
-                              <div className="bg-white border border-nhs-grey-4 rounded p-2.5">
-                                <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
-                                  {[
-                                    { label: 'Issue date',                  value: issue.issueDate },
-                                    { label: 'Start date',                  value: issue.startDate },
-                                    { label: 'End date',                    value: issue.endDate },
-                                    { label: 'Status',                      value: issue.status },
-                                    { label: 'Quantity',                    value: issue.quantity },
-                                    { label: 'Supply duration',             value: issue.supplyDuration },
-                                    { label: 'Dosage instruction',          value: issue.dosageInstruction },
-                                    { label: 'Patient instructions',        value: issue.patientInstructions },
-                                    { label: 'Pharmacy / prescriber note',  value: issue.pharmacyInstructions },
-                                  ].filter(f => f.value).map(f => (
-                                    <div key={f.label}>
-                                      <span className="text-nhs-grey-3 text-xs uppercase tracking-wide">{f.label}</span>
-                                      <p className="text-nhs-grey-1 text-xs mt-0.5">{f.value}</p>
-                                    </div>
-                                  ))}
-                                  {issue.recorder && (
-                                    <div>
-                                      <span className="text-nhs-grey-3 text-xs uppercase tracking-wide">Recorder</span>
-                                      <p className="mt-0.5">
-                                        {issue.recorderId
-                                          ? <ReferenceChip label={issue.recorder} onClick={() => toggle(issue.recorderId!)} active={openResourceId === issue.recorderId} />
-                                          : <span className="text-nhs-grey-1 text-xs">{issue.recorder}</span>
-                                        }
-                                      </p>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </Fragment>
-                    )
-                  })}
-                </tbody>
-              </table>
-            ) : (
-              <p className="text-xs text-nhs-grey-3 italic">No issues recorded for this authorisation.</p>
-            )}
-
-            {/* ── Detail panel (hidden until "Show detail" is clicked) ── */}
+            {/* ── Full detail (expanded by Show detail) ── */}
             {showDetail && (
-              <div className="mt-3 pt-3 border-t border-nhs-grey-4" onClick={e => e.stopPropagation()}>
+              <div className="mb-3 pb-3 border-b border-nhs-grey-4 space-y-3" onClick={e => e.stopPropagation()}>
+
+                {/* Patient instructions + Pharmacy note */}
+                {(med.patientInstructions || med.pharmacyInstructions) && (
+                  <div className="space-y-1.5 text-sm">
+                    {med.patientInstructions && (
+                      <div>
+                        <span className="text-nhs-grey-3 text-xs uppercase tracking-wide">Patient instructions</span>
+                        <p className="mt-0.5 text-nhs-grey-1">{med.patientInstructions}</p>
+                      </div>
+                    )}
+                    {med.pharmacyInstructions && (
+                      <div>
+                        <span className="text-nhs-grey-3 text-xs uppercase tracking-wide">Pharmacy / prescriber note</span>
+                        <p className="mt-0.5 text-nhs-grey-1">{med.pharmacyInstructions}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Dates + Repeats */}
                 <div className="grid grid-cols-2 gap-x-8 gap-y-1.5 text-sm">
-                  <Detail label="Drug name"              value={med.drugName} />
-                  <Detail label="Dosage instruction"     value={med.dosageInstruction} />
-                  <Detail label="Route"                  value={med.route} />
-                  <Detail label="Dose"                   value={med.dose} />
-                  <Detail label="Frequency"              value={med.frequency} />
-                  <Detail label="Quantity"               value={med.prescribedQuantity} />
-                  <Detail label="Repeats allowed"        value={med.numberOfRepeatsAllowed !== undefined ? String(med.numberOfRepeatsAllowed) : undefined} />
-                  <Detail label="Issues to date"         value={
-                    med.numberOfIssued !== undefined
-                      ? med.numberOfRepeatsAllowed !== undefined
-                        ? `${med.numberOfIssued} of ${med.numberOfRepeatsAllowed}`
-                        : String(med.numberOfIssued)
-                      : undefined
-                  } />
-                  <Detail label="Authorisation expiry"   value={med.authorisationExpiryDate} />
-                  <Detail label="Prescription type"      value={med.prescriptionType} />
-                  <Detail label="Start date"             value={med.startDate} />
-                  <Detail label="End date"               value={med.endDate} />
-                  <Detail label="Last issued"            value={med.lastIssuedDate} />
-                  <Detail label="Date asserted"          value={med.dateAsserted} />
-                  <Detail label="Expected supply"        value={med.expectedSupplyDuration} />
+                  <Detail label="Date asserted"        value={med.dateAsserted} />
+                  <Detail label="End date"             value={med.endDate} />
+                  <Detail label="Authorisation expiry" value={med.authorisationExpiryDate} />
+                  <Detail label="Repeats allowed"      value={med.numberOfRepeatsAllowed !== undefined ? String(med.numberOfRepeatsAllowed) : undefined} />
+                </div>
+
+                {/* Prescriber / Recorder / Practice */}
+                <div className="grid grid-cols-2 gap-x-8 gap-y-1.5 text-sm">
                   <div>
                     <span className="text-nhs-grey-3 text-xs uppercase tracking-wide">Prescriber</span>
                     <p className="mt-0.5">
@@ -260,24 +215,38 @@ function MedicationRow({ med, record, selected, selectedIssueId, onSelect, onSel
                       }
                     </p>
                   </div>
-                  <Detail label="Patient instructions"        value={med.patientInstructions} />
-                  <Detail label="Pharmacy / prescriber note"  value={med.pharmacyInstructions} />
-                  {(med.statusReason || med.statusChangeDate) && (
-                    <div className="col-span-2 mt-1 pt-1 border-t border-nhs-grey-5">
-                      <span className="text-nhs-grey-3 text-xs uppercase tracking-wide">Status reason</span>
-                      <p className="mt-0.5 text-nhs-grey-1">
-                        {[med.statusReason, med.statusChangeDate && `(${med.statusChangeDate})`].filter(Boolean).join(' ')}
-                      </p>
-                    </div>
-                  )}
-                  {med.additionalInformation && (
-                    <div className="col-span-2 mt-1 pt-1 border-t border-nhs-grey-5">
-                      <span className="text-nhs-grey-3 text-xs uppercase tracking-wide">Additional information</span>
-                      <p className="mt-0.5 text-nhs-grey-1 italic">{med.additionalInformation}</p>
-                    </div>
-                  )}
-                  <Detail label="FHIR ID" value={med.medicationStatementId} mono />
                 </div>
+
+                {/* Status reason / additional information (conditional) */}
+                {(med.statusReason || med.statusChangeDate) && (
+                  <div className="text-sm">
+                    <span className="text-nhs-grey-3 text-xs uppercase tracking-wide">Status reason</span>
+                    <p className="mt-0.5 text-nhs-grey-1">
+                      {[med.statusReason, med.statusChangeDate && `(${med.statusChangeDate})`].filter(Boolean).join(' ')}
+                    </p>
+                  </div>
+                )}
+                {med.additionalInformation && (
+                  <div className="text-sm">
+                    <span className="text-nhs-grey-3 text-xs uppercase tracking-wide">Additional information</span>
+                    <p className="mt-0.5 text-nhs-grey-1 italic">{med.additionalInformation}</p>
+                  </div>
+                )}
+
+                {/* Structured Dose Syntax */}
+                {(med.dosageInstruction || med.dose || med.site || med.route || med.frequency) && (
+                  <div className="pt-2 border-t border-nhs-grey-5">
+                    <p className="text-[10px] font-semibold text-nhs-grey-3 uppercase tracking-wide mb-1.5">Structured Dose Syntax</p>
+                    <div className="grid grid-cols-2 gap-x-8 gap-y-1.5 text-sm">
+                      {med.dosageInstruction && <Detail label="Dosage"  value={med.dosageInstruction} />}
+                      {med.dose             && <Detail label="Dose"    value={med.dose} />}
+                      {med.site             && <Detail label="Site"    value={med.site} />}
+                      {med.route            && <Detail label="Route"   value={med.route} />}
+                      {med.frequency        && <Detail label="Timing"  value={med.frequency} />}
+                    </div>
+                  </div>
+                )}
+
                 <ReferencedResources
                   refs={refs}
                   practitioners={record.practitioners}
@@ -291,6 +260,100 @@ function MedicationRow({ med, record, selected, selectedIssueId, onSelect, onSel
                 />
               </div>
             )}
+
+            {/* ── Issues section ── */}
+            <div>
+              <p className="text-xs font-semibold text-nhs-grey-2 uppercase tracking-wide mb-2">
+                Issues ({med.issues.length})
+                {onSelectIssue && med.issues.length > 0 && (
+                  <span className="normal-case font-normal text-nhs-grey-3 ml-1">· click row to inspect FHIR source</span>
+                )}
+              </p>
+              {med.issues.length > 0 ? (
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="text-nhs-grey-3 uppercase tracking-wide text-left">
+                      <th className="pb-1 pr-4 font-semibold">Issue date</th>
+                      <th className="pb-1 pr-4 font-semibold">Start date</th>
+                      <th className="pb-1 pr-4 font-semibold">End date</th>
+                      <th className="pb-1 pr-4 font-semibold">Quantity</th>
+                      <th className="pb-1 pr-4 font-semibold">Status</th>
+                      <th className="pb-1"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {med.issues.map(issue => {
+                      const detailOpen = detailIssueId === issue.id
+                      return (
+                        <Fragment key={issue.id}>
+                          <tr
+                            onClick={onSelectIssue ? e => { e.stopPropagation(); onSelectIssue(med.id, issue.id) } : undefined}
+                            className={`transition-colors ${onSelectIssue ? 'cursor-pointer' : ''} ${selectedIssueId === issue.id ? 'bg-blue-200' : onSelectIssue ? 'hover:bg-blue-100' : ''}`}
+                          >
+                            <td className="py-0.5 pr-4">{issue.issueDate ?? 'Unknown'}</td>
+                            <td className="py-0.5 pr-4">{issue.startDate ?? 'Unknown'}</td>
+                            <td className="py-0.5 pr-4">{issue.endDate ?? 'Unknown'}</td>
+                            <td className="py-0.5 pr-4">{issue.quantity ?? '—'}</td>
+                            <td className="py-0.5 pr-4"><StatusBadge status={issue.status ?? 'unknown'} /></td>
+                            <td className="py-0.5">
+                              <button
+                                onClick={e => { e.stopPropagation(); setDetailIssueId(prev => prev === issue.id ? null : issue.id) }}
+                                className={`px-1.5 py-0.5 rounded border text-xs transition-colors whitespace-nowrap ${
+                                  detailOpen
+                                    ? 'bg-nhs-blue text-white border-nhs-blue'
+                                    : 'bg-white border-nhs-grey-4 text-nhs-grey-2 hover:border-nhs-blue hover:text-nhs-blue'
+                                }`}
+                              >
+                                Detail
+                              </button>
+                            </td>
+                          </tr>
+                          {detailOpen && (
+                            <tr>
+                              <td colSpan={6} className="pb-2 pt-0.5 px-1">
+                                <div className="bg-white border border-nhs-grey-4 rounded p-2.5">
+                                  <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
+                                    {[
+                                      { label: 'Issue date',                  value: issue.issueDate },
+                                      { label: 'Start date',                  value: issue.startDate },
+                                      { label: 'End date',                    value: issue.endDate },
+                                      { label: 'Status',                      value: issue.status },
+                                      { label: 'Quantity',                    value: issue.quantity },
+                                      { label: 'Supply duration',             value: issue.supplyDuration },
+                                      { label: 'Dosage instruction',          value: issue.dosageInstruction },
+                                      { label: 'Patient instructions',        value: issue.patientInstructions },
+                                      { label: 'Pharmacy / prescriber note',  value: issue.pharmacyInstructions },
+                                    ].filter(f => f.value).map(f => (
+                                      <div key={f.label}>
+                                        <span className="text-nhs-grey-3 text-xs uppercase tracking-wide">{f.label}</span>
+                                        <p className="text-nhs-grey-1 text-xs mt-0.5">{f.value}</p>
+                                      </div>
+                                    ))}
+                                    {issue.recorder && (
+                                      <div>
+                                        <span className="text-nhs-grey-3 text-xs uppercase tracking-wide">Recorder</span>
+                                        <p className="mt-0.5">
+                                          {issue.recorderId
+                                            ? <ReferenceChip label={issue.recorder} onClick={() => toggle(issue.recorderId!)} active={openResourceId === issue.recorderId} />
+                                            : <span className="text-nhs-grey-1 text-xs">{issue.recorder}</span>
+                                          }
+                                        </p>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              ) : (
+                <p className="text-xs text-nhs-grey-3 italic">No issues recorded for this authorisation.</p>
+              )}
+            </div>
 
           </td>
         </tr>

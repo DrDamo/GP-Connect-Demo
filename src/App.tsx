@@ -24,7 +24,7 @@ import { extractDiaryEntries } from './fhir/diaryEntries'
 import { extractCodedData } from './fhir/codedData'
 import { extractDocuments } from './fhir/documents'
 import { extractPatientInfo, getOrganisationName } from './fhir/utils'
-import { extractPractitioners, extractOrganisations, extractHealthcareServices, extractLocations, extractFhirMedications } from './fhir/supportingResources'
+import { extractPractitioners, extractPractitionerRoles, extractOrganisations, extractHealthcareServices, extractLocations, extractFhirMedications } from './fhir/supportingResources'
 import { extractLists } from './fhir/lists'
 import type { ValidationResult, GpConnectMedicationsRecord } from './fhir/types'
 import type { DomainId } from './components/clinical/domains'
@@ -123,6 +123,7 @@ function AppContent() {
       documents: extractDocuments(parsed.data),
       fhirMedications: extractFhirMedications(parsed.data),
       practitioners: extractPractitioners(parsed.data),
+      practitionerRoles: extractPractitionerRoles(parsed.data),
       organisations: extractOrganisations(parsed.data),
       healthcareServices: extractHealthcareServices(parsed.data),
       locations: extractLocations(parsed.data),

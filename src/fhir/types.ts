@@ -47,6 +47,7 @@ export interface GpConnectMedication {
   snomedCode?: string
   dose?: string
   frequency?: string
+  site?: string
   route?: string
   status: string
   prescriptionType?: string
@@ -261,6 +262,7 @@ export interface GpConnectInvestigationResult {
   referenceRange?: string
   interpretation?: string
   comment?: string
+  commentObservationId?: string
   isSubHeader?: boolean
   isTransferDegraded?: boolean
   components?: GpConnectObservationComponent[]
@@ -272,6 +274,7 @@ export interface GpConnectTestGroup {
   snomedCode?: string
   comment?: string
   date?: string
+  interpretation?: string
   isTransferDegraded?: boolean
   results: GpConnectInvestigationResult[]
 }
@@ -398,6 +401,13 @@ export interface GpConnectPractitioner {
   gender?: string
 }
 
+export interface GpConnectPractitionerRole {
+  id: string
+  practitionerId: string
+  jobRole?: string
+  organisationId?: string
+}
+
 export interface GpConnectOrganisation {
   id: string
   name: string
@@ -472,6 +482,7 @@ export interface GpConnectBundle {
   documents: GpConnectDocument[]
   fhirMedications: GpConnectFhirMedication[]
   practitioners: GpConnectPractitioner[]
+  practitionerRoles: GpConnectPractitionerRole[]
   organisations: GpConnectOrganisation[]
   healthcareServices: GpConnectHealthcareService[]
   locations: GpConnectLocation[]

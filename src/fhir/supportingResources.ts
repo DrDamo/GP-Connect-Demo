@@ -1,4 +1,4 @@
-import type { GpConnectPractitioner, GpConnectOrganisation, GpConnectHealthcareService, GpConnectLocation, GpConnectFhirMedication } from './types'
+import type { GpConnectPractitioner, GpConnectPractitionerRole, GpConnectOrganisation, GpConnectHealthcareService, GpConnectLocation, GpConnectFhirMedication } from './types'
 import { getEntries, resolvePractitionerName, extractSnomedCode } from './utils'
 
 export function extractPractitioners(bundle: fhir3.Bundle): GpConnectPractitioner[] {
@@ -24,6 +24,27 @@ export function extractPractitioners(bundle: fhir3.Bundle): GpConnectPractitione
       gender: p.gender,
     }
   }).filter(p => p.id)
+}
+
+export function extractPractitionerRoles(bundle: fhir3.Bundle): GpConnectPractitionerRole[] {
+  type PrCast = {
+    id?: string
+    practitioner?: fhir3.Reference
+    organization?: fhir3.Reference
+    code?: fhir3.CodeableConcept[]
+  }
+  return (bundle.entry ?? [])
+    .map(e => e.resource as (PrCast & { resourceType?: string }) | undefined)
+    .filter((r): r is PrCast & { resourceType: string } => r?.resourceType === 'PractitionerRole')
+    .map(pr => {
+      const practRef = pr.practitioner?.reference ?? ''
+      const practitionerId = practRef.includes('/') ? practRef.split('/').pop()! : practRef
+      const orgRef = pr.organization?.reference ?? ''
+      const organisationId = orgRef.includes('/') ? orgRef.split('/').pop() : undefined
+      const jobRole = pr.code?.[0]?.coding?.[0]?.display ?? pr.code?.[0]?.text
+      return { id: pr.id ?? '', practitionerId, jobRole, organisationId }
+    })
+    .filter(r => r.id && r.practitionerId)
 }
 
 export function extractOrganisations(bundle: fhir3.Bundle): GpConnectOrganisation[] {

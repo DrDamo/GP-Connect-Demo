@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import type { GpConnectBundle, GpConnectPractitioner, GpConnectOrganisation, GpConnectHealthcareService, GpConnectLocation, GpConnectFhirMedication } from '../../fhir/types'
+import type { GpConnectBundle, GpConnectPractitioner, GpConnectPractitionerRole, GpConnectOrganisation, GpConnectHealthcareService, GpConnectLocation, GpConnectFhirMedication } from '../../fhir/types'
 
 interface Props {
   bundle: GpConnectBundle
@@ -35,10 +35,15 @@ function CollapsibleSectionHeader({ title, count, open, onToggle }: {
   )
 }
 
-function PractitionerCard({ p, selected, onSelect, onJumpToSource }: {
-  p: GpConnectPractitioner; selected: boolean
-  onSelect?: (id: string) => void; onJumpToSource?: (id: string) => void
+function PractitionerCard({ p, roles, organisations, selected, onSelect, onJumpToSource }: {
+  p: GpConnectPractitioner
+  roles: GpConnectPractitionerRole[]
+  organisations: GpConnectOrganisation[]
+  selected: boolean
+  onSelect?: (id: string) => void
+  onJumpToSource?: (id: string) => void
 }) {
+  const myRoles = roles.filter(r => r.practitionerId === p.id)
   return (
     <div
       className={`border rounded-lg p-3 transition-colors ${selected ? 'border-nhs-blue bg-blue-50' : 'border-nhs-grey-4 bg-white hover:border-nhs-blue/40'} ${onSelect ? 'cursor-pointer' : ''}`}
@@ -59,6 +64,32 @@ function PractitionerCard({ p, selected, onSelect, onJumpToSource }: {
         <Row label="Gender"              value={p.gender} />
         <Row label="Resource ID"         value={p.id} />
       </div>
+      {myRoles.length > 0 && (
+        <div className="mt-2 pt-2 border-t border-nhs-grey-4 space-y-1.5">
+          <p className="text-[10px] font-semibold text-nhs-grey-3 uppercase tracking-wide">Practitioner Roles</p>
+          {myRoles.map(role => {
+            const orgName = role.organisationId
+              ? organisations.find(o => o.id === role.organisationId)?.name
+              : undefined
+            return (
+              <div key={role.id} className="flex items-start justify-between gap-2">
+                <div className="text-xs text-nhs-grey-1 space-y-0.5">
+                  {role.jobRole && <span className="font-medium">{role.jobRole}</span>}
+                  {orgName && <span className="text-nhs-grey-3"> · {orgName}</span>}
+                </div>
+                {onJumpToSource && (
+                  <button
+                    onClick={e => { e.stopPropagation(); onJumpToSource(role.id) }}
+                    className="text-xs text-nhs-blue hover:underline shrink-0"
+                  >
+                    FHIR ↗
+                  </button>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
@@ -177,7 +208,7 @@ function HealthcareServiceCard({ h, selected, onSelect, onJumpToSource }: {
 type SectionKey = 'practitioners' | 'organisations' | 'locations' | 'healthcareServices' | 'fhirMedications'
 
 export function SupportingResourcesView({ bundle, selectedId, onSelect, onJumpToSource }: Props) {
-  const { practitioners, organisations, healthcareServices, locations, fhirMedications } = bundle
+  const { practitioners, practitionerRoles, organisations, healthcareServices, locations, fhirMedications } = bundle
   const total = practitioners.length + organisations.length + healthcareServices.length + locations.length + fhirMedications.length
 
   const findSection = (id: string): SectionKey | null => {
@@ -232,7 +263,7 @@ export function SupportingResourcesView({ bundle, selectedId, onSelect, onJumpTo
           {openSections.has('practitioners') && (
             <div className="grid grid-cols-1 gap-3">
               {practitioners.map(p => (
-                <PractitionerCard key={p.id} p={p} selected={selectedId === p.id} onSelect={onSelect} onJumpToSource={onJumpToSource} />
+                <PractitionerCard key={p.id} p={p} roles={practitionerRoles} organisations={organisations} selected={selectedId === p.id} onSelect={onSelect} onJumpToSource={onJumpToSource} />
               ))}
             </div>
           )}

@@ -27,7 +27,7 @@ const COLUMNS: DomainColumn<GpConnectInvestigation>[] = [
       ? <span className={interpretationClass(item.interpretation)}>{item.interpretation}</span>
       : <span>—</span>,
   },
-  { label: 'Performer', render: item => item.performer ?? '—' },
+  { label: 'Requestor', render: item => item.performer ?? '—' },
 ]
 
 function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
@@ -57,7 +57,7 @@ function CommentText({ text, className }: { text: string; className?: string }) 
   const cleaned = text.replace(/\r\n?/g, '\n').trim()
   if (!cleaned) return null
   return (
-    <pre className={`whitespace-pre-wrap break-words font-sans text-xs text-nhs-grey-2 leading-relaxed ${className ?? ''}`}>
+    <pre className={`whitespace-pre-wrap break-words font-mono text-xs text-nhs-grey-2 leading-relaxed ${className ?? ''}`}>
       {cleaned}
     </pre>
   )
@@ -87,7 +87,19 @@ function ResultsTable({
             if (r.isSubHeader) {
               return (
                 <tr key={r.id} className="bg-nhs-grey-5/60 border-b border-nhs-blue/10">
-                  <td colSpan={4} className="py-1 px-2 text-xs font-medium text-nhs-grey-2">{r.name}</td>
+                  <td colSpan={4} className="py-1 px-2 text-xs font-medium text-nhs-grey-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span>{r.name}</span>
+                      {onJumpToSource && (
+                        <button
+                          onClick={e => { e.stopPropagation(); onJumpToSource(`Observation/${r.id}`) }}
+                          className="text-[11px] text-nhs-grey-3 hover:text-nhs-grey-1 hover:underline font-normal shrink-0"
+                        >
+                          FHIR ↗
+                        </button>
+                      )}
+                    </div>
+                  </td>
                 </tr>
               )
             }
@@ -129,7 +141,17 @@ function ResultsTable({
                 {r.comment && (
                   <tr key={`${r.id}-note`} className="border-b border-nhs-blue/10 last:border-0">
                     <td colSpan={4} className="py-1 pr-4">
-                      <CommentText text={r.comment} />
+                      <div className="flex items-start justify-between gap-2">
+                        <CommentText text={r.comment} />
+                        {onJumpToSource && r.commentObservationId && (
+                          <button
+                            onClick={e => { e.stopPropagation(); onJumpToSource(`Observation/${r.commentObservationId}`) }}
+                            className="text-[11px] text-nhs-grey-3 hover:text-nhs-grey-1 hover:underline shrink-0 mt-0.5"
+                          >
+                            FHIR ↗
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 )}
@@ -339,6 +361,16 @@ function InvestigationDetail({ investigation, bundle, onJumpToSource, onJumpToRe
             // merely repeats the report title (inferred TPP/EMIS test-type descriptor).
             // Show any group-level comment, then the results directly.
             <>
+              {onJumpToSource && (
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => onJumpToSource(`Observation/${investigation.testGroups[0].id}`)}
+                    className="text-[11px] text-nhs-grey-3 hover:text-nhs-grey-1 hover:underline"
+                  >
+                    View group FHIR ↗
+                  </button>
+                </div>
+              )}
               {investigation.testGroups[0].comment && (
                 <CommentText
                   text={investigation.testGroups[0].comment}
