@@ -5,7 +5,6 @@ import { newTempId } from '../hooks/useDraftRecord'
 import { Field } from './shared/FormField'
 import { SelectField } from './shared/SelectField'
 import { PractitionerSelect } from './shared/PractitionerSelect'
-import { NotesList } from './shared/NotesList'
 import { SnomedPicker } from './shared/SnomedPicker'
 import { BuilderModal } from '../components/BuilderModal'
 import { DeleteConfirmDialog } from '../components/DeleteConfirmDialog'
@@ -90,16 +89,15 @@ function ProblemCard({
 
       {expanded && (
         <div className="p-3 bg-white dark:bg-gray-900 space-y-3">
-          <Field label="Problem description" value={problem.problem ?? ''} onChange={v => upd({ problem: v })} required />
           <SnomedPicker
+            label="Problem description"
+            value={problem.problem ?? ''}
             code={problem.snomedCode}
-            display={problem.problem}
             semanticTag="disorder,finding"
-            onSelect={({ code, display }) => upd({
-              snomedCode: code || undefined,
-              ...(display ? { problem: display } : {}),
-            })}
+            onChange={({ value, code }) => upd({ problem: value, snomedCode: code })}
+            required
           />
+          <Field label="Associated text" value={problem.associatedText ?? ''} onChange={v => upd({ associatedText: v })} />
 
           <div className="grid grid-cols-2 gap-2">
             <SelectField
@@ -133,10 +131,6 @@ function ProblemCard({
             onChange={v => upd({ asserterTempId: v })}
           />
 
-          <NotesList
-            notes={problem.notes ?? []}
-            onChange={notes => upd({ notes })}
-          />
           <LinkSection
             draft={draft}
             linkedProblemTempIds={problem.linkedProblemTempIds ?? []}

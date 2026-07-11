@@ -6,12 +6,14 @@ import type {
   DraftConsultationCategory,
   DraftConsultationItem,
   DraftConsultationItemType,
+  DraftProblem,
 } from '../types'
 import type { DraftAction } from '../hooks/useDraftRecord'
 import { newTempId } from '../hooks/useDraftRecord'
 import { Field } from './shared/FormField'
 import { SelectField } from './shared/SelectField'
 import { PractitionerSelect } from './shared/PractitionerSelect'
+import { SnomedPicker } from './shared/SnomedPicker'
 import { BuilderModal } from '../components/BuilderModal'
 import { DeleteConfirmDialog } from '../components/DeleteConfirmDialog'
 import { LinkSection } from './shared/LinkSection'
@@ -34,16 +36,20 @@ const ENCOUNTER_CLASS_OPTS = [
 
 const ITEM_TYPE_OPTS = [
   { value: 'note', label: 'Note' },
-  { value: 'linked', label: 'Linked item' },
   { value: 'coded', label: 'Coded observation' },
 ]
 
-const CATEGORY_TITLE_OPTS = [
-  { value: 'History', label: 'History' },
-  { value: 'Examination', label: 'Examination' },
-  { value: 'Assessment', label: 'Assessment' },
-  { value: 'Plan', label: 'Plan' },
-  { value: 'Other', label: 'Other' },
+const FIXED_CATEGORY_TITLES = ['History', 'Examination', 'Assessment', 'Plan']
+
+const CLINICAL_STATUS_OPTS = [
+  { value: 'active', label: 'Active' },
+  { value: 'inactive', label: 'Inactive' },
+  { value: 'resolved', label: 'Resolved' },
+]
+
+const SIGNIFICANCE_OPTS = [
+  { value: 'major', label: 'Major' },
+  { value: 'minor', label: 'Minor' },
 ]
 
 // ---------------------------------------------------------------------------
@@ -70,9 +76,9 @@ function ConsultationItemRow({
     })
 
   return (
-    <div className="border border-nhs-grey-5 dark:border-nhs-grey-4 rounded p-2 mb-1 bg-white dark:bg-gray-900">
-      <div className="flex items-start gap-2">
-        <div className="w-36 shrink-0">
+    <div className="border border-nhs-grey-5 dark:border-nhs-grey-4 rounded p-2 mb-1.5 bg-white dark:bg-gray-900">
+      <div className="flex items-start gap-2 mb-1.5">
+        <div className="w-40 shrink-0">
           <SelectField
             label="Type"
             value={item.itemType}
@@ -80,35 +86,7 @@ function ConsultationItemRow({
             options={ITEM_TYPE_OPTS}
           />
         </div>
-        <div className="flex-1 space-y-1">
-          {item.itemType === 'note' && (
-            <div>
-              <label className="block text-xs font-medium text-nhs-grey-3 uppercase tracking-wide mb-0.5">
-                Narrative text
-              </label>
-              <textarea
-                value={item.narrativeText ?? ''}
-                onChange={e => upd({ narrativeText: e.target.value })}
-                rows={2}
-                className="w-full rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-2 py-1.5 text-sm text-nhs-grey-1 dark:bg-gray-800 focus:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue resize-none"
-              />
-            </div>
-          )}
-          {item.itemType === 'linked' && (
-            <Field
-              label="Linked resource type"
-              value={item.linkedResourceType ?? ''}
-              onChange={v => upd({ linkedResourceType: v })}
-            />
-          )}
-          {item.itemType === 'coded' && (
-            <div className="grid grid-cols-3 gap-1">
-              <Field label="SNOMED code" value={item.snomedCode ?? ''} onChange={v => upd({ snomedCode: v })} />
-              <Field label="Description" value={item.description ?? ''} onChange={v => upd({ description: v })} />
-              <Field label="Value" value={item.value ?? ''} onChange={v => upd({ value: v })} />
-            </div>
-          )}
-        </div>
+        <div className="flex-1" />
         <button
           type="button"
           onClick={() =>
@@ -122,6 +100,114 @@ function ConsultationItemRow({
         >
           <TrashIcon className="w-3.5 h-3.5" />
         </button>
+      </div>
+
+      {item.itemType === 'note' && (
+        <div>
+          <label className="block text-xs font-medium text-nhs-grey-3 uppercase tracking-wide mb-0.5">
+            Narrative text
+          </label>
+          <textarea
+            value={item.narrativeText ?? ''}
+            onChange={e => upd({ narrativeText: e.target.value })}
+            rows={2}
+            className="w-full rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-2 py-1.5 text-sm text-nhs-grey-1 dark:bg-gray-800 focus:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue resize-none"
+          />
+        </div>
+      )}
+      {item.itemType === 'coded' && (
+        <div className="space-y-2">
+          <SnomedPicker
+            label="Description"
+            value={item.description ?? ''}
+            code={item.snomedCode}
+            onChange={({ value, code }) => upd({ description: value, snomedCode: code })}
+          />
+          <Field label="Associated text" value={item.associatedText ?? ''} onChange={v => upd({ associatedText: v })} />
+          <Field label="Value" value={item.value ?? ''} onChange={v => upd({ value: v })} className="max-w-xs" />
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// TopicProblemBox — the single Problem (Condition) belonging to a topic
+// ---------------------------------------------------------------------------
+
+function TopicProblemBox({
+  topic,
+  consTempId,
+  draft,
+  dispatch,
+}: {
+  topic: DraftConsultationTopic
+  consTempId: string
+  draft: DraftRecord
+  dispatch: React.Dispatch<DraftAction>
+}) {
+  const problem: DraftProblem | undefined = topic.problemTempId
+    ? draft.problems.find(p => p._tempId === topic.problemTempId)
+    : undefined
+
+  if (!problem) {
+    return (
+      <div className="border border-dashed border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg mb-2 px-3 py-2 flex items-center justify-between">
+        <span className="text-xs text-nhs-grey-3">No problem linked to this topic.</span>
+        <button
+          type="button"
+          onClick={() => dispatch({ type: 'ADD_TOPIC_PROBLEM', payload: { consTempId, topicTempId: topic._tempId } })}
+          className="text-xs text-nhs-blue hover:underline"
+        >
+          + Add problem
+        </button>
+      </div>
+    )
+  }
+
+  const upd = (updates: Partial<DraftProblem>) =>
+    dispatch({ type: 'UPDATE_PROBLEM', payload: { _tempId: problem._tempId, updates } })
+
+  return (
+    <div className="border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg mb-2">
+      <div className="flex items-center justify-between px-3 py-1.5 bg-nhs-grey-5 dark:bg-gray-800 rounded-t-lg">
+        <span className="text-xs font-semibold text-nhs-grey-2 uppercase tracking-wide">Problem</span>
+        <button
+          type="button"
+          onClick={() => dispatch({ type: 'REMOVE_TOPIC_PROBLEM', payload: { consTempId, topicTempId: topic._tempId } })}
+          className="text-nhs-red hover:opacity-70 p-0.5"
+          title="Remove problem"
+        >
+          <TrashIcon className="w-3.5 h-3.5" />
+        </button>
+      </div>
+      <div className="p-3 bg-white dark:bg-gray-900 space-y-2">
+        <SnomedPicker
+          label="Problem description"
+          value={problem.problem ?? ''}
+          code={problem.snomedCode}
+          semanticTag="disorder,finding"
+          onChange={({ value, code }) => upd({ problem: value, snomedCode: code })}
+          required
+        />
+        <Field label="Associated text" value={problem.associatedText ?? ''} onChange={v => upd({ associatedText: v })} />
+        <div className="grid grid-cols-2 gap-2">
+          <SelectField
+            label="Clinical status"
+            value={problem.clinicalStatus ?? ''}
+            onChange={v => upd({ clinicalStatus: v as DraftProblem['clinicalStatus'] })}
+            options={CLINICAL_STATUS_OPTS}
+            placeholder="— Select —"
+            required
+          />
+          <SelectField
+            label="Significance"
+            value={problem.significance ?? ''}
+            onChange={v => upd({ significance: v as DraftProblem['significance'] })}
+            options={SIGNIFICANCE_OPTS}
+            placeholder="— Select —"
+          />
+        </div>
       </div>
     </div>
   )
@@ -143,52 +229,52 @@ function CategoryBlock({
   dispatch: React.Dispatch<DraftAction>
 }) {
   const [open, setOpen] = useState(true)
+  const isFixed = FIXED_CATEGORY_TITLES.includes(cat.title ?? '')
 
   return (
     <div className="border border-nhs-grey-4 dark:border-nhs-grey-2 rounded mb-1.5 overflow-hidden">
       <div className="flex items-center justify-between px-2 py-1.5 bg-nhs-grey-5 dark:bg-gray-800">
-        <button type="button" onClick={() => setOpen(o => !o)} className="flex items-center gap-1.5 flex-1 text-left">
-          <svg
-            className={`w-3 h-3 text-nhs-grey-3 transition-transform ${open ? 'rotate-180' : ''}`}
-            fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-          </svg>
-          <span className="text-xs font-medium text-nhs-grey-2">
-            {cat.title || 'Category'}
-          </span>
-          <span className="text-xs text-nhs-grey-3">({cat.items.length} items)</span>
-        </button>
-        <div className="flex items-center gap-2">
-          <select
-            value={cat.title ?? ''}
-            onChange={e =>
-              dispatch({
-                type: 'UPDATE_CONSULTATION_CATEGORY',
-                payload: { consTempId, topicTempId, catTempId: cat._tempId, updates: { title: e.target.value } },
-              })
-            }
-            className="text-xs text-nhs-grey-1 rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-1 py-0.5 dark:bg-gray-800 focus:border-nhs-blue focus:outline-none"
-          >
-            <option value="">— Category —</option>
-            {CATEGORY_TITLE_OPTS.map(o => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
-          <button
-            type="button"
-            onClick={() =>
-              dispatch({
-                type: 'REMOVE_CONSULTATION_CATEGORY',
-                payload: { consTempId, topicTempId, catTempId: cat._tempId },
-              })
-            }
-            className="text-nhs-red hover:opacity-70 p-0.5"
-            title="Remove"
-          >
-            <TrashIcon className="w-3.5 h-3.5" />
+        <div className="flex items-center gap-1.5 flex-1 min-w-0">
+          <button type="button" onClick={() => setOpen(o => !o)} className="shrink-0 p-0.5">
+            <svg
+              className={`w-3 h-3 text-nhs-grey-3 transition-transform ${open ? 'rotate-180' : ''}`}
+              fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
           </button>
+          {isFixed ? (
+            <span className="text-xs font-medium text-nhs-grey-2 shrink-0">{cat.title}</span>
+          ) : (
+            <input
+              type="text"
+              value={cat.title ?? ''}
+              onChange={e =>
+                dispatch({
+                  type: 'UPDATE_CONSULTATION_CATEGORY',
+                  payload: { consTempId, topicTempId, catTempId: cat._tempId, updates: { title: e.target.value } },
+                })
+              }
+              placeholder="Category title…"
+              required
+              className="min-w-0 flex-1 text-xs font-medium text-nhs-grey-2 rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-1.5 py-0.5 dark:bg-gray-800 focus:border-nhs-blue focus:outline-none"
+            />
+          )}
+          <span className="text-xs text-nhs-grey-3 shrink-0">({cat.items.length} items)</span>
         </div>
+        <button
+          type="button"
+          onClick={() =>
+            dispatch({
+              type: 'REMOVE_CONSULTATION_CATEGORY',
+              payload: { consTempId, topicTempId, catTempId: cat._tempId },
+            })
+          }
+          className="shrink-0 text-nhs-red hover:opacity-70 p-0.5 ml-2"
+          title="Remove"
+        >
+          <TrashIcon className="w-3.5 h-3.5" />
+        </button>
       </div>
 
       {open && (
@@ -222,117 +308,102 @@ function CategoryBlock({
 }
 
 // ---------------------------------------------------------------------------
-// ConsultationTopic
+// ConsultationTopic — content panel for the active tab
 // ---------------------------------------------------------------------------
 
 function TopicBlock({
   topic,
   consTempId,
+  draft,
   dispatch,
 }: {
   topic: DraftConsultationTopic
   consTempId: string
+  draft: DraftRecord
   dispatch: React.Dispatch<DraftAction>
 }) {
-  const [open, setOpen] = useState(true)
-
   return (
-    <div className="border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg mb-2 overflow-hidden">
-      <div className="flex items-center justify-between px-3 py-2 bg-nhs-grey-5 dark:bg-gray-800">
-        <button type="button" onClick={() => setOpen(o => !o)} className="flex items-center gap-2 flex-1 text-left">
-          <svg
-            className={`w-3.5 h-3.5 text-nhs-grey-3 transition-transform ${open ? 'rotate-180' : ''}`}
-            fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-          </svg>
-          <span className="text-sm font-medium text-nhs-grey-1">
-            {topic.title || 'Topic'}
-          </span>
-          <span className="text-xs text-nhs-grey-3">
-            ({topic.categories.length} categories, {topic.items.length} direct items)
-          </span>
-        </button>
-        <button
-          type="button"
-          onClick={() =>
-            dispatch({ type: 'REMOVE_CONSULTATION_TOPIC', payload: { consTempId, topicTempId: topic._tempId } })
-          }
-          className="text-nhs-red hover:opacity-70 p-0.5"
-          title="Remove"
-        >
-          <TrashIcon className="w-3.5 h-3.5" />
-        </button>
-      </div>
+    <div className="border border-nhs-grey-4 dark:border-nhs-grey-2 border-t-0 rounded-b-lg p-3 bg-white dark:bg-gray-900 space-y-2">
+      <Field
+        label="Topic title"
+        value={topic.title ?? ''}
+        onChange={v =>
+          dispatch({
+            type: 'UPDATE_CONSULTATION_TOPIC',
+            payload: { consTempId, topicTempId: topic._tempId, updates: { title: v } },
+          })
+        }
+      />
 
-      {open && (
-        <div className="p-3 bg-white dark:bg-gray-900 space-y-2">
-          <Field
-            label="Topic title"
-            value={topic.title ?? ''}
-            onChange={v =>
-              dispatch({
-                type: 'UPDATE_CONSULTATION_TOPIC',
-                payload: { consTempId, topicTempId: topic._tempId, updates: { title: v } },
-              })
-            }
-          />
+      <TopicProblemBox topic={topic} consTempId={consTempId} draft={draft} dispatch={dispatch} />
 
-          {/* Categories */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-medium text-nhs-grey-3 uppercase tracking-wide">
-                Categories
-              </span>
+      {/* Categories — one each of History/Examination/Assessment/Plan, unlimited Other */}
+      <div>
+        <div className="flex items-center justify-between mb-1 flex-wrap gap-1">
+          <span className="text-xs font-medium text-nhs-grey-3 uppercase tracking-wide">
+            Categories
+          </span>
+          <div className="flex items-center gap-2 flex-wrap">
+            {FIXED_CATEGORY_TITLES.filter(title => !topic.categories.some(c => c.title === title)).map(title => (
               <button
+                key={title}
                 type="button"
                 onClick={() =>
-                  dispatch({ type: 'ADD_CONSULTATION_CATEGORY', payload: { consTempId, topicTempId: topic._tempId } })
+                  dispatch({ type: 'ADD_CONSULTATION_CATEGORY', payload: { consTempId, topicTempId: topic._tempId, title } })
                 }
                 className="text-xs text-nhs-blue hover:underline"
               >
-                + Add category
+                + {title}
               </button>
-            </div>
-            {topic.categories.map(cat => (
-              <CategoryBlock
-                key={cat._tempId}
-                cat={cat}
-                consTempId={consTempId}
-                topicTempId={topic._tempId}
-                dispatch={dispatch}
-              />
             ))}
-          </div>
-
-          {/* Direct topic items (no category) */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-medium text-nhs-grey-3 uppercase tracking-wide">
-                Topic-level items
-              </span>
-              <button
-                type="button"
-                onClick={() =>
-                  dispatch({ type: 'ADD_CONSULTATION_ITEM', payload: { consTempId, topicTempId: topic._tempId } })
-                }
-                className="text-xs text-nhs-blue hover:underline"
-              >
-                + Add item
-              </button>
-            </div>
-            {topic.items.map(item => (
-              <ConsultationItemRow
-                key={item._tempId}
-                item={item}
-                consTempId={consTempId}
-                topicTempId={topic._tempId}
-                dispatch={dispatch}
-              />
-            ))}
+            <button
+              type="button"
+              onClick={() =>
+                dispatch({ type: 'ADD_CONSULTATION_CATEGORY', payload: { consTempId, topicTempId: topic._tempId, title: '' } })
+              }
+              className="text-xs text-nhs-blue hover:underline"
+            >
+              + Other category
+            </button>
           </div>
         </div>
-      )}
+        {topic.categories.map(cat => (
+          <CategoryBlock
+            key={cat._tempId}
+            cat={cat}
+            consTempId={consTempId}
+            topicTempId={topic._tempId}
+            dispatch={dispatch}
+          />
+        ))}
+      </div>
+
+      {/* Direct topic items (no category) */}
+      <div>
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-xs font-medium text-nhs-grey-3 uppercase tracking-wide">
+            Topic-level items
+          </span>
+          <button
+            type="button"
+            onClick={() =>
+              dispatch({ type: 'ADD_CONSULTATION_ITEM', payload: { consTempId, topicTempId: topic._tempId } })
+            }
+            className="text-xs text-nhs-blue hover:underline"
+          >
+            + Add item
+          </button>
+        </div>
+        {topic.items.map(item => (
+          <ConsultationItemRow
+            key={item._tempId}
+            item={item}
+            consTempId={consTempId}
+            topicTempId={topic._tempId}
+            dispatch={dispatch}
+          />
+        ))}
+      </div>
     </div>
   )
 }
@@ -353,6 +424,23 @@ function ConsultationCard({
   isModal?: boolean
 }) {
   const [open, setOpen] = useState(true)
+  const [activeTopicId, setActiveTopicId] = useState<string | null>(consultation.topics[0]?._tempId ?? null)
+  const [prevTopics, setPrevTopics] = useState(consultation.topics)
+
+  // Keep the active tab valid as topics are added/removed — this is the
+  // React-recommended "adjust state during render" pattern, not an effect,
+  // so a newly added topic becomes active in the same render it appears in.
+  if (consultation.topics !== prevTopics) {
+    setPrevTopics(consultation.topics)
+    if (consultation.topics.length > prevTopics.length) {
+      setActiveTopicId(consultation.topics[consultation.topics.length - 1]._tempId)
+    } else if (!consultation.topics.some(t => t._tempId === activeTopicId)) {
+      setActiveTopicId(consultation.topics[0]?._tempId ?? null)
+    }
+  }
+
+  const activeTopic = consultation.topics.find(t => t._tempId === activeTopicId) ?? null
+
   const upd = (updates: Partial<DraftConsultation>) =>
     dispatch({ type: 'UPDATE_CONSULTATION', payload: { _tempId: consultation._tempId, updates } })
 
@@ -390,31 +478,66 @@ function ConsultationCard({
         />
       </div>
 
-      {/* Topics */}
+      {/* Topics — one horizontal tab per topic */}
       <div>
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-semibold text-nhs-grey-2 uppercase tracking-wide">
-            Topics
-          </span>
+        <span className="text-xs font-semibold text-nhs-grey-2 uppercase tracking-wide mb-2 block">
+          Topics
+        </span>
+        {consultation.topics.length === 0 && (
+          <p className="text-xs text-nhs-grey-3 mb-2">No topics yet — add one below.</p>
+        )}
+        <div className="flex items-end gap-1 overflow-x-auto">
+          {consultation.topics.map((topic, idx) => {
+            const isActive = topic._tempId === activeTopicId
+            return (
+              <div
+                key={topic._tempId}
+                className={
+                  'shrink-0 flex items-center gap-1 rounded-t-lg border border-b-0 -mb-px ' +
+                  (isActive
+                    ? 'bg-white dark:bg-gray-900 border-nhs-grey-4 dark:border-nhs-grey-2'
+                    : 'bg-nhs-grey-5 dark:bg-gray-800 border-transparent')
+                }
+              >
+                <button
+                  type="button"
+                  onClick={() => setActiveTopicId(topic._tempId)}
+                  className={
+                    'pl-3 pr-1.5 py-1.5 text-sm font-medium truncate max-w-[10rem] ' +
+                    (isActive ? 'text-nhs-blue' : 'text-nhs-grey-2 hover:text-nhs-blue')
+                  }
+                >
+                  {topic.title || `Topic ${idx + 1}`}
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    dispatch({ type: 'REMOVE_CONSULTATION_TOPIC', payload: { consTempId: consultation._tempId, topicTempId: topic._tempId } })
+                  }
+                  className="pr-2 text-nhs-grey-3 hover:text-nhs-red"
+                  title="Remove topic"
+                >
+                  <TrashIcon className="w-3 h-3" />
+                </button>
+              </div>
+            )
+          })}
           <button
             type="button"
             onClick={() => dispatch({ type: 'ADD_CONSULTATION_TOPIC', payload: consultation._tempId })}
-            className="text-xs text-nhs-blue hover:underline"
+            className="shrink-0 px-3 py-1.5 text-sm font-medium text-nhs-blue hover:underline"
           >
-            + Add topic
+            + Topic
           </button>
         </div>
-        {consultation.topics.length === 0 && (
-          <p className="text-xs text-nhs-grey-3">No topics yet — add one above.</p>
-        )}
-        {consultation.topics.map(topic => (
+        {activeTopic && (
           <TopicBlock
-            key={topic._tempId}
-            topic={topic}
+            topic={activeTopic}
             consTempId={consultation._tempId}
+            draft={draft}
             dispatch={dispatch}
           />
-        ))}
+        )}
       </div>
       <LinkSection
         draft={draft}
@@ -585,7 +708,7 @@ export function ConsultationForm({ draft, dispatch }: Props) {
       ))}
 
       {modalState && activeConsultation && (
-        <BuilderModal title={modalTitle} onDone={handleDone} onCancel={handleCancel} size="xl">
+        <BuilderModal title={modalTitle} onDone={handleDone} onCancel={handleCancel} size="full">
           <ConsultationCard
             consultation={activeConsultation}
             draft={draft}

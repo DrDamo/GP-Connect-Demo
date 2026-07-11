@@ -18,15 +18,16 @@ interface SnomedConfig {
 }
 
 export interface SnomedPickerProps {
-  /** Current SNOMED code value */
+  /** Current free-text value — also the search query and the description shown if no code is linked */
+  value: string
+  /** Called on every text edit or when a search result is selected */
+  onChange: (result: { value: string; code?: string }) => void
+  /** Current SNOMED code linked to `value`, if any */
   code?: string
-  /** Current display term (shown as hint in search box) */
-  display?: string
-  /** Called when user selects a concept */
-  onSelect: (result: { code: string; display: string }) => void
   label?: string
   /** Comma-separated SNOMED semantic tags to filter results, e.g. "disorder,finding" */
   semanticTag?: string
+  required?: boolean
 }
 
 // ---------------------------------------------------------------------------
@@ -267,11 +268,10 @@ function ConfigModal({ onClose, onSaved }: ConfigModalProps) {
 // SnomedPicker
 // ---------------------------------------------------------------------------
 
-export function SnomedPicker({ code, display, onSelect, label = 'SNOMED CT', semanticTag }: SnomedPickerProps) {
+export function SnomedPicker({ value, onChange, code, label = 'SNOMED CT', semanticTag, required }: SnomedPickerProps) {
   const [config, setConfig] = useState<Partial<SnomedConfig>>(loadConfig)
   const [showConfig, setShowConfig] = useState(false)
 
-  const [query, setQuery] = useState('')
   const [results, setResults] = useState<SnomedResult[]>([])
   const [isOpen, setIsOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -325,17 +325,19 @@ export function SnomedPicker({ code, display, onSelect, label = 'SNOMED CT', sem
     }
   }, [semanticTag])
 
-  // Debounced search on query change
-  useEffect(() => {
+  // Search is triggered imperatively from actual keystrokes (not reactively off
+  // `value`) so that loading an existing coded value never auto-opens the dropdown.
+  const triggerSearch = (text: string) => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
-    if (query.length < 2) {
+    if (text.length < 2) {
       setResults([])
       setIsOpen(false)
       return
     }
-    debounceRef.current = setTimeout(() => search(query, config), 300)
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
-  }, [query, config, search])
+    debounceRef.current = setTimeout(() => search(text, config), 300)
+  }
+
+  useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current) }, [])
 
   // Close on outside click
   useEffect(() => {
@@ -351,10 +353,18 @@ export function SnomedPicker({ code, display, onSelect, label = 'SNOMED CT', sem
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
+  const handleTextChange = (v: string) => {
+    onChange({ value: v, code: undefined })
+    triggerSearch(v)
+  }
+
   const handleSelect = (r: SnomedResult) => {
-    onSelect({ code: r.code, display: r.display_term })
-    setQuery('')
+    onChange({ value: r.display_term, code: r.code })
     setIsOpen(false)
+  }
+
+  const handleClearCode = () => {
+    onChange({ value, code: undefined })
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -379,24 +389,8 @@ export function SnomedPicker({ code, display, onSelect, label = 'SNOMED CT', sem
 
   return (
     <>
-      <FormField label={label}>
+      <FormField label={label} required={required}>
         <div className="space-y-1">
-          {/* Current value display */}
-          {(code || display) && (
-            <div className="flex items-center gap-2 px-2 py-1 bg-nhs-grey-5 dark:bg-gray-800 rounded border border-nhs-grey-4 dark:border-nhs-grey-2 text-xs">
-              <span className="font-mono text-nhs-blue dark:text-blue-400 shrink-0">{code}</span>
-              {display && <span className="text-nhs-grey-1 truncate">{display}</span>}
-              <button
-                type="button"
-                onClick={() => onSelect({ code: '', display: '' })}
-                className="ml-auto text-nhs-grey-3 hover:text-nhs-red transition-colors shrink-0"
-                title="Clear"
-              >
-                ×
-              </button>
-            </div>
-          )}
-
           {/* Search row + dropdown (relative wrapper so dropdown is anchored here) */}
           <div className="relative">
             <div className="flex items-center gap-1">
@@ -404,27 +398,36 @@ export function SnomedPicker({ code, display, onSelect, label = 'SNOMED CT', sem
                 <input
                   ref={inputRef}
                   type="text"
-                  value={query}
-                  onChange={e => setQuery(e.target.value)}
+                  value={value}
+                  onChange={e => handleTextChange(e.target.value)}
                   onFocus={() => results.length > 0 && setIsOpen(true)}
                   onKeyDown={handleKeyDown}
-                  placeholder={isConnected ? 'Search SNOMED CT…' : 'Configure server to enable search'}
-                  disabled={!isConnected}
+                  placeholder={isConnected ? 'Search SNOMED CT or type free text…' : 'Type free text (configure server to enable SNOMED search)'}
+                  required={required}
                   className={
                     'w-full rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-2 py-1.5 text-sm ' +
-                    'text-nhs-grey-1 dark:bg-gray-800 pr-8 ' +
-                    'focus:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue ' +
-                    'disabled:opacity-50 disabled:cursor-not-allowed'
+                    'text-nhs-grey-1 dark:bg-gray-800 ' +
+                    (code ? 'pr-24 ' : 'pr-8 ') +
+                    'focus:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue'
                   }
                 />
-                {isLoading && (
-                  <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                  {isLoading && (
                     <svg className="w-3.5 h-3.5 animate-spin text-nhs-blue" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                     </svg>
-                  </div>
-                )}
+                  )}
+                  {code && !isLoading && (
+                    <span
+                      className="flex items-center gap-1 text-xs font-mono px-1.5 py-0.5 rounded bg-nhs-blue/10 text-nhs-blue dark:bg-blue-900/40 dark:text-blue-300"
+                      title={`SNOMED CT ${code} — click × to unlink and keep as free text`}
+                    >
+                      {code}
+                      <button type="button" onClick={handleClearCode} className="hover:opacity-70" title="Unlink code">×</button>
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Settings button */}

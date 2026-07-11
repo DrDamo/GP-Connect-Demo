@@ -65,7 +65,6 @@ function MedicationRow({ med, record, selected, selectedIssueId, onSelect, onSel
 
   const summaryPersonLabel = med.prescriber ? 'Prescriber' : 'Recorder'
   const summaryPersonName  = med.prescriber ?? med.recorder
-  const summaryPersonId    = med.prescriber ? med.prescriberId : med.recorderId
 
   const issuesToDate = med.numberOfIssued !== undefined
     ? med.numberOfRepeatsAllowed !== undefined

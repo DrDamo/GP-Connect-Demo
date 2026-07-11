@@ -5,7 +5,6 @@ import { newTempId } from '../hooks/useDraftRecord'
 import { Field } from './shared/FormField'
 import { SelectField } from './shared/SelectField'
 import { PractitionerSelect } from './shared/PractitionerSelect'
-import { NotesList } from './shared/NotesList'
 import { SnomedPicker } from './shared/SnomedPicker'
 import { BuilderModal } from '../components/BuilderModal'
 import { DeleteConfirmDialog } from '../components/DeleteConfirmDialog'
@@ -27,10 +26,35 @@ const STATUS_OPTS = [
   { value: 'not-done', label: 'Not done' },
 ]
 
+const ROUTE_OPTS = [
+  { value: 'Oral', label: 'Oral' },
+  { value: 'Nasal', label: 'Nasal' },
+  { value: 'Intramuscular', label: 'Intramuscular' },
+  { value: 'Subcutaneous', label: 'Subcutaneous' },
+  { value: 'Subdermal', label: 'Subdermal' },
+]
+
 const SELECT_CLS =
   'w-full rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-2 py-1.5 text-sm ' +
   'text-nhs-grey-1 dark:bg-gray-800 ' +
   'focus:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue'
+
+// ---------------------------------------------------------------------------
+// NotApplicableField — greyed placeholder for fields disabled by "Not given"
+// ---------------------------------------------------------------------------
+
+function NotApplicableField({ label }: { label: string }) {
+  return (
+    <div>
+      <label className="block text-xs font-medium text-nhs-grey-3 uppercase tracking-wide mb-0.5">
+        {label}
+      </label>
+      <div className="w-full rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-2 py-1.5 text-sm bg-nhs-grey-5 dark:bg-gray-800 text-nhs-grey-3 dark:text-gray-600 italic">
+        N/A — not given
+      </div>
+    </div>
+  )
+}
 
 // ---------------------------------------------------------------------------
 // ImmunisationCard
@@ -58,21 +82,15 @@ function ImmunisationCard({
 
   const body = (
     <div className="p-3 bg-white dark:bg-gray-900 space-y-3">
-      <Field label="Vaccine name" value={imm.vaccineName ?? ''} onChange={v => upd({ vaccineName: v })} required />
       <SnomedPicker
-        code={imm.snomedCode}
-        display={imm.vaccineName}
-        semanticTag="product"
-        onSelect={({ code, display }) => upd({
-          snomedCode: code || undefined,
-          ...(display ? { vaccineName: display } : {}),
-        })}
+        label="Vaccination procedure"
+        value={imm.vaccinationProcedureDisplay ?? ''}
+        code={imm.vaccinationProcedureCode}
+        semanticTag={imm.notGiven ? 'situation' : 'procedure,situation'}
+        onChange={({ value, code }) => upd({ vaccinationProcedureDisplay: value, vaccinationProcedureCode: code })}
+        required
       />
-
-      <div className="grid grid-cols-2 gap-2">
-        <Field label="Vaccination procedure code" value={imm.vaccinationProcedureCode ?? ''} onChange={v => upd({ vaccinationProcedureCode: v })} />
-        <Field label="Vaccination procedure display" value={imm.vaccinationProcedureDisplay ?? ''} onChange={v => upd({ vaccinationProcedureDisplay: v })} />
-      </div>
+      <Field label="Associated text" value={imm.associatedText ?? ''} onChange={v => upd({ associatedText: v })} />
 
       <div className="grid grid-cols-2 gap-2">
         <Field label="Date given" type="date" value={imm.dateGiven ?? ''} onChange={v => upd({ dateGiven: v })} required />
@@ -80,19 +98,47 @@ function ImmunisationCard({
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        <SelectField
-          label="Status"
-          value={imm.status ?? ''}
-          onChange={v => upd({ status: v })}
-          options={STATUS_OPTS}
-          required
-        />
+        {imm.notGiven ? (
+          <div>
+            <label className="block text-xs font-medium text-nhs-grey-3 uppercase tracking-wide mb-0.5">
+              Status<span className="text-nhs-red ml-0.5">*</span>
+            </label>
+            <div className="w-full rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-2 py-1.5 text-sm bg-nhs-grey-5 dark:bg-gray-800 text-nhs-grey-3 dark:text-gray-600 italic">
+              Not done
+            </div>
+          </div>
+        ) : (
+          <SelectField
+            label="Status"
+            value={imm.status ?? ''}
+            onChange={v => upd({ status: v })}
+            options={STATUS_OPTS}
+            required
+          />
+        )}
         <div className="flex items-end pb-1">
           <label className="flex items-center gap-1.5 text-xs text-nhs-grey-2">
             <input
               type="checkbox"
               checked={imm.notGiven ?? false}
-              onChange={e => upd({ notGiven: e.target.checked })}
+              onChange={e => {
+                const notGiven = e.target.checked
+                upd(
+                  notGiven
+                    ? {
+                        notGiven: true,
+                        status: 'not-done',
+                        site: undefined,
+                        route: undefined,
+                        batchNumber: undefined,
+                        expirationDate: undefined,
+                        manufacturer: undefined,
+                        vaccineName: undefined,
+                        snomedCode: undefined,
+                      }
+                    : { notGiven: false, status: 'completed' },
+                )
+              }}
               className="rounded"
             />
             Not given
@@ -101,13 +147,52 @@ function ImmunisationCard({
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        <Field label="Site" value={imm.site ?? ''} onChange={v => upd({ site: v })} />
-        <Field label="Route" value={imm.route ?? ''} onChange={v => upd({ route: v })} />
+        <label className="flex items-center gap-1.5 text-xs text-nhs-grey-2 self-end pb-1">
+          <input
+            type="checkbox"
+            checked={imm.parentPresent ?? false}
+            onChange={e => upd({ parentPresent: e.target.checked })}
+            className="rounded"
+          />
+          Parent present
+        </label>
+        <Field label="Reason" value={imm.reason ?? ''} onChange={v => upd({ reason: v })} />
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        <Field label="Batch number" value={imm.batchNumber ?? ''} onChange={v => upd({ batchNumber: v })} />
-        <Field label="Expiration date" type="date" value={imm.expirationDate ?? ''} onChange={v => upd({ expirationDate: v })} />
+        {imm.notGiven ? (
+          <>
+            <NotApplicableField label="Site" />
+            <NotApplicableField label="Route" />
+          </>
+        ) : (
+          <>
+            <Field label="Site" value={imm.site ?? ''} onChange={v => upd({ site: v })} />
+            <SelectField
+              label="Route"
+              value={imm.route ?? ''}
+              onChange={v => upd({ route: v })}
+              options={ROUTE_OPTS}
+              placeholder="— Select —"
+            />
+          </>
+        )}
+      </div>
+
+      <div className="grid grid-cols-3 gap-2">
+        {imm.notGiven ? (
+          <>
+            <NotApplicableField label="Batch number" />
+            <NotApplicableField label="Expiration date" />
+            <NotApplicableField label="Manufacturer" />
+          </>
+        ) : (
+          <>
+            <Field label="Batch number" value={imm.batchNumber ?? ''} onChange={v => upd({ batchNumber: v })} />
+            <Field label="Expiration date" type="date" value={imm.expirationDate ?? ''} onChange={v => upd({ expirationDate: v })} />
+            <Field label="Manufacturer" value={imm.manufacturer ?? ''} onChange={v => upd({ manufacturer: v })} />
+          </>
+        )}
       </div>
 
       <PractitionerSelect
@@ -139,10 +224,23 @@ function ImmunisationCard({
         </select>
       </div>
 
-      <NotesList
-        notes={imm.notes ?? []}
-        onChange={notes => upd({ notes })}
-      />
+      <div className="pt-2 border-t border-nhs-grey-4 dark:border-nhs-grey-2 space-y-2">
+        <span className="text-xs font-semibold text-nhs-grey-2 uppercase tracking-wide block">
+          Vaccine product {!imm.notGiven && <span className="normal-case font-normal text-nhs-grey-3">(optional)</span>}
+        </span>
+        {imm.notGiven ? (
+          <p className="text-xs text-nhs-grey-3 italic">Not applicable — vaccine was not given.</p>
+        ) : (
+          <SnomedPicker
+            label="Vaccine product"
+            value={imm.vaccineName ?? ''}
+            code={imm.snomedCode}
+            semanticTag="product"
+            onChange={({ value, code }) => upd({ vaccineName: value, snomedCode: code })}
+          />
+        )}
+      </div>
+
       <LinkSection
         draft={draft}
         linkedProblemTempIds={imm.linkedProblemTempIds ?? []}
@@ -172,7 +270,7 @@ function ImmunisationCard({
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
           </svg>
           <span className="text-sm font-medium text-nhs-grey-1">
-            {imm.vaccineName || 'New immunisation'}
+            {imm.vaccinationProcedureDisplay || imm.vaccineName || 'New immunisation'}
           </span>
           {imm.dateGiven && (
             <span className="text-xs text-nhs-grey-3">{imm.dateGiven}</span>
@@ -227,7 +325,7 @@ function ImmunisationDisplayRow({
       <div className="min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <p className="text-sm font-medium text-nhs-grey-1 dark:text-gray-100 truncate">
-            {imm.vaccineName || 'New immunisation'}
+            {imm.vaccinationProcedureDisplay || imm.vaccineName || 'New immunisation'}
           </p>
           {statusBadge(imm.status)}
         </div>
@@ -317,7 +415,7 @@ export function ImmunisationForm({ draft, dispatch }: Props) {
 
       {modalState && activeImm && (
         <BuilderModal
-          title={activeImm.vaccineName || 'Add Immunisation'}
+          title={activeImm.vaccinationProcedureDisplay || activeImm.vaccineName || 'Add Immunisation'}
           onDone={handleDone}
           onCancel={handleCancel}
           size="lg"
@@ -333,7 +431,7 @@ export function ImmunisationForm({ draft, dispatch }: Props) {
 
       {deleteTarget && (
         <DeleteConfirmDialog
-          label={deleteImm?.vaccineName || 'this immunisation'}
+          label={deleteImm?.vaccinationProcedureDisplay || deleteImm?.vaccineName || 'this immunisation'}
           onConfirm={handleDeleteConfirm}
           onCancel={() => setDeleteTarget(null)}
         />

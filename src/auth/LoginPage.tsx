@@ -2,8 +2,13 @@ import { useState } from 'react'
 import { useAuth } from './AuthContext'
 import { isSupabaseConfigured } from '../lib/supabase'
 
-export function LoginPage() {
-  const [username, setUsername] = useState('')
+interface LoginPageProps {
+  onSwitchToSignup: () => void
+  onBackToLanding: () => void
+}
+
+export function LoginPage({ onSwitchToSignup, onBackToLanding }: LoginPageProps) {
+  const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -13,7 +18,7 @@ export function LoginPage() {
     e.preventDefault()
     setLoading(true)
     setError('')
-    const result = await login(username.trim(), password)
+    const result = await login(identifier.trim(), password)
     if (result.error) {
       setError(result.error)
       setLoading(false)
@@ -23,12 +28,14 @@ export function LoginPage() {
   return (
     <div className="min-h-screen bg-nhs-grey-5 dark:bg-gray-950 flex flex-col">
       <header className="bg-nhs-blue px-4 py-3 shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="bg-white text-nhs-blue font-extrabold text-sm px-2 py-1 rounded leading-tight">NHS</div>
-          <div>
-            <h1 className="text-white text-base font-semibold leading-tight">GP Connect Demonstrator</h1>
-            <p className="text-white/75 text-xs leading-tight">Access Record Structured · FHIR STU3</p>
-          </div>
+        <div className="max-w-screen-2xl mx-auto flex items-center gap-3">
+          <button onClick={onBackToLanding} className="flex items-center gap-3 text-left">
+            <div className="bg-white text-nhs-blue font-extrabold text-sm px-2 py-1 rounded leading-tight">NHS</div>
+            <div>
+              <h1 className="text-white text-base font-semibold leading-tight">GP Connect Demonstrator</h1>
+              <p className="text-white/75 text-xs leading-tight">Access Record Structured · FHIR STU3</p>
+            </div>
+          </button>
         </div>
       </header>
 
@@ -38,7 +45,7 @@ export function LoginPage() {
             <div className="px-6 py-5 border-b border-nhs-grey-4 dark:border-gray-700">
               <h2 className="text-lg font-semibold text-nhs-grey-1 dark:text-gray-100">Sign in</h2>
               <p className="text-sm text-nhs-grey-3 dark:text-gray-500 mt-0.5">
-                {isSupabaseConfigured ? 'Enter your username and password' : 'Authentication not yet configured'}
+                {isSupabaseConfigured ? 'Enter your email (or username) and password' : 'Authentication not yet configured'}
               </p>
             </div>
 
@@ -58,12 +65,12 @@ export function LoginPage() {
                 )}
                 <div>
                   <label className="block text-sm font-medium text-nhs-grey-1 dark:text-gray-300 mb-1">
-                    Username
+                    Email or username
                   </label>
                   <input
                     type="text"
-                    value={username}
-                    onChange={e => setUsername(e.target.value)}
+                    value={identifier}
+                    onChange={e => setIdentifier(e.target.value)}
                     autoComplete="username"
                     autoFocus
                     required
@@ -85,11 +92,17 @@ export function LoginPage() {
                 </div>
                 <button
                   type="submit"
-                  disabled={loading || !username.trim() || !password}
+                  disabled={loading || !identifier.trim() || !password}
                   className="w-full bg-nhs-blue text-white py-2 rounded text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
                 >
                   {loading ? 'Signing in…' : 'Sign in'}
                 </button>
+                <p className="text-sm text-center text-nhs-grey-3 dark:text-gray-500">
+                  New here?{' '}
+                  <button type="button" onClick={onSwitchToSignup} className="text-nhs-blue dark:text-nhs-blue-light font-medium hover:underline">
+                    Create a free account
+                  </button>
+                </p>
               </form>
             )}
           </div>

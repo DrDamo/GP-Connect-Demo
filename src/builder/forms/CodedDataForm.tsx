@@ -145,16 +145,14 @@ function CodedDataCard({
 
       {expanded && (
         <div className="p-3 bg-white dark:bg-gray-900 space-y-3">
-          <Field label="Description" value={item.description ?? ''} onChange={v => upd({ description: v })} required />
           <SnomedPicker
+            label="Description"
+            value={item.description ?? ''}
             code={item.snomedCode}
-            display={item.description}
-            semanticTag="observable entity,finding"
-            onSelect={({ code, display }) => upd({
-              snomedCode: code || undefined,
-              ...(display ? { description: display } : {}),
-            })}
+            onChange={({ value, code }) => upd({ description: value, snomedCode: code })}
+            required
           />
+          <Field label="Associated text" value={item.comment ?? ''} onChange={v => upd({ comment: v })} />
 
           <div className="grid grid-cols-3 gap-2">
             <Field label="Date" type="date" value={item.date ?? ''} onChange={v => upd({ date: v })} />
@@ -162,7 +160,7 @@ function CodedDataCard({
             <Field label="Unit" value={item.unit ?? ''} onChange={v => upd({ unit: v })} />
           </div>
 
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             <SelectField
               label="Status"
               value={item.status ?? ''}
@@ -176,7 +174,6 @@ function CodedDataCard({
               onChange={v => upd({ interpretation: v })}
               options={INTERPRETATION_OPTS}
             />
-            <Field label="Comment" value={item.comment ?? ''} onChange={v => upd({ comment: v })} />
           </div>
 
           <PractitionerSelect

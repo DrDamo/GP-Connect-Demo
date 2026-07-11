@@ -24,14 +24,9 @@ function extractObsDescription(obs: ObsLike): string {
   return codeText ?? coding?.[0]?.display ?? 'Unknown'
 }
 
-export function extractCodedData(bundle: fhir3.Bundle): GpConnectCodedDataItem[] {
-  // GP Connect scopes uncategorised coded data to the miscellaneous record List
-  // (826501000000100). Using the list prevents consultation-internal Observations
-  // (which appear in category lists with code 24781000000107) from leaking here.
-  // Fall back to a filtered bundle-wide scan for non-compliant/partial bundles.
-  const miscList = getEntries<fhir3.List>(bundle, 'List')
-    .find(l => l.code?.coding?.some(c => c.code === '826501000000100'))
+const COMMENT_NOTE_CODE = '37331000000100'
 
+export function extractCodedData(bundle: fhir3.Bundle): GpConnectCodedDataItem[] {
   // Always exclude observations that belong to a DiagnosticReport result set.
   // Also traverse has-member links transitively: GP Connect bundles list only the
   // group-header in DiagnosticReport.result; the individual child results are only
@@ -55,7 +50,10 @@ export function extractCodedData(bundle: fhir3.Bundle): GpConnectCodedDataItem[]
     type Related = { type?: string; target?: { reference?: string } }
     const related = (obs as unknown as { related?: Related[] }).related ?? []
     for (const r of related) {
-      if (r.type === 'has-member') {
+      // Some vendor bundles (e.g. Orange Labs) omit related.type entirely on
+      // group-header -> analyte links; an untyped relation between
+      // Observations here is a has-member link in practice.
+      if (r.type === 'has-member' || r.type === undefined) {
         const childId = r.target?.reference?.split('/').pop()
         if (childId && !investigationObsIds.has(childId)) {
           investigationObsIds.add(childId)
@@ -67,23 +65,13 @@ export function extractCodedData(bundle: fhir3.Bundle): GpConnectCodedDataItem[]
 
   const notAnInvestigation = (obs: ObsLike) => !investigationObsIds.has(obs.id ?? '')
 
-  let observations: ObsLike[]
-
-  if (miscList) {
-    const allowedIds = new Set(
-      (miscList.entry ?? [])
-        .map(e => extractId(e.item?.reference))
-        .filter((id): id is string => !!id)
-    )
-    observations = getEntries<ObsLike>(bundle, 'Observation')
-      .filter(obs => allowedIds.has(obs.id ?? ''))
-      .filter(notAnInvestigation)
-  } else {
-    // Fallback: also exclude consultation note Observations
-    observations = getEntries<ObsLike>(bundle, 'Observation')
-      .filter(notAnInvestigation)
-      .filter(obs => !obs.code?.coding?.some(c => c.code === '37331000000100'))
-  }
+  // Show every coded Observation that isn't an investigation result and isn't
+  // a free-text comment note (37331000000100) — including ones nested inside
+  // consultation topic/category lists (24781000000107), which also surface
+  // there but should still appear here as flat coded entries.
+  const observations = getEntries<ObsLike>(bundle, 'Observation')
+    .filter(notAnInvestigation)
+    .filter(obs => !obs.code?.coding?.some(c => c.code === COMMENT_NOTE_CODE))
 
   return observations
     .sort((a, b) => fhirDateKey(

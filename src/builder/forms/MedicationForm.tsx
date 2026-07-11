@@ -217,19 +217,20 @@ function MedicationCard({
 
   return (
     <div className="space-y-3">
-      <Field label="Drug name" value={med.drugName ?? ''} onChange={v => upd({ drugName: v })} required />
-
       <DmdPicker
+        label="Drug name"
+        value={med.drugName ?? ''}
         code={med.dmdCode}
-        display={med.dmdDisplay}
         dmdType={med.dmdType ?? 'AMP'}
-        onSelect={({ code, display, dmdType }) => upd({
+        onChange={({ value, code, dmdType }) => upd({
+          drugName: value,
           dmdCode: code || undefined,
-          dmdDisplay: display || undefined,
+          dmdDisplay: code ? value : undefined,
           dmdType: code ? dmdType : undefined,
-          ...(display && !med.drugName ? { drugName: display } : {}),
         })}
+        required
       />
+      <Field label="Associated text" value={med.associatedText ?? ''} onChange={v => upd({ associatedText: v })} />
 
       <div className="grid grid-cols-2 gap-2">
         <SelectField
@@ -296,7 +297,6 @@ function MedicationCard({
 
       <Field label="Patient instructions" value={med.patientInstructions ?? ''} onChange={v => upd({ patientInstructions: v })} />
       <Field label="Pharmacy instructions" value={med.pharmacyInstructions ?? ''} onChange={v => upd({ pharmacyInstructions: v })} />
-      <Field label="Additional information" value={med.additionalInformation ?? ''} onChange={v => upd({ additionalInformation: v })} />
 
       <LinkSection
         draft={draft}

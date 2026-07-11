@@ -45,11 +45,14 @@ function loadConfig(): Partial<TerminologyConfig> {
 // ---------------------------------------------------------------------------
 
 export interface DmdPickerProps {
+  /** Current free-text value — also the search query and the drug name shown if no code is linked */
+  value: string
+  /** Called on every text edit or when a search result is selected */
+  onChange: (result: { value: string; code?: string; system?: string; dmdType: DmdType }) => void
   code?: string
-  display?: string
   dmdType?: DmdType
-  onSelect: (result: { code: string; display: string; system: string; dmdType: DmdType }) => void
   label?: string
+  required?: boolean
 }
 
 // ---------------------------------------------------------------------------
@@ -61,11 +64,10 @@ const TYPE_LABELS: Record<DmdType, string> = {
   AMP: 'AMP — branded product',
 }
 
-export function DmdPicker({ code, display, dmdType = 'VMP', onSelect, label = 'dm+d' }: DmdPickerProps) {
+export function DmdPicker({ value, onChange, code, dmdType = 'VMP', label = 'dm+d', required }: DmdPickerProps) {
   const [config, setConfig] = useState<Partial<TerminologyConfig>>(loadConfig)
   const [activeType, setActiveType] = useState<DmdType>(dmdType)
 
-  const [query, setQuery] = useState('')
   const [results, setResults] = useState<DmdResult[]>([])
   const [isOpen, setIsOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -112,12 +114,15 @@ export function DmdPicker({ code, display, dmdType = 'VMP', onSelect, label = 'd
     }
   }, [])
 
-  useEffect(() => {
+  // Search is triggered imperatively from actual keystrokes (not reactively off
+  // `value`) so that loading an existing coded value never auto-opens the dropdown.
+  const triggerSearch = (text: string, type: DmdType) => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
-    if (query.length < 2) { setResults([]); setIsOpen(false); return }
-    debounceRef.current = setTimeout(() => search(query, config, activeType), 300)
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
-  }, [query, config, activeType, search])
+    if (text.length < 2) { setResults([]); setIsOpen(false); return }
+    debounceRef.current = setTimeout(() => search(text, config, type), 300)
+  }
+
+  useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current) }, [])
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -130,10 +135,18 @@ export function DmdPicker({ code, display, dmdType = 'VMP', onSelect, label = 'd
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
+  const handleTextChange = (v: string) => {
+    onChange({ value: v, code: undefined, dmdType: activeType })
+    triggerSearch(v, activeType)
+  }
+
   const handleSelect = (r: DmdResult) => {
-    onSelect({ code: r.code, display: r.display, system: r.system, dmdType: r.type })
-    setQuery('')
+    onChange({ value: r.display, code: r.code, system: r.system, dmdType: r.type })
     setIsOpen(false)
+  }
+
+  const handleClearCode = () => {
+    onChange({ value, code: undefined, dmdType: activeType })
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -150,25 +163,8 @@ export function DmdPicker({ code, display, dmdType = 'VMP', onSelect, label = 'd
       : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300'
 
   return (
-    <FormField label={label}>
+    <FormField label={label} required={required}>
       <div className="space-y-1">
-        {/* Current value */}
-        {(code || display) && (
-          <div className="flex items-center gap-2 px-2 py-1 bg-nhs-grey-5 dark:bg-gray-800 rounded border border-nhs-grey-4 dark:border-nhs-grey-2 text-xs">
-            <span className={`shrink-0 text-xs px-1.5 py-0.5 rounded font-medium ${typeCls(dmdType)}`}>{dmdType}</span>
-            <span className="font-mono text-nhs-blue dark:text-blue-400 shrink-0">{code}</span>
-            {display && <span className="text-nhs-grey-1 truncate">{display}</span>}
-            <button
-              type="button"
-              onClick={() => onSelect({ code: '', display: '', system: 'https://dmd.nhs.uk', dmdType: activeType })}
-              className="ml-auto text-nhs-grey-3 hover:text-nhs-red transition-colors shrink-0"
-              title="Clear"
-            >
-              ×
-            </button>
-          </div>
-        )}
-
         {/* VMP / AMP toggle */}
         <div className="flex gap-1">
           {(['VMP', 'AMP'] as DmdType[]).map(t => (
@@ -197,27 +193,36 @@ export function DmdPicker({ code, display, dmdType = 'VMP', onSelect, label = 'd
             <input
               ref={inputRef}
               type="text"
-              value={query}
-              onChange={e => setQuery(e.target.value)}
+              value={value}
+              onChange={e => handleTextChange(e.target.value)}
               onFocus={() => results.length > 0 && setIsOpen(true)}
               onKeyDown={handleKeyDown}
-              placeholder={isConnected ? `Search dm+d ${activeType}…` : 'Configure server to enable search'}
-              disabled={!isConnected}
+              placeholder={isConnected ? `Search dm+d ${activeType} or type free text…` : 'Type free text (configure server to enable dm+d search)'}
+              required={required}
               className={
                 'w-full rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-2 py-1.5 text-sm ' +
-                'text-nhs-grey-1 dark:bg-gray-800 pr-8 ' +
-                'focus:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue ' +
-                'disabled:opacity-50 disabled:cursor-not-allowed'
+                'text-nhs-grey-1 dark:bg-gray-800 ' +
+                (code ? 'pr-24 ' : 'pr-8 ') +
+                'focus:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue'
               }
             />
-            {isLoading && (
-              <div className="absolute right-2 top-1/2 -translate-y-1/2">
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+              {isLoading && (
                 <svg className="w-3.5 h-3.5 animate-spin text-nhs-blue" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                 </svg>
-              </div>
-            )}
+              )}
+              {code && !isLoading && (
+                <span
+                  className={`flex items-center gap-1 text-xs font-mono px-1.5 py-0.5 rounded ${typeCls(dmdType)}`}
+                  title={`dm+d ${dmdType} ${code} — click × to unlink and keep as free text`}
+                >
+                  {code}
+                  <button type="button" onClick={handleClearCode} className="hover:opacity-70" title="Unlink code">×</button>
+                </span>
+              )}
+            </div>
           </div>
 
           {error && <p className="mt-1 text-xs text-nhs-red">{error}</p>}

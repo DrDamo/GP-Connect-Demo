@@ -5,7 +5,7 @@ interface BuilderModalProps {
   onDone: () => void
   onCancel: () => void
   children: React.ReactNode
-  size?: 'md' | 'lg' | 'xl'
+  size?: 'md' | 'lg' | 'xl' | 'full'
 }
 
 export function BuilderModal({ title, onDone, onCancel, children, size = 'lg' }: BuilderModalProps) {
@@ -26,7 +26,8 @@ export function BuilderModal({ title, onDone, onCancel, children, size = 'lg' }:
     return () => document.removeEventListener('keydown', handleKey)
   }, [])
 
-  const maxW = size === 'xl' ? 'max-w-3xl' : size === 'md' ? 'max-w-lg' : 'max-w-2xl'
+  const maxW = size === 'full' ? 'max-w-[92vw]' : size === 'xl' ? 'max-w-3xl' : size === 'md' ? 'max-w-lg' : 'max-w-2xl'
+  const bodyMaxH = size === 'full' ? 'max-h-[85vh]' : 'max-h-[70vh]'
 
   return (
     // Backdrop — click does nothing (modal is locked)
@@ -51,7 +52,7 @@ export function BuilderModal({ title, onDone, onCancel, children, size = 'lg' }:
         </div>
 
         {/* Body */}
-        <div className="max-h-[70vh] overflow-y-auto p-4">
+        <div className={`${bodyMaxH} overflow-y-auto p-4`}>
           {children}
         </div>
 

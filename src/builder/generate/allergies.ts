@@ -65,9 +65,7 @@ function makeAllergyResource(
           ],
         }
       : {}),
-    ...((draft.notes ?? []).length > 0
-      ? { note: draft.notes!.map(n => ({ text: n })) }
-      : {}),
+    ...(draft.associatedText ? { note: [{ text: draft.associatedText }] } : {}),
     ...(endExt ? { extension: [endExt] } : {}),
   }
 

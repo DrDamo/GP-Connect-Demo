@@ -136,6 +136,11 @@ function makeMedicationStatement(
       : []),
   ]
 
+  const noteEntries: fhir3.Annotation[] = [
+    ...(draft.pharmacyInstructions ? [{ text: draft.pharmacyInstructions }] : []),
+    ...(draft.associatedText ? [{ text: draft.associatedText }] : []),
+  ]
+
   const resource: fhir3.MedicationStatement = {
     resourceType: 'MedicationStatement',
     id,
@@ -155,7 +160,7 @@ function makeMedicationStatement(
           },
         }
       : {}),
-    ...(draft.pharmacyInstructions ? { note: [{ text: draft.pharmacyInstructions }] } : {}),
+    ...(noteEntries.length > 0 ? { note: noteEntries } : {}),
   }
 
   return { fullUrl, resource }

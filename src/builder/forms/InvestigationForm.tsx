@@ -60,16 +60,15 @@ function ResultRow({
   return (
     <div className="border border-nhs-grey-5 dark:border-nhs-grey-4 rounded p-2 mb-1.5 bg-white dark:bg-gray-900">
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 mb-2">
-        <Field label="Result name" value={result.name ?? ''} onChange={v => upd({ name: v })} required />
         <SnomedPicker
+          label="Result name"
+          value={result.name ?? ''}
           code={result.snomedCode}
-          display={result.name}
           semanticTag="observable entity"
-          onSelect={({ code, display }) => upd({
-            snomedCode: code || undefined,
-            ...(display ? { name: display } : {}),
-          })}
+          onChange={({ value, code }) => upd({ name: value, snomedCode: code })}
+          required
         />
+        <Field label="Associated text" value={result.comment ?? ''} onChange={v => upd({ comment: v })} />
         <div className="flex gap-1">
           <Field label="Value" value={result.value ?? ''} onChange={v => upd({ value: v })} className="flex-1" />
           <Field label="Unit" value={result.unit ?? ''} onChange={v => upd({ unit: v })} className="w-20" />
@@ -85,7 +84,6 @@ function ResultRow({
           options={INTERPRETATION_OPTS}
           placeholder="— Select —"
         />
-        <Field label="Comment" value={result.comment ?? ''} onChange={v => upd({ comment: v })} />
       </div>
       <div className="flex justify-end mt-1">
         <button
@@ -127,15 +125,14 @@ function InvestigationCard({
 
   const body = (
     <div className="p-3 bg-white dark:bg-gray-900 space-y-3">
-      <Field label="Test name" value={inv.name ?? ''} onChange={v => upd({ name: v })} required />
+      {/* No Associated Text here: DiagnosticReport has no free-text field for it in STU3 */}
       <SnomedPicker
+        label="Test name"
+        value={inv.name ?? ''}
         code={inv.snomedCode}
-        display={inv.name}
         semanticTag="observable entity"
-        onSelect={({ code, display }) => upd({
-          snomedCode: code || undefined,
-          ...(display ? { name: display } : {}),
-        })}
+        onChange={({ value, code }) => upd({ name: value, snomedCode: code })}
+        required
       />
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">

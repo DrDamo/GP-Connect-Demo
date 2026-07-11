@@ -64,7 +64,7 @@ function makeCodedObservation(
   encRef: string,
   item: DraftConsultationItem,
 ): fhir3.BundleEntry {
-  const resource: fhir3.Observation = {
+  const resource: fhir3.Observation & { comment?: string } = {
     resourceType: 'Observation',
     id,
     status: 'final',
@@ -80,6 +80,7 @@ function makeCodedObservation(
     },
     subject: { reference: patientRef },
     ...(item.value ? { valueString: item.value } : {}),
+    ...(item.associatedText ? { comment: item.associatedText } : {}),
   }
   ;(resource as unknown as Record<string, unknown>)['context'] = { reference: encRef }
   return { fullUrl, resource }
@@ -96,10 +97,6 @@ function processItem(
     const { id, fullUrl } = map.entry(item._tempId)
     extraEntries.push(makeNoteObservation(id, fullUrl, patientRef, encRef, item.narrativeText))
     return `Observation/${id}`
-  }
-
-  if (item.itemType === 'linked' && item.linkedDraftTempId) {
-    return map.ref(item.linkedDraftTempId, item.linkedResourceType ?? 'Resource')
   }
 
   if (item.itemType === 'coded') {

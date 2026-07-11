@@ -83,7 +83,7 @@ export interface DraftMedication {
   orgTempId?: string
   patientInstructions?: string
   pharmacyInstructions?: string
-  additionalInformation?: string
+  associatedText?: string
   issues?: DraftMedicationIssue[]
   stopReason?: 'reauthorisation' | string
   reauthorisedFromTempId?: string
@@ -105,7 +105,7 @@ export interface DraftAllergy {
   endDate?: string
   endReason?: string
   recorderTempId?: string
-  notes?: string[]
+  associatedText?: string
   linkedProblemTempIds?: string[]
   linkedConsultationTempId?: string
 }
@@ -120,22 +120,21 @@ export interface DraftProblem {
   endDate?: string
   assertedDate?: string
   asserterTempId?: string
-  notes?: string[]
+  associatedText?: string
   linkedProblemTempIds?: string[]
   linkedConsultationTempId?: string
 }
 
-export type DraftConsultationItemType = 'note' | 'linked' | 'coded'
+export type DraftConsultationItemType = 'note' | 'coded'
 
 export interface DraftConsultationItem {
   _tempId: string
   itemType: DraftConsultationItemType
   narrativeText?: string
-  linkedDraftTempId?: string
-  linkedResourceType?: string
   snomedCode?: string
   description?: string
   value?: string
+  associatedText?: string
 }
 
 export interface DraftConsultationCategory {
@@ -147,6 +146,8 @@ export interface DraftConsultationCategory {
 export interface DraftConsultationTopic {
   _tempId: string
   title?: string
+  /** Single Problem (Condition) created for this topic — max one per topic. */
+  problemTempId?: string
   categories: DraftConsultationCategory[]
   items: DraftConsultationItem[]
 }
@@ -173,14 +174,17 @@ export interface DraftImmunisation {
   dateRecorded?: string
   status?: string
   notGiven?: boolean
+  parentPresent?: boolean
+  reason?: string
   site?: string
   route?: string
   batchNumber?: string
   expirationDate?: string
+  manufacturer?: string
   administeringPractitionerTempId?: string
   enteringPractitionerTempId?: string
   locationTempId?: string
-  notes?: string[]
+  associatedText?: string
   linkedProblemTempIds?: string[]
   linkedConsultationTempId?: string
 }
@@ -219,7 +223,7 @@ export interface DraftReferral {
   requesterTempId?: string
   status?: string
   intent?: string
-  notes?: string[]
+  associatedText?: string
   linkedProblemTempIds?: string[]
   linkedConsultationTempId?: string
 }
@@ -235,7 +239,7 @@ export interface DraftDiaryEntry {
   priority?: string
   status?: string
   intent?: string
-  notes?: string[]
+  associatedText?: string
   linkedProblemTempIds?: string[]
   linkedConsultationTempId?: string
 }

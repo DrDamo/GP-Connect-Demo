@@ -41,9 +41,7 @@ export function generateDiaryEntries(
           ? { occurrenceDateTime: entry.date }
           : {}),
       ...(entry.priority ? { priority: entry.priority } : {}),
-      ...((entry.notes ?? []).length > 0
-        ? { note: entry.notes!.map(n => ({ text: n })) }
-        : {}),
+      ...(entry.associatedText ? { note: [{ text: entry.associatedText }] } : {}),
     }
 
     return { fullUrl, resource }

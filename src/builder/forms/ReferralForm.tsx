@@ -5,7 +5,6 @@ import { newTempId } from '../hooks/useDraftRecord'
 import { Field } from './shared/FormField'
 import { SelectField } from './shared/SelectField'
 import { PractitionerSelect } from './shared/PractitionerSelect'
-import { NotesList } from './shared/NotesList'
 import { BuilderModal } from '../components/BuilderModal'
 import { DeleteConfirmDialog } from '../components/DeleteConfirmDialog'
 import { LinkSection } from './shared/LinkSection'
@@ -168,6 +167,7 @@ function ReferralCard({
 
           <Field label="Reason" value={referral.reason ?? ''} onChange={v => upd({ reason: v })} />
           <Field label="Description" value={referral.description ?? ''} onChange={v => upd({ description: v })} required />
+          <Field label="Associated text" value={referral.associatedText ?? ''} onChange={v => upd({ associatedText: v })} />
 
           <PractitionerSelect
             label="Requester"
@@ -176,10 +176,6 @@ function ReferralCard({
             onChange={v => upd({ requesterTempId: v })}
           />
 
-          <NotesList
-            notes={referral.notes ?? []}
-            onChange={notes => upd({ notes })}
-          />
           <LinkSection
             draft={draft}
             linkedProblemTempIds={referral.linkedProblemTempIds ?? []}

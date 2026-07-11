@@ -27,6 +27,13 @@
   --cm-indent-2: rgba(  0, 170,  85, 0.09);
   --cm-indent-3: rgba( 51, 153, 255, 0.09);
   --cm-indent-4: rgba(170,  85, 255, 0.09);
+
+  /* Training markdown editor (editable — needs a visible caret in both modes) */
+  --cm-editor-bg: #ffffff;
+  --cm-editor-fg: #1a1a1a;
+  --cm-editor-caret: #005eb8;
+  --cm-editor-gutter-bg: #f8f9fa;
+  --cm-editor-gutter-fg: #aeb7bd;
 }
 
 body {
@@ -55,6 +62,13 @@ body {
   --cm-highlight: #6b5500;
   --cm-search-match: #1f5c30;
   --cm-current-match: #2a7a45;
+
+  /* Training markdown editor */
+  --cm-editor-bg: #111827;
+  --cm-editor-fg: #e5e7eb;
+  --cm-editor-caret: #7dd3fc;
+  --cm-editor-gutter-bg: #1f2937;
+  --cm-editor-gutter-fg: #6b7280;
 }
 
 html.dark body {

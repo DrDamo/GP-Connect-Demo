@@ -377,9 +377,12 @@ export function extractInvestigations(bundle: fhir3.Bundle): GpConnectInvestigat
       // hasMemberPattern is true only when a has-member reference points to a non-COMM
       // analyte observation. EMIS also uses has-member to link result→comment-note pairs,
       // which must NOT be mistaken for the "new GP Connect group container" pattern.
+      // Some vendor bundles (e.g. Orange Labs) omit related.type entirely on these links —
+      // an untyped Observation-to-Observation relation here is a has-member link in practice.
+      const isMemberRelation = (r: RelatedEntry) => r.type === 'has-member' || r.type === undefined
       const hasMemberPattern = labObs.some(obs =>
         ((obs as unknown as { related?: RelatedEntry[] }).related ?? [])
-          .filter(r => r.type === 'has-member')
+          .filter(isMemberRelation)
           .some(r => {
             const target = resolveReference(bundle, r.target?.reference) as ObsLike | undefined
             return target && target.code?.coding?.[0]?.code !== COMMENT_NOTE_CODE
@@ -395,7 +398,7 @@ export function extractInvestigations(bundle: fhir3.Bundle): GpConnectInvestigat
             effectiveDateTime?: string
           }
           const memberRefs = (castRelated.related ?? [])
-            .filter(r => r.type === 'has-member')
+            .filter(isMemberRelation)
             .map(r => r.target?.reference)
             .filter((r): r is string => !!r)
 

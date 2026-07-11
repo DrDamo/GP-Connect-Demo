@@ -2,6 +2,12 @@ import { useState, useEffect } from 'react'
 import { DOMAINS, type DomainId, type DomainDef } from '../clinical/domains'
 import { MarkdownContent } from './MarkdownContent'
 import { slugify } from './utils'
+import { useAuth } from '../../auth/AuthContext'
+import { PencilIcon } from '../../builder/components/Icons'
+import { useTrainingContentOverrides } from './hooks/useTrainingContentOverrides'
+import { useTrainingNotes, type TrainingNote } from './hooks/useTrainingNotes'
+import { TrainingContentEditor } from './TrainingContentEditor'
+import { TrainingNotesPanel } from './TrainingNotesPanel'
 
 // ─── Table of contents helpers ───────────────────────────────────────────────
 
@@ -256,20 +262,47 @@ function IntroPage({ onSelect }: { onSelect: (id: PageId) => void }) {
   )
 }
 
-function DomainPage({ domainId, onBack }: { domainId: DomainId; onBack: () => void }) {
+interface TrainingPageExtras {
+  overrideContent?: string
+  notes: TrainingNote[]
+  isAdmin: boolean
+  onEdit: () => void
+  onAddNote: (pageId: string, body: string) => Promise<void>
+  onUpdateNote: (id: string, body: string) => Promise<void>
+  onDeleteNote: (id: string) => Promise<void>
+}
+
+function PageEditBar({ isAdmin, onEdit }: { isAdmin: boolean; onEdit: () => void }) {
+  if (!isAdmin) return null
+  return (
+    <button
+      onClick={onEdit}
+      className="ml-auto text-xs text-nhs-blue hover:underline flex items-center gap-1"
+    >
+      <PencilIcon className="w-3 h-3" />
+      Edit page
+    </button>
+  )
+}
+
+function DomainPage({ domainId, onBack, overrideContent, notes, isAdmin, onEdit, onAddNote, onUpdateNote, onDeleteNote }: { domainId: DomainId; onBack: () => void } & TrainingPageExtras) {
   const domain = DOMAINS.find(d => d.id === domainId)!
   const accent = TILE_ACCENT[domainId] ?? 'text-nhs-grey-1'
   const colour = TILE_COLOURS[domainId] ?? 'border-nhs-grey-4 bg-white'
-  const headings = extractHeadings(DOMAIN_CONTENT[domainId])
+  const effectiveContent = overrideContent ?? DOMAIN_CONTENT[domainId]
+  const headings = extractHeadings(effectiveContent)
 
   return (
-    <div className="max-w-5xl mx-auto py-6 space-y-4">
-      <button
-        onClick={onBack}
-        className="text-xs text-nhs-grey-3 dark:text-slate-400 hover:text-nhs-grey-1 dark:hover:text-slate-100 hover:underline flex items-center gap-1"
-      >
-        ← Back to overview
-      </button>
+    <div className="max-w-[76.8rem] mx-auto py-6 space-y-4">
+      <div className="flex items-center gap-2">
+        <button
+          onClick={onBack}
+          className="text-xs text-nhs-grey-3 dark:text-slate-400 hover:text-nhs-grey-1 dark:hover:text-slate-100 hover:underline flex items-center gap-1"
+        >
+          ← Back to overview
+        </button>
+        <PageEditBar isAdmin={isAdmin} onEdit={onEdit} />
+      </div>
 
       <div className="flex gap-6 items-start">
         <aside className="hidden md:block w-44 lg:w-52 shrink-0">
@@ -292,28 +325,34 @@ function DomainPage({ domainId, onBack }: { domainId: DomainId; onBack: () => vo
           </div>
 
           <div className="bg-white dark:bg-slate-800 rounded-lg border border-nhs-grey-4 dark:border-slate-600 p-6">
-            <MarkdownContent content={DOMAIN_CONTENT[domainId]} />
+            <MarkdownContent content={effectiveContent} />
           </div>
+
+          <TrainingNotesPanel pageId={domainId} notes={notes} onAdd={onAddNote} onUpdate={onUpdateNote} onDelete={onDeleteNote} />
         </div>
       </div>
     </div>
   )
 }
 
-function ApiPage({ pageId, onBack }: { pageId: ApiPageId; onBack: () => void }) {
+function ApiPage({ pageId, onBack, overrideContent, notes, isAdmin, onEdit, onAddNote, onUpdateNote, onDeleteNote }: { pageId: ApiPageId; onBack: () => void } & TrainingPageExtras) {
   const tile = API_TILES.find(t => t.id === pageId)!
   const accent = API_TILE_ACCENT[pageId]
   const colour = API_TILE_COLOURS[pageId]
-  const headings = extractHeadings(API_CONTENT[pageId])
+  const effectiveContent = overrideContent ?? API_CONTENT[pageId]
+  const headings = extractHeadings(effectiveContent)
 
   return (
-    <div className="max-w-5xl mx-auto py-6 space-y-4">
-      <button
-        onClick={onBack}
-        className="text-xs text-nhs-grey-3 dark:text-slate-400 hover:text-nhs-grey-1 dark:hover:text-slate-100 hover:underline flex items-center gap-1"
-      >
-        ← Back to overview
-      </button>
+    <div className="max-w-[76.8rem] mx-auto py-6 space-y-4">
+      <div className="flex items-center gap-2">
+        <button
+          onClick={onBack}
+          className="text-xs text-nhs-grey-3 dark:text-slate-400 hover:text-nhs-grey-1 dark:hover:text-slate-100 hover:underline flex items-center gap-1"
+        >
+          ← Back to overview
+        </button>
+        <PageEditBar isAdmin={isAdmin} onEdit={onEdit} />
+      </div>
 
       <div className="flex gap-6 items-start">
         <aside className="hidden md:block w-44 lg:w-52 shrink-0">
@@ -327,8 +366,10 @@ function ApiPage({ pageId, onBack }: { pageId: ApiPageId; onBack: () => void }) 
           </div>
 
           <div className="bg-white dark:bg-slate-800 rounded-lg border border-nhs-grey-4 dark:border-slate-600 p-6">
-            <MarkdownContent content={API_CONTENT[pageId]} />
+            <MarkdownContent content={effectiveContent} />
           </div>
+
+          <TrainingNotesPanel pageId={pageId} notes={notes} onAdd={onAddNote} onUpdate={onUpdateNote} onDelete={onDeleteNote} />
         </div>
       </div>
     </div>
@@ -339,6 +380,12 @@ function ApiPage({ pageId, onBack }: { pageId: ApiPageId; onBack: () => void }) 
 
 export function TrainingView({ initialPage, onNavigate }: Props) {
   const [page, setPage] = useState<PageId | null>(initialPage ?? null)
+  const [editingPage, setEditingPage] = useState<PageId | null>(null)
+
+  const { profile } = useAuth()
+  const isAdmin = profile?.role === 'admin'
+  const { overrides, refetch: refetchOverrides } = useTrainingContentOverrides()
+  const { notesByPage, addNote, updateNote, deleteNote } = useTrainingNotes()
 
   useEffect(() => {
     if (initialPage !== undefined) setPage(initialPage ?? null)
@@ -349,14 +396,52 @@ export function TrainingView({ initialPage, onNavigate }: Props) {
     if (!p || !isApiPageId(p)) onNavigate?.(p as DomainId | null)
   }
 
+  const staticContentFor = (id: PageId) => isApiPageId(id) ? API_CONTENT[id] : DOMAIN_CONTENT[id]
+
   return (
     <div className="h-full overflow-auto p-4 bg-nhs-grey-5 dark:bg-slate-900">
       {page === null
         ? <IntroPage onSelect={id => navigate(id)} />
         : isApiPageId(page)
-          ? <ApiPage pageId={page} onBack={() => navigate(null)} />
-          : <DomainPage domainId={page} onBack={() => navigate(null)} />
+          ? (
+            <ApiPage
+              pageId={page}
+              onBack={() => navigate(null)}
+              overrideContent={overrides[page]?.content}
+              notes={notesByPage[page] ?? []}
+              isAdmin={isAdmin}
+              onEdit={() => setEditingPage(page)}
+              onAddNote={addNote}
+              onUpdateNote={updateNote}
+              onDeleteNote={deleteNote}
+            />
+          )
+          : (
+            <DomainPage
+              domainId={page}
+              onBack={() => navigate(null)}
+              overrideContent={overrides[page]?.content}
+              notes={notesByPage[page] ?? []}
+              isAdmin={isAdmin}
+              onEdit={() => setEditingPage(page)}
+              onAddNote={addNote}
+              onUpdateNote={updateNote}
+              onDeleteNote={deleteNote}
+            />
+          )
       }
+
+      {editingPage !== null && (
+        <TrainingContentEditor
+          pageId={editingPage}
+          title={isApiPageId(editingPage) ? API_TILES.find(t => t.id === editingPage)!.label : DOMAINS.find(d => d.id === editingPage)!.label}
+          initialContent={overrides[editingPage]?.content ?? staticContentFor(editingPage)}
+          hasOverride={editingPage in overrides}
+          onSaved={() => { refetchOverrides(); setEditingPage(null) }}
+          onReverted={() => { refetchOverrides(); setEditingPage(null) }}
+          onClose={() => setEditingPage(null)}
+        />
+      )}
     </div>
   )
 }

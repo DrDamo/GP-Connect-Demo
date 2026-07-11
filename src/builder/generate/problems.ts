@@ -63,9 +63,7 @@ export function generateProblems(
       ...(p.asserterTempId
         ? { asserter: { reference: map.ref(p.asserterTempId, 'Practitioner') } }
         : {}),
-      ...((p.notes ?? []).length > 0
-        ? { note: p.notes!.map(n => ({ text: n })) }
-        : {}),
+      ...(p.associatedText ? { note: [{ text: p.associatedText }] } : {}),
     }
 
     // assertedDate is a GP Connect STU3 field not in the fhir3 type definition

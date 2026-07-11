@@ -5,7 +5,6 @@ import { newTempId } from '../hooks/useDraftRecord'
 import { Field } from './shared/FormField'
 import { SelectField } from './shared/SelectField'
 import { PractitionerSelect } from './shared/PractitionerSelect'
-import { NotesList } from './shared/NotesList'
 import { SnomedPicker } from './shared/SnomedPicker'
 import { BuilderModal } from '../components/BuilderModal'
 import { DeleteConfirmDialog } from '../components/DeleteConfirmDialog'
@@ -98,16 +97,15 @@ function AllergyCard({
 
       {expanded && (
         <div className="p-3 bg-white dark:bg-gray-900 space-y-3">
-          <Field label="Causative agent" value={allergy.causativeAgent ?? ''} onChange={v => upd({ causativeAgent: v })} required />
           <SnomedPicker
+            label="Causative agent"
+            value={allergy.causativeAgent ?? ''}
             code={allergy.snomedCode}
-            display={allergy.causativeAgent}
             semanticTag="substance,product,allergy"
-            onSelect={({ code, display }) => upd({
-              snomedCode: code || undefined,
-              ...(display ? { causativeAgent: display } : {}),
-            })}
+            onChange={({ value, code }) => upd({ causativeAgent: value, snomedCode: code })}
+            required
           />
+          <Field label="Associated text" value={allergy.associatedText ?? ''} onChange={v => upd({ associatedText: v })} />
 
           <div className="grid grid-cols-3 gap-2">
             <SelectField
@@ -136,13 +134,10 @@ function AllergyCard({
 
           <SnomedPicker
             label="Reaction"
+            value={allergy.reaction ?? ''}
             code={allergy.reactionCode}
-            display={allergy.reaction}
             semanticTag="finding,disorder"
-            onSelect={({ code, display }) => upd({
-              reactionCode: code || undefined,
-              reaction: display || undefined,
-            })}
+            onChange={({ value, code }) => upd({ reaction: value, reactionCode: code })}
           />
 
           <div className="grid grid-cols-2 gap-2">
@@ -164,10 +159,6 @@ function AllergyCard({
             onChange={v => upd({ recorderTempId: v })}
           />
 
-          <NotesList
-            notes={allergy.notes ?? []}
-            onChange={notes => upd({ notes })}
-          />
           <LinkSection
             draft={draft}
             linkedProblemTempIds={allergy.linkedProblemTempIds ?? []}

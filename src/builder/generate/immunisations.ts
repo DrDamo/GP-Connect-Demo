@@ -2,6 +2,8 @@ import type { DraftRecord } from '../types'
 import type { TempIdMap } from '../idMap'
 
 const VACCINATION_PROCEDURE_EXT = 'https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-VaccinationProcedure-1'
+const PARENT_PRESENT_EXT = 'https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-ParentPresent-1'
+const DATE_RECORDED_EXT = 'https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-DateRecorded-1'
 
 export function generateImmunisations(
   draft: DraftRecord,
@@ -26,19 +28,26 @@ export function generateImmunisations(
     }
 
     const extensions: fhir3.Extension[] = []
-    if (imm.vaccinationProcedureCode) {
+    if (imm.vaccinationProcedureCode || imm.vaccinationProcedureDisplay) {
       extensions.push({
         url: VACCINATION_PROCEDURE_EXT,
         valueCodeableConcept: {
           coding: [
             {
               system: 'http://snomed.info/sct',
-              code: imm.vaccinationProcedureCode,
+              ...(imm.vaccinationProcedureCode ? { code: imm.vaccinationProcedureCode } : {}),
               ...(imm.vaccinationProcedureDisplay ? { display: imm.vaccinationProcedureDisplay } : {}),
             },
           ],
+          ...(imm.vaccinationProcedureDisplay ? { text: imm.vaccinationProcedureDisplay } : {}),
         },
       })
+    }
+    if (imm.parentPresent) {
+      extensions.push({ url: PARENT_PRESENT_EXT, valueBoolean: true })
+    }
+    if (imm.dateRecorded) {
+      extensions.push({ url: DATE_RECORDED_EXT, valueDateTime: imm.dateRecorded })
     }
 
     const resource: fhir3.Immunization = {
@@ -71,8 +80,14 @@ export function generateImmunisations(
       ...(imm.locationTempId
         ? { location: { reference: map.ref(imm.locationTempId, 'Location') } }
         : {}),
-      ...((imm.notes ?? []).length > 0
-        ? { note: imm.notes!.map(n => ({ text: n })) }
+      ...(imm.manufacturer ? { manufacturer: { display: imm.manufacturer } } : {}),
+      ...(imm.associatedText ? { note: [{ text: imm.associatedText }] } : {}),
+      ...(imm.reason
+        ? {
+            explanation: imm.notGiven
+              ? { reasonNotGiven: [{ text: imm.reason }] }
+              : { reason: [{ text: imm.reason }] },
+          }
         : {}),
       ...(extensions.length > 0 ? { extension: extensions } : {}),
     }

@@ -5,7 +5,6 @@ import { newTempId } from '../hooks/useDraftRecord'
 import { Field } from './shared/FormField'
 import { SelectField } from './shared/SelectField'
 import { PractitionerSelect } from './shared/PractitionerSelect'
-import { NotesList } from './shared/NotesList'
 import { SnomedPicker } from './shared/SnomedPicker'
 import { BuilderModal } from '../components/BuilderModal'
 import { DeleteConfirmDialog } from '../components/DeleteConfirmDialog'
@@ -136,16 +135,15 @@ function DiaryEntryCard({
 
       {expanded && (
         <div className="p-3 bg-white dark:bg-gray-900 space-y-3">
-          <Field label="Description" value={entry.description ?? ''} onChange={v => upd({ description: v })} required />
           <SnomedPicker
+            label="Description"
+            value={entry.description ?? ''}
             code={entry.snomedCode}
-            display={entry.description}
             semanticTag="procedure"
-            onSelect={({ code, display }) => upd({
-              snomedCode: code || undefined,
-              ...(display ? { description: display } : {}),
-            })}
+            onChange={({ value, code }) => upd({ description: value, snomedCode: code })}
+            required
           />
+          <Field label="Associated text" value={entry.associatedText ?? ''} onChange={v => upd({ associatedText: v })} />
 
           <div className="grid grid-cols-3 gap-2">
             <Field label="Date" type="date" value={entry.date ?? ''} onChange={v => upd({ date: v })} />
@@ -186,10 +184,6 @@ function DiaryEntryCard({
             onChange={v => upd({ clinicianTempId: v })}
           />
 
-          <NotesList
-            notes={entry.notes ?? []}
-            onChange={notes => upd({ notes })}
-          />
           <LinkSection
             draft={draft}
             linkedProblemTempIds={entry.linkedProblemTempIds ?? []}

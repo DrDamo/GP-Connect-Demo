@@ -23,9 +23,7 @@ export function generateReferrals(
       ...(ref.recipientName ? { recipient: [{ display: ref.recipientName }] } : {}),
       ...(ref.reason ? { reasonCode: [{ text: ref.reason }] } : {}),
       ...(ref.description ? { description: ref.description } : {}),
-      ...((ref.notes ?? []).length > 0
-        ? { note: ref.notes!.map(n => ({ text: n })) }
-        : {}),
+      ...(ref.associatedText ? { note: [{ text: ref.associatedText }] } : {}),
     }
 
     return { fullUrl, resource }

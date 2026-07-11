@@ -96,7 +96,9 @@ export type DraftAction =
   | { type: 'ADD_CONSULTATION_TOPIC'; payload: string }
   | { type: 'UPDATE_CONSULTATION_TOPIC'; payload: { consTempId: string; topicTempId: string; updates: Partial<DraftConsultationTopic> } }
   | { type: 'REMOVE_CONSULTATION_TOPIC'; payload: { consTempId: string; topicTempId: string } }
-  | { type: 'ADD_CONSULTATION_CATEGORY'; payload: { consTempId: string; topicTempId: string } }
+  | { type: 'ADD_TOPIC_PROBLEM'; payload: { consTempId: string; topicTempId: string } }
+  | { type: 'REMOVE_TOPIC_PROBLEM'; payload: { consTempId: string; topicTempId: string } }
+  | { type: 'ADD_CONSULTATION_CATEGORY'; payload: { consTempId: string; topicTempId: string; title?: string } }
   | { type: 'UPDATE_CONSULTATION_CATEGORY'; payload: { consTempId: string; topicTempId: string; catTempId: string; updates: Partial<DraftConsultationCategory> } }
   | { type: 'REMOVE_CONSULTATION_CATEGORY'; payload: { consTempId: string; topicTempId: string; catTempId: string } }
   | { type: 'ADD_CONSULTATION_ITEM'; payload: { consTempId: string; topicTempId: string; catTempId?: string } }
@@ -355,7 +357,7 @@ function draftReducer(state: DraftRecord, action: DraftAction): DraftRecord {
     case 'ADD_ALLERGY':
       return {
         ...state,
-        allergies: [...state.allergies, { _tempId: newTempId(), notes: [] }],
+        allergies: [...state.allergies, { _tempId: newTempId() }],
       }
 
     case 'UPDATE_ALLERGY':
@@ -374,7 +376,7 @@ function draftReducer(state: DraftRecord, action: DraftAction): DraftRecord {
     case 'ADD_PROBLEM':
       return {
         ...state,
-        problems: [...state.problems, { _tempId: newTempId(), notes: [] }],
+        problems: [...state.problems, { _tempId: newTempId() }],
       }
 
     case 'UPDATE_PROBLEM':
@@ -410,15 +412,22 @@ function draftReducer(state: DraftRecord, action: DraftAction): DraftRecord {
 
     case 'ADD_CONSULTATION_TOPIC': {
       const consTempId = action.payload
+      const problemTempId = newTempId()
+      const defaultCategories: DraftConsultationCategory[] = ['History', 'Examination', 'Assessment', 'Plan'].map(title => ({
+        _tempId: newTempId(),
+        title,
+        items: [{ _tempId: newTempId(), itemType: 'note' }],
+      }))
       return {
         ...state,
+        problems: [...state.problems, { _tempId: problemTempId, linkedConsultationTempId: consTempId }],
         consultations: state.consultations.map(c =>
           c._tempId === consTempId
             ? {
                 ...c,
                 topics: [
                   ...c.topics,
-                  { _tempId: newTempId(), categories: [], items: [] },
+                  { _tempId: newTempId(), problemTempId, categories: defaultCategories, items: [] },
                 ],
               }
             : c,
@@ -440,8 +449,11 @@ function draftReducer(state: DraftRecord, action: DraftAction): DraftRecord {
 
     case 'REMOVE_CONSULTATION_TOPIC': {
       const { consTempId, topicTempId } = action.payload
+      const cons = state.consultations.find(c => c._tempId === consTempId)
+      const topic = cons?.topics.find(t => t._tempId === topicTempId)
       return {
         ...state,
+        problems: topic?.problemTempId ? removeById(state.problems, topic.problemTempId) : state.problems,
         consultations: state.consultations.map(c =>
           c._tempId === consTempId
             ? { ...c, topics: removeById(c.topics, topicTempId) }
@@ -450,8 +462,37 @@ function draftReducer(state: DraftRecord, action: DraftAction): DraftRecord {
       }
     }
 
-    case 'ADD_CONSULTATION_CATEGORY': {
+    case 'ADD_TOPIC_PROBLEM': {
       const { consTempId, topicTempId } = action.payload
+      const problemTempId = newTempId()
+      return {
+        ...state,
+        problems: [...state.problems, { _tempId: problemTempId, linkedConsultationTempId: consTempId }],
+        consultations: state.consultations.map(c =>
+          c._tempId === consTempId
+            ? { ...c, topics: updateById(c.topics, topicTempId, { problemTempId }) }
+            : c,
+        ),
+      }
+    }
+
+    case 'REMOVE_TOPIC_PROBLEM': {
+      const { consTempId, topicTempId } = action.payload
+      const cons = state.consultations.find(c => c._tempId === consTempId)
+      const topic = cons?.topics.find(t => t._tempId === topicTempId)
+      return {
+        ...state,
+        problems: topic?.problemTempId ? removeById(state.problems, topic.problemTempId) : state.problems,
+        consultations: state.consultations.map(c =>
+          c._tempId === consTempId
+            ? { ...c, topics: updateById(c.topics, topicTempId, { problemTempId: undefined }) }
+            : c,
+        ),
+      }
+    }
+
+    case 'ADD_CONSULTATION_CATEGORY': {
+      const { consTempId, topicTempId, title } = action.payload
       return {
         ...state,
         consultations: state.consultations.map(c =>
@@ -464,7 +505,7 @@ function draftReducer(state: DraftRecord, action: DraftAction): DraftRecord {
                         ...t,
                         categories: [
                           ...t.categories,
-                          { _tempId: newTempId(), items: [] },
+                          { _tempId: newTempId(), title, items: [] },
                         ],
                       }
                     : t,
@@ -602,7 +643,7 @@ function draftReducer(state: DraftRecord, action: DraftAction): DraftRecord {
     case 'ADD_IMMUNISATION':
       return {
         ...state,
-        immunisations: [...state.immunisations, { _tempId: newTempId(), notes: [] }],
+        immunisations: [...state.immunisations, { _tempId: newTempId() }],
       }
 
     case 'UPDATE_IMMUNISATION':
@@ -676,7 +717,7 @@ function draftReducer(state: DraftRecord, action: DraftAction): DraftRecord {
     case 'ADD_REFERRAL':
       return {
         ...state,
-        referrals: [...state.referrals, { _tempId: newTempId(), notes: [] }],
+        referrals: [...state.referrals, { _tempId: newTempId() }],
       }
 
     case 'UPDATE_REFERRAL':
@@ -695,7 +736,7 @@ function draftReducer(state: DraftRecord, action: DraftAction): DraftRecord {
     case 'ADD_DIARY_ENTRY':
       return {
         ...state,
-        diaryEntries: [...state.diaryEntries, { _tempId: newTempId(), notes: [] }],
+        diaryEntries: [...state.diaryEntries, { _tempId: newTempId() }],
       }
 
     case 'UPDATE_DIARY_ENTRY':
@@ -766,7 +807,6 @@ function draftReducer(state: DraftRecord, action: DraftAction): DraftRecord {
         ...state,
         allergies: [...state.allergies, {
           _tempId: action.payload,
-          notes: [],
           status: 'active' as const,
           assertedDate: new Date().toISOString().split('T')[0],
         }],
@@ -775,7 +815,7 @@ function draftReducer(state: DraftRecord, action: DraftAction): DraftRecord {
     case 'ADD_PROBLEM_WITH_ID':
       return {
         ...state,
-        problems: [...state.problems, { _tempId: action.payload, notes: [] }],
+        problems: [...state.problems, { _tempId: action.payload }],
       }
 
     case 'ADD_CONSULTATION_WITH_ID':
@@ -787,7 +827,7 @@ function draftReducer(state: DraftRecord, action: DraftAction): DraftRecord {
     case 'ADD_IMMUNISATION_WITH_ID':
       return {
         ...state,
-        immunisations: [...state.immunisations, { _tempId: action.payload, notes: [] }],
+        immunisations: [...state.immunisations, { _tempId: action.payload }],
       }
 
     case 'ADD_INVESTIGATION_WITH_ID':
@@ -799,13 +839,13 @@ function draftReducer(state: DraftRecord, action: DraftAction): DraftRecord {
     case 'ADD_REFERRAL_WITH_ID':
       return {
         ...state,
-        referrals: [...state.referrals, { _tempId: action.payload, notes: [] }],
+        referrals: [...state.referrals, { _tempId: action.payload }],
       }
 
     case 'ADD_DIARY_ENTRY_WITH_ID':
       return {
         ...state,
-        diaryEntries: [...state.diaryEntries, { _tempId: action.payload, notes: [] }],
+        diaryEntries: [...state.diaryEntries, { _tempId: action.payload }],
       }
 
     case 'ADD_CODED_DATA_WITH_ID':

@@ -8,6 +8,9 @@ export interface Profile {
   display_name?: string | null
   org_id: string
   role: string
+  job_title?: string | null
+  date_of_birth?: string | null
+  address?: string | null
 }
 
 export interface Organisation {
@@ -15,12 +18,23 @@ export interface Organisation {
   name: string
 }
 
+export interface ProfileUpdate {
+  display_name?: string | null
+  job_title?: string | null
+  date_of_birth?: string | null
+  address?: string | null
+}
+
 interface AuthContextValue {
   user: User | null
   profile: Profile | null
   organisation: Organisation | null
   isLoading: boolean
-  login: (username: string, password: string) => Promise<{ error?: string }>
+  login: (identifier: string, password: string) => Promise<{ error?: string }>
+  signup: (params: { email: string; password: string; displayName: string; orgName: string }) => Promise<{ error?: string; needsConfirmation?: boolean }>
+  updateProfile: (fields: ProfileUpdate) => Promise<{ error?: string }>
+  updateOrganisationName: (name: string) => Promise<{ error?: string }>
+  changePassword: (newPassword: string) => Promise<{ error?: string }>
   logout: () => Promise<void>
 }
 
@@ -38,7 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // the organisations RLS policy reads from profiles, creating a circular dependency.
     const { data: profileData } = await supabase
       .from('profiles')
-      .select('id, username, display_name, org_id, role')
+      .select('id, username, display_name, org_id, role, job_title, date_of_birth, address')
       .eq('id', userId)
       .single()
     if (!profileData) return
@@ -78,11 +92,67 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe()
   }, [])
 
-  const login = async (username: string, password: string): Promise<{ error?: string }> => {
+  const login = async (identifier: string, password: string): Promise<{ error?: string }> => {
     if (!supabase) return { error: 'Authentication not configured.' }
-    const email = `${username.toLowerCase()}@gpc-demo.local`
+    // Legacy accounts are provisioned with a username and a synthetic email
+    // (username@gpc-demo.local); self-serve signups use a real email address.
+    const email = identifier.includes('@') ? identifier : `${identifier.toLowerCase()}@gpc-demo.local`
     const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) return { error: 'Invalid username or password.' }
+    if (error) return { error: 'Invalid email/username or password.' }
+    return {}
+  }
+
+  const signup = async ({ email, password, displayName, orgName }: { email: string; password: string; displayName: string; orgName: string }): Promise<{ error?: string; needsConfirmation?: boolean }> => {
+    if (!supabase) return { error: 'Authentication not configured.' }
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          // Flags this account for auto-provisioning (new org + profile) in
+          // the on_auth_user_created DB trigger. Admin-provisioned accounts
+          // (setup-user.mjs, repair-auth-user.mjs) don't set this and create
+          // their organisation/profile rows themselves.
+          self_signup: 'true',
+          display_name: displayName || undefined,
+          org_name: orgName || undefined,
+        },
+      },
+    })
+    if (error) return { error: error.message }
+    return { needsConfirmation: !data.session }
+  }
+
+  const updateProfile = async (fields: ProfileUpdate): Promise<{ error?: string }> => {
+    if (!supabase || !user) return { error: 'Not signed in.' }
+    const { data, error } = await supabase
+      .from('profiles')
+      .update(fields)
+      .eq('id', user.id)
+      .select('id, username, display_name, org_id, role, job_title, date_of_birth, address')
+      .single()
+    if (error) return { error: error.message }
+    setProfile(data as Profile)
+    return {}
+  }
+
+  const updateOrganisationName = async (name: string): Promise<{ error?: string }> => {
+    if (!supabase || !organisation) return { error: 'Not signed in.' }
+    const { data, error } = await supabase
+      .from('organisations')
+      .update({ name })
+      .eq('id', organisation.id)
+      .select('id, name')
+      .single()
+    if (error) return { error: error.message }
+    setOrganisation(data as Organisation)
+    return {}
+  }
+
+  const changePassword = async (newPassword: string): Promise<{ error?: string }> => {
+    if (!supabase) return { error: 'Authentication not configured.' }
+    const { error } = await supabase.auth.updateUser({ password: newPassword })
+    if (error) return { error: error.message }
     return {}
   }
 
@@ -92,7 +162,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, profile, organisation, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, profile, organisation, isLoading, login, signup, updateProfile, updateOrganisationName, changePassword, logout }}>
       {children}
     </AuthContext.Provider>
   )

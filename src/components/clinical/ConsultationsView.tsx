@@ -328,13 +328,33 @@ function TopicSection({
   return (
     <div className="space-y-2">
       {topic.title && (
-        <div className="text-xs font-semibold text-nhs-grey-2 border-b border-nhs-grey-4 pb-1">{topic.title}</div>
+        <div className="flex items-center justify-between gap-2 border-b border-nhs-grey-4 pb-1">
+          <span className="text-xs font-semibold text-nhs-grey-2">{topic.title}</span>
+          {onJumpToSource && topic.id && (
+            <button
+              onClick={() => onJumpToSource(topic.id)}
+              className="text-[11px] text-nhs-grey-3 hover:text-nhs-grey-1 hover:underline shrink-0"
+            >
+              View FHIR ↗
+            </button>
+          )}
+        </div>
       )}
       {hasCategories ? (
         topic.categories.map(cat => (
           <div key={cat.id} className="space-y-1.5">
             {cat.title && (
-              <div className="text-[10px] font-semibold text-nhs-grey-3 uppercase tracking-wide">{cat.title}</div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] font-semibold text-nhs-grey-3 uppercase tracking-wide">{cat.title}</span>
+                {onJumpToSource && cat.id && (
+                  <button
+                    onClick={() => onJumpToSource(cat.id)}
+                    className="text-[11px] text-nhs-grey-3 hover:text-nhs-grey-1 hover:underline shrink-0 normal-case tracking-normal font-normal"
+                  >
+                    View FHIR ↗
+                  </button>
+                )}
+              </div>
             )}
             <div className="space-y-1.5">
               {cat.items.map((item, i) => (

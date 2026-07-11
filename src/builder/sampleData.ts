@@ -109,7 +109,6 @@ export function createFullSampleDraft(): DraftRecord {
       status: 'active',
       assertedDate: '2019-06-10',
       recorderTempId: 'prac-2',
-      notes: [],
     }],
     problems: [{
       _tempId: 'prob-1',
@@ -119,7 +118,6 @@ export function createFullSampleDraft(): DraftRecord {
       significance: 'major',
       startDate: '2018-03-22',
       asserterTempId: 'prac-1',
-      notes: [],
     }],
     consultations: [{
       _tempId: 'cons-1',
@@ -145,13 +143,14 @@ export function createFullSampleDraft(): DraftRecord {
     }],
     immunisations: [{
       _tempId: 'imm-1',
+      vaccinationProcedureCode: '86198006',
+      vaccinationProcedureDisplay: 'Seasonal influenza vaccination',
       vaccineName: 'Influenza vaccine',
       snomedCode: '46233009',
       dateGiven: '2023-10-15',
       status: 'completed',
       administeringPractitionerTempId: 'prac-3',
       locationTempId: 'loc-1',
-      notes: [],
     }],
     investigations: [{
       _tempId: 'inv-1',
@@ -178,7 +177,6 @@ export function createFullSampleDraft(): DraftRecord {
       reason: 'Chest pain assessment',
       status: 'active',
       requesterTempId: 'prac-1',
-      notes: [],
     }],
     diaryEntries: [{
       _tempId: 'diary-1',
@@ -189,7 +187,6 @@ export function createFullSampleDraft(): DraftRecord {
       clinicianTempId: 'prac-1',
       status: 'active',
       intent: 'plan',
-      notes: [],
     }],
     codedData: [{
       _tempId: 'coded-1',

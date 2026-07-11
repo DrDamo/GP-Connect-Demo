@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@codemirror/lang-json": "^6.0.2",
+    "@codemirror/lang-markdown": "^6.5.0",
     "@codemirror/lang-xml": "^6.1.0",
     "@supabase/supabase-js": "^2.108.2",
     "@types/fhir": "^0.0.42",
