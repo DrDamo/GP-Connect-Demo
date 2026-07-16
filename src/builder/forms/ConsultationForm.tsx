@@ -18,6 +18,7 @@ import { BuilderModal } from '../components/BuilderModal'
 import { DeleteConfirmDialog } from '../components/DeleteConfirmDialog'
 import { LinkSection } from './shared/LinkSection'
 import { TrashIcon } from '../components/Icons'
+import { InfoHint } from '../../onboarding/InfoHint'
 
 // ---------------------------------------------------------------------------
 // ConsultationForm — three-level nested structure
@@ -40,6 +41,21 @@ const ITEM_TYPE_OPTS = [
 ]
 
 const FIXED_CATEGORY_TITLES = ['History', 'Examination', 'Assessment', 'Plan']
+
+// Compiled from real GP Connect consultation List (Category (EHR)) titles
+// seen across a broad sample of vendor-exported bundles, so the "Add
+// category" dropdown reflects the full range systems actually use, not
+// just the SOAP-note four above.
+const ALL_CATEGORY_TITLES = [
+  'Additional', 'Administration', 'Allergy', 'Assessment', 'Comment',
+  'Diagnosis', 'Document', 'Examination', 'Family History', 'Follow up',
+  'History', 'Intervention', 'Investigation', 'Lab Results', 'Medication',
+  'Other', 'Patient Medication Review', 'Plan', 'Problem', 'Procedure',
+  'Protocols', 'Referral', 'Regime Review', 'Social', 'Template entry',
+  'Test Request',
+]
+
+const CUSTOM_CATEGORY_OPTION = '__custom__'
 
 const CLINICAL_STATUS_OPTS = [
   { value: 'active', label: 'Active' },
@@ -356,15 +372,24 @@ function TopicBlock({
                 + {title}
               </button>
             ))}
-            <button
-              type="button"
-              onClick={() =>
-                dispatch({ type: 'ADD_CONSULTATION_CATEGORY', payload: { consTempId, topicTempId: topic._tempId, title: '' } })
-              }
-              className="text-xs text-nhs-blue hover:underline"
+            <select
+              value=""
+              onChange={e => {
+                const val = e.target.value
+                if (!val) return
+                const title = val === CUSTOM_CATEGORY_OPTION ? '' : val
+                dispatch({ type: 'ADD_CONSULTATION_CATEGORY', payload: { consTempId, topicTempId: topic._tempId, title } })
+              }}
+              className="text-xs text-nhs-blue border border-nhs-grey-4 dark:border-nhs-grey-2 rounded px-1.5 py-0.5 bg-white dark:bg-gray-800 hover:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue"
             >
-              + Other category
-            </button>
+              <option value="">+ Add category…</option>
+              {ALL_CATEGORY_TITLES
+                .filter(t => !FIXED_CATEGORY_TITLES.includes(t) && !topic.categories.some(c => c.title === t))
+                .map(t => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              <option value={CUSTOM_CATEGORY_OPTION}>Custom…</option>
+            </select>
           </div>
         </div>
         {topic.categories.map(cat => (
@@ -480,8 +505,9 @@ function ConsultationCard({
 
       {/* Topics — one horizontal tab per topic */}
       <div>
-        <span className="text-xs font-semibold text-nhs-grey-2 uppercase tracking-wide mb-2 block">
+        <span className="text-xs font-semibold text-nhs-grey-2 uppercase tracking-wide mb-2 flex items-center gap-1">
           Topics
+          <InfoHint topic="builder.topics-categories-items" />
         </span>
         {consultation.topics.length === 0 && (
           <p className="text-xs text-nhs-grey-3 mb-2">No topics yet — add one below.</p>

@@ -1,8 +1,17 @@
+import { useState } from 'react'
 import type { GpConnectBundle, GpConnectList, GpConnectListEntry, ListCategory } from '../../fhir/types'
 import { formatDate } from '../../fhir/utils'
 import { DomainTable, StatusBadge } from './DomainTable'
 import type { DomainColumn } from './DomainTable'
 import type { DomainId } from './domains'
+import { SearchFilterBox } from './SearchFilterBox'
+
+function listSearchText(l: GpConnectList): string {
+  return [
+    l.title, l.status, l.date, l.mode, l.orderedBy, l.note,
+    ...l.entries.flatMap(e => [e.resourceType, e.display, e.resourceId]),
+  ].filter(Boolean).join(' ').toLowerCase()
+}
 
 interface Props {
   bundle: GpConnectBundle
@@ -186,17 +195,22 @@ function countByCategory(lists: GpConnectList[], cat: ListCategory) {
 
 export function ListsView({ bundle, selectedId, onSelect, onJumpToSource, onJumpToRecord }: Props) {
   const { lists } = bundle
+  const [searchQuery, setSearchQuery] = useState('')
+  const trimmedQuery = searchQuery.trim().toLowerCase()
+  const filteredLists = trimmedQuery
+    ? lists.filter(l => listSearchText(l).includes(trimmedQuery))
+    : lists
 
-  const primary             = lists.filter(l => l.category === 'primary')
-  const secondaryConsult    = lists.filter(l => l.category === 'secondary-consultation')
-  const secondaryProblems   = lists.filter(l => l.category === 'secondary-problems')
-  const other               = lists.filter(l => l.category === 'other')
+  const primary             = filteredLists.filter(l => l.category === 'primary')
+  const secondaryConsult    = filteredLists.filter(l => l.category === 'secondary-consultation')
+  const secondaryProblems   = filteredLists.filter(l => l.category === 'secondary-problems')
+  const other               = filteredLists.filter(l => l.category === 'other')
 
   const total = lists.length
   const counts = [
-    countByCategory(lists, 'primary'),
-    countByCategory(lists, 'secondary-consultation'),
-    countByCategory(lists, 'secondary-problems'),
+    countByCategory(filteredLists, 'primary'),
+    countByCategory(filteredLists, 'secondary-consultation'),
+    countByCategory(filteredLists, 'secondary-problems'),
   ]
 
   return (
@@ -212,6 +226,14 @@ export function ListsView({ bundle, selectedId, onSelect, onJumpToSource, onJump
         </div>
         <span className="px-2 py-1 bg-nhs-blue text-white text-xs font-semibold rounded">GP Connect STU3</span>
       </div>
+
+      <SearchFilterBox
+        value={searchQuery}
+        onChange={setSearchQuery}
+        placeholder="Search lists…"
+        matchCount={filteredLists.length}
+        totalCount={total}
+      />
 
       <ListSection
         title="Primary Lists"

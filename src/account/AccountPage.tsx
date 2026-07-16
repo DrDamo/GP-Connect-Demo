@@ -1,5 +1,11 @@
 import { useState } from 'react'
 import { useAuth } from '../auth/AuthContext'
+import { useOnboarding } from '../onboarding/OnboardingContext'
+import { InfoHint } from '../onboarding/InfoHint'
+import { useGuideNav } from '../onboarding/GuideNavContext'
+import { TOURS, type TourId } from '../onboarding/tourDefinitions'
+
+const ACCOUNT_TOURS: TourId[] = ['home', 'clinical-view', 'inspector', 'builder']
 
 function SectionCard({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
   return (
@@ -122,13 +128,16 @@ export function AccountPage() {
         <SectionCard title="Organisation">
           <form onSubmit={handleSaveOrg} className="space-y-4">
             <Field label="Organisation name">
-              <input
-                type="text"
-                value={orgName}
-                onChange={e => setOrgName(e.target.value)}
-                disabled={!isAdmin}
-                className={`${inputClass} disabled:opacity-60 disabled:cursor-not-allowed`}
-              />
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="text"
+                  value={orgName}
+                  onChange={e => setOrgName(e.target.value)}
+                  disabled={!isAdmin}
+                  className={`${inputClass} disabled:opacity-60 disabled:cursor-not-allowed`}
+                />
+                {!isAdmin && <InfoHint topic="account.org-name-locked" />}
+              </div>
             </Field>
             {!isAdmin && (
               <p className="text-xs text-nhs-grey-3 dark:text-gray-500">Only an organisation admin can rename your organisation.</p>
@@ -172,7 +181,10 @@ export function AccountPage() {
         <SectionCard title="Billing" description="Manage your plan and view payment history.">
           <div className="flex items-center justify-between bg-nhs-grey-5 dark:bg-gray-800 rounded-lg p-4">
             <div>
-              <p className="text-sm font-medium text-nhs-grey-1 dark:text-gray-100">Free plan</p>
+              <p className="text-sm font-medium text-nhs-grey-1 dark:text-gray-100 flex items-center gap-1">
+                Free plan
+                <InfoHint topic="account.billing-placeholder" />
+              </p>
               <p className="text-xs text-nhs-grey-3 dark:text-gray-500 mt-0.5">No payment method on file · Payment history will appear here</p>
             </div>
             <button
@@ -184,7 +196,55 @@ export function AccountPage() {
             </button>
           </div>
         </SectionCard>
+
+        <OnboardingSectionCard />
       </div>
     </div>
+  )
+}
+
+function OnboardingSectionCard() {
+  const { isTourCompleted, restartTour, resetAllHints } = useOnboarding()
+  const guideNav = useGuideNav()
+
+  return (
+    <SectionCard title="Onboarding &amp; Help" description="Replay guided tours or reset info-hint tooltips.">
+      <div className="space-y-3">
+        <ul className="space-y-2">
+          {ACCOUNT_TOURS.map(id => (
+            <li key={id} className="flex items-center justify-between text-sm">
+              <span className="flex items-center gap-2 text-nhs-grey-1 dark:text-gray-100">
+                {TOURS[id].label}
+                {isTourCompleted(id) && (
+                  <span className="text-xs text-nhs-green">✓ Completed</span>
+                )}
+              </span>
+              <button
+                onClick={() => restartTour(id)}
+                className="text-xs px-2.5 py-1 rounded border border-nhs-grey-4 dark:border-gray-600 text-nhs-grey-2 dark:text-gray-300 hover:border-nhs-blue hover:text-nhs-blue transition-colors"
+              >
+                Restart tour
+              </button>
+            </li>
+          ))}
+        </ul>
+        <div className="flex items-center gap-3 pt-2 border-t border-nhs-grey-4 dark:border-gray-700">
+          <button
+            onClick={resetAllHints}
+            className="text-xs px-2.5 py-1.5 rounded border border-nhs-grey-4 dark:border-gray-600 text-nhs-grey-2 dark:text-gray-300 hover:border-nhs-blue hover:text-nhs-blue transition-colors"
+          >
+            Reset dismissed hints
+          </button>
+          {guideNav && (
+            <button
+              onClick={() => guideNav.openGuide('overview', '')}
+              className="text-xs text-nhs-blue hover:underline"
+            >
+              Open App Guide →
+            </button>
+          )}
+        </div>
+      </div>
+    </SectionCard>
   )
 }

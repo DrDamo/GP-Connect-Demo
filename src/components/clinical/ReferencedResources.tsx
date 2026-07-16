@@ -1,6 +1,7 @@
 import type { GpConnectPractitioner, GpConnectOrganisation, GpConnectHealthcareService, GpConnectLocation, GpConnectConsultation, GpConnectFhirMedication, GpConnectDocument } from '../../fhir/types'
 import { ResourceCard, type ResourceRef } from './ResourceCard'
 import { type DomainId } from './domains'
+import { InfoHint } from '../../onboarding/InfoHint'
 
 interface ReferencedResourcesProps {
   refs: ResourceRef[]
@@ -51,7 +52,10 @@ export function ReferencedResources({ refs, practitioners, organisations, health
 
   return (
     <div className="mt-4 pt-4 border-t border-nhs-grey-4 space-y-2">
-      <p className="text-xs font-medium text-nhs-grey-3 uppercase tracking-wide">Referenced resources</p>
+      <p className="text-xs font-medium text-nhs-grey-3 uppercase tracking-wide flex items-center gap-1">
+        Referenced resources
+        <InfoHint topic="clinical.resource-card" />
+      </p>
       {displayed.map(r => (
         <ResourceCard
           key={`${r.type}-${r.id}-${r.label}`}

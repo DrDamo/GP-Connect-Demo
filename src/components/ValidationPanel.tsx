@@ -1,14 +1,145 @@
-import type { ValidationResult } from '../fhir/types'
+import { useState } from 'react'
+import type { ValidationIssue, ValidationResult, ValidationSeverity } from '../fhir/types'
+import { InfoHint } from '../onboarding/InfoHint'
 
 interface Props {
   result: ValidationResult
   onCleanRefs?: () => void
 }
 
-const severityConfig = {
-  error: { bg: 'bg-red-50', border: 'border-red-300', text: 'text-red-800', icon: '✕', badge: 'bg-nhs-red text-white' },
-  warning: { bg: 'bg-yellow-50', border: 'border-yellow-300', text: 'text-yellow-800', icon: '⚠', badge: 'bg-nhs-yellow text-nhs-grey-1' },
-  info: { bg: 'bg-blue-50', border: 'border-blue-300', text: 'text-blue-800', icon: 'ℹ', badge: 'bg-nhs-blue-light text-white' },
+const severityConfig: Record<ValidationSeverity, { bg: string; border: string; text: string; icon: string; badge: string; label: string }> = {
+  error:   { bg: 'bg-red-50',    border: 'border-red-300',    text: 'text-red-800',    icon: '✕', badge: 'bg-nhs-red text-white',          label: 'Errors' },
+  warning: { bg: 'bg-yellow-50', border: 'border-yellow-300', text: 'text-yellow-800', icon: '⚠', badge: 'bg-nhs-yellow text-nhs-grey-1',   label: 'Warnings' },
+  info:    { bg: 'bg-blue-50',   border: 'border-blue-300',   text: 'text-blue-800',   icon: 'ℹ', badge: 'bg-nhs-blue-light text-white',    label: 'Info' },
+}
+
+const SEVERITY_ORDER: ValidationSeverity[] = ['error', 'warning', 'info']
+
+// Collapses dynamic details (quoted values, bracketed lists, numbers) so that
+// issues which are really "the same kind of problem" on different resources
+// (e.g. 30 different dangling references) group together under one heading,
+// instead of each being its own line in one long flat list.
+function issueTypeKey(message: string): string {
+  return message
+    .replace(/"[^"]*"/g, '"…"')
+    .replace(/\[[^\]]*\]/g, '[…]')
+    .replace(/\b\d+\b/g, '#')
+}
+
+interface IssueGroup {
+  key: string
+  sample: string
+  issues: ValidationIssue[]
+}
+
+function groupBySeverity(issues: ValidationIssue[]): Partial<Record<ValidationSeverity, ValidationIssue[]>> {
+  const out: Partial<Record<ValidationSeverity, ValidationIssue[]>> = {}
+  for (const issue of issues) {
+    ;(out[issue.severity] ??= []).push(issue)
+  }
+  return out
+}
+
+function groupByType(issues: ValidationIssue[]): IssueGroup[] {
+  const map = new Map<string, ValidationIssue[]>()
+  for (const issue of issues) {
+    const key = issueTypeKey(issue.message)
+    ;(map.get(key) ?? map.set(key, []).get(key)!).push(issue)
+  }
+  return [...map.entries()]
+    .map(([key, groupIssues]) => ({ key, sample: groupIssues[0].message, issues: groupIssues }))
+    .sort((a, b) => b.issues.length - a.issues.length)
+}
+
+function IssueRow({ issue, cfg }: { issue: ValidationIssue; cfg: typeof severityConfig[ValidationSeverity] }) {
+  return (
+    <div className={`flex gap-2 p-2 rounded border text-xs ${cfg.bg} ${cfg.border} ${cfg.text}`}>
+      <span className="font-bold shrink-0">{cfg.icon}</span>
+      <div className="min-w-0">
+        <span className="font-medium break-words">{issue.message}</span>
+        {issue.path && <span className="ml-2 font-mono opacity-70 break-all">{issue.path}</span>}
+      </div>
+    </div>
+  )
+}
+
+function TypeGroup({ group, cfg, open, onToggle }: {
+  group: IssueGroup
+  cfg: typeof severityConfig[ValidationSeverity]
+  open: boolean
+  onToggle: () => void
+}) {
+  // A group with just one issue doesn't need its own collapse toggle — show it directly.
+  if (group.issues.length === 1) {
+    return <IssueRow issue={group.issues[0]} cfg={cfg} />
+  }
+  return (
+    <div className={`rounded border ${cfg.border} overflow-hidden`}>
+      <button
+        onClick={onToggle}
+        className={`w-full flex items-center justify-between gap-2 px-2.5 py-1.5 text-xs text-left ${cfg.bg} ${cfg.text} hover:opacity-80 transition-opacity`}
+      >
+        <span className="flex items-center gap-2 min-w-0">
+          <span className="font-bold shrink-0">{cfg.icon}</span>
+          <span className="font-medium truncate">{group.sample}</span>
+        </span>
+        <span className="flex items-center gap-2 shrink-0">
+          <span className="px-1.5 py-0.5 rounded-full bg-white/70 text-[11px] font-semibold">{group.issues.length}</span>
+          <span className="text-[10px]">{open ? '▲' : '▼'}</span>
+        </span>
+      </button>
+      {open && (
+        <div className="p-1.5 space-y-1 bg-white">
+          {group.issues.map((issue, i) => (
+            <div key={i} className="pl-2 text-xs text-nhs-grey-1">
+              {issue.path && <span className="font-mono text-nhs-grey-3 break-all">{issue.path}</span>}
+              {!issue.path && <span className="text-nhs-grey-3 italic">No path</span>}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function SeveritySection({ severity, issues, open, onToggle, openGroups, onToggleGroup }: {
+  severity: ValidationSeverity
+  issues: ValidationIssue[]
+  open: boolean
+  onToggle: () => void
+  openGroups: Set<string>
+  onToggleGroup: (key: string) => void
+}) {
+  const cfg = severityConfig[severity]
+  const groups = groupByType(issues)
+  return (
+    <div className="rounded-lg border border-nhs-grey-4 overflow-hidden shrink-0">
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-nhs-grey-5 hover:bg-nhs-grey-4/40 transition-colors text-left"
+      >
+        <span className="flex items-center gap-2">
+          <span className={`w-5 h-5 flex items-center justify-center rounded-full text-xs font-bold ${cfg.badge}`}>{cfg.icon}</span>
+          <span className="text-sm font-semibold text-nhs-grey-1">{cfg.label}</span>
+          <span className="px-1.5 py-0.5 rounded-full bg-nhs-grey-4 text-nhs-grey-2 text-[11px] font-semibold">{issues.length}</span>
+        </span>
+        <span className="text-xs text-nhs-grey-3">{open ? '▲ Collapse' : '▼ Expand'}</span>
+      </button>
+      {open && (
+        <div className="p-2 space-y-1.5">
+          {groups.map(group => (
+            <TypeGroup
+              key={group.key}
+              group={group}
+              cfg={cfg}
+              open={openGroups.has(`${severity}:${group.key}`)}
+              onToggle={() => onToggleGroup(`${severity}:${group.key}`)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
 export function ValidationPanel({ result, onCleanRefs }: Props) {
@@ -16,10 +147,32 @@ export function ValidationPanel({ result, onCleanRefs }: Props) {
   const warnings = result.issues.filter(i => i.severity === 'warning')
   const danglingCount = warnings.filter(i => i.message.includes('does not resolve')).length
 
+  const bySeverity = groupBySeverity(result.issues)
+  // Default: open whichever is the most severe non-empty section, collapse the rest.
+  const defaultOpenSeverity = SEVERITY_ORDER.find(s => (bySeverity[s]?.length ?? 0) > 0)
+  const [openSeverities, setOpenSeverities] = useState<Set<ValidationSeverity>>(
+    () => new Set(defaultOpenSeverity ? [defaultOpenSeverity] : [])
+  )
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set())
+
+  const toggleSeverity = (s: ValidationSeverity) =>
+    setOpenSeverities(prev => {
+      const next = new Set(prev)
+      next.has(s) ? next.delete(s) : next.add(s)
+      return next
+    })
+
+  const toggleGroup = (key: string) =>
+    setOpenGroups(prev => {
+      const next = new Set(prev)
+      next.has(key) ? next.delete(key) : next.add(key)
+      return next
+    })
+
   return (
-    <div className="space-y-3">
+    <div className="h-full flex flex-col gap-3 min-h-0">
       {/* Summary bar */}
-      <div className={`flex items-center gap-3 p-3 rounded-lg border ${result.valid ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300'}`}>
+      <div className={`shrink-0 flex items-center gap-3 p-3 rounded-lg border ${result.valid ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300'}`}>
         <span className={`text-lg font-bold ${result.valid ? 'text-nhs-green' : 'text-nhs-red'}`}>
           {result.valid ? '✓' : '✕'}
         </span>
@@ -43,19 +196,22 @@ export function ValidationPanel({ result, onCleanRefs }: Props) {
             <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-nhs-green text-white">No issues</span>
           )}
           {danglingCount > 0 && onCleanRefs && (
-            <button
-              onClick={onCleanRefs}
-              className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-nhs-blue text-white hover:bg-nhs-blue/80 transition-colors"
-            >
-              Remove {danglingCount} dangling ref{danglingCount !== 1 ? 's' : ''} →
-            </button>
+            <span className="inline-flex items-center gap-1">
+              <button
+                onClick={onCleanRefs}
+                className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-nhs-blue text-white hover:bg-nhs-blue/80 transition-colors"
+              >
+                Remove {danglingCount} dangling ref{danglingCount !== 1 ? 's' : ''} →
+              </button>
+              <InfoHint topic="validation.clean-refs" />
+            </span>
           )}
         </div>
       </div>
 
       {/* Resource counts */}
       {Object.keys(result.resourceCounts).length > 0 && (
-        <div className="flex flex-wrap gap-2">
+        <div className="shrink-0 flex flex-wrap gap-2">
           {Object.entries(result.resourceCounts).map(([rt, count]) => (
             <span key={rt} className="px-2 py-1 rounded text-xs bg-nhs-grey-5 text-nhs-grey-2 font-mono">
               {rt}: {count}
@@ -64,21 +220,20 @@ export function ValidationPanel({ result, onCleanRefs }: Props) {
         </div>
       )}
 
-      {/* Issues */}
+      {/* Issues — accordion by severity, then by issue type */}
       {result.issues.length > 0 && (
-        <div className="space-y-1.5 max-h-48 overflow-y-auto">
-          {result.issues.map((issue, i) => {
-            const cfg = severityConfig[issue.severity]
-            return (
-              <div key={i} className={`flex gap-2 p-2 rounded border text-xs ${cfg.bg} ${cfg.border} ${cfg.text}`}>
-                <span className="font-bold shrink-0">{cfg.icon}</span>
-                <div>
-                  <span className="font-medium">{issue.message}</span>
-                  {issue.path && <span className="ml-2 font-mono opacity-70">{issue.path}</span>}
-                </div>
-              </div>
-            )
-          })}
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1">
+          {SEVERITY_ORDER.filter(s => (bySeverity[s]?.length ?? 0) > 0).map(severity => (
+            <SeveritySection
+              key={severity}
+              severity={severity}
+              issues={bySeverity[severity]!}
+              open={openSeverities.has(severity)}
+              onToggle={() => toggleSeverity(severity)}
+              openGroups={openGroups}
+              onToggleGroup={toggleGroup}
+            />
+          ))}
         </div>
       )}
     </div>

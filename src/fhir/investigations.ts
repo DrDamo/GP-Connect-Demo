@@ -1,5 +1,28 @@
 import type { GpConnectInvestigation, GpConnectInvestigationResult, GpConnectTestGroup, GpConnectObservationComponent, GpConnectSpecimen, GpConnectProcedureRequest } from './types'
-import { getEntries, formatDate, resolvePractitionerRef, resolveReference, extractSnomedCode, extractSnomedDisplay, extractId, fhirDateKey } from './utils'
+import { getEntries, formatDate, resolvePractitionerRef, resolvePractitionerName, resolveReference, extractSnomedCode, extractSnomedDisplay, extractId, fhirDateKey } from './utils'
+
+const PERFORMER_ACTOR_TYPE: Record<string, 'Practitioner' | 'Organisation' | 'HealthcareService'> = {
+  Practitioner: 'Practitioner',
+  Organization: 'Organisation',
+  HealthcareService: 'HealthcareService',
+}
+
+// Resolves a single DiagnosticReport.performer[].actor (or an Observation.performer[]
+// fallback) — these can be a Practitioner, Organization, or HealthcareService.
+function resolvePerformerActor(
+  bundle: fhir3.Bundle,
+  ref: string | undefined,
+  display: string | undefined
+): { type: 'Practitioner' | 'Organisation' | 'HealthcareService'; id: string; name?: string } | undefined {
+  if (!ref) return undefined
+  const type = PERFORMER_ACTOR_TYPE[ref.split('/')[0]]
+  const id = extractId(ref)
+  if (!type || !id) return undefined
+  const name = type === 'Practitioner'
+    ? resolvePractitionerName(bundle, ref) || display
+    : (resolveReference(bundle, ref) as { name?: string } | undefined)?.name || display
+  return { type, id, name }
+}
 
 type ObsLike = fhir3.Observation & {
   comment?: string
@@ -48,6 +71,27 @@ function normalizeInterpretation(interp: fhir3.CodeableConcept | undefined, rawC
     if (m) return m[1].trim()
   }
   return undefined
+}
+
+function resolveSpecimen(bundle: fhir3.Bundle, ref: string | undefined): GpConnectSpecimen | undefined {
+  if (!ref) return undefined
+  const spec = resolveReference(bundle, ref) as (fhir3.Resource & {
+    type?: { text?: string; coding?: Array<{ display?: string; code?: string; system?: string }> }
+    status?: string
+    collection?: { collectedDateTime?: string }
+    receivedTime?: string
+    note?: Array<{ text?: string }>
+  }) | undefined
+  if (!spec) return undefined
+  return {
+    id: spec.id ?? '',
+    type: spec.type?.text ?? spec.type?.coding?.[0]?.display,
+    typeCode: spec.type?.coding?.find(c => c.system === 'http://snomed.info/sct')?.code ?? spec.type?.coding?.[0]?.code,
+    collectedDateTime: formatDate(spec.collection?.collectedDateTime),
+    receivedTime: formatDate(spec.receivedTime),
+    status: spec.status,
+    note: spec.note?.map(n => n.text).filter((t): t is string => !!t).join('\n\n') || undefined,
+  }
 }
 
 function formatRange(rr: fhir3.ObservationReferenceRange | undefined): string | undefined {
@@ -202,19 +246,18 @@ export function extractInvestigations(bundle: fhir3.Bundle): GpConnectInvestigat
       const castReport = report as unknown as Record<string, string>
       const reportId = report.id ?? crypto.randomUUID()
 
-      const performerActor = (report.performer?.[0] as { actor?: { reference?: string; display?: string } } | undefined)?.actor
-      const performerActorRef = performerActor?.reference
-      const performerActorDisplay = performerActor?.display
-      let performer: string | undefined
-      let performerId: string | undefined
-      if (performerActorRef?.startsWith('Practitioner/')) {
-        const resolved = resolvePractitionerRef(bundle, performerActorRef)
-        performer = resolved.name || performerActorDisplay
-        performerId = resolved.id
-      } else if (performerActorRef) {
-        const resolvedOrg = resolveReference(bundle, performerActorRef) as fhir3.Organization | undefined
-        performer = resolvedOrg?.name || performerActorDisplay
+      // DiagnosticReport.performer[] can list several actors mixing Organizations,
+      // Practitioners, and HealthcareServices (e.g. the reporting lab, an interpreting
+      // practitioner, and a referring practice) — capture all of them, not just the first,
+      // so every one of them can be shown (and jumped to) as a referenced resource.
+      const performerActors: Array<{ type: 'Practitioner' | 'Organisation' | 'HealthcareService'; id: string; name?: string }> = []
+      for (const p of (report.performer ?? []) as Array<{ actor?: { reference?: string; display?: string } }>) {
+        const resolved = resolvePerformerActor(bundle, p.actor?.reference, p.actor?.display)
+        if (resolved) performerActors.push(resolved)
       }
+
+      let performer: string | undefined = performerActors[0]?.name
+      let performerId: string | undefined = performerActors[0]?.id
 
       // Fallback: if DiagnosticReport carries no performer, take it from the first result Observation
       if (!performer) {
@@ -222,41 +265,35 @@ export function extractInvestigations(bundle: fhir3.Bundle): GpConnectInvestigat
         if (firstResultRef?.reference) {
           const firstObs = resolveReference(bundle, firstResultRef.reference) as ObsLike | undefined
           const obsPerf = (firstObs?.performer as Array<{ reference?: string; display?: string } | undefined> | undefined)?.[0]
-          const obsPerfRef = obsPerf?.reference
-          const obsPerfDisplay = obsPerf?.display
-          if (obsPerfRef?.startsWith('Practitioner/')) {
-            const resolved = resolvePractitionerRef(bundle, obsPerfRef)
-            performer = resolved.name || obsPerfDisplay
+          const resolved = resolvePerformerActor(bundle, obsPerf?.reference, obsPerf?.display)
+          if (resolved) {
+            performerActors.push(resolved)
+            performer = resolved.name
             performerId = resolved.id
-          } else if (obsPerfRef) {
-            const resolvedOrg = resolveReference(bundle, obsPerfRef) as fhir3.Organization | undefined
-            performer = resolvedOrg?.name || obsPerfDisplay
           } else {
-            performer = obsPerfDisplay
+            performer = obsPerf?.display
           }
         }
       }
 
-      // Resolve specimen from DiagnosticReport
-      let specimen: GpConnectSpecimen | undefined
+      const performers = performerActors.length > 0
+        ? performerActors.map(({ type, id }) => ({ type, id }))
+        : undefined
+
+      // DiagnosticReport.specimen[] — a report can reference several specimens (e.g. one
+      // per test group: serum for renal/lipids, fluoride oxalate for glucose, EDTA for FBC).
+      // Falls back to this DR-level list only when a result observation doesn't carry its
+      // own specimen reference (common when the report has just one specimen overall).
       const drSpecimenRefs = (report as unknown as { specimen?: Array<{ reference?: string }> }).specimen ?? []
-      if (drSpecimenRefs.length > 0 && drSpecimenRefs[0].reference) {
-        const spec = resolveReference(bundle, drSpecimenRefs[0].reference) as (fhir3.Resource & {
-          type?: { text?: string; coding?: Array<{ display?: string; code?: string; system?: string }> }
-          status?: string
-          collection?: { collectedDateTime?: string }
-          receivedTime?: string
-        }) | undefined
-        if (spec) {
-          specimen = {
-            id: spec.id ?? '',
-            type: spec.type?.text ?? spec.type?.coding?.[0]?.display,
-            typeCode: spec.type?.coding?.find(c => c.system === 'http://snomed.info/sct')?.code ?? spec.type?.coding?.[0]?.code,
-            collectedDateTime: formatDate(spec.collection?.collectedDateTime),
-            receivedTime: formatDate(spec.receivedTime),
-            status: spec.status,
-          }
-        }
+      const drFallbackSpecimen = drSpecimenRefs.length === 1
+        ? resolveSpecimen(bundle, drSpecimenRefs[0].reference)
+        : undefined
+
+      // Resolves the specimen for a given result/group-header observation, falling back to
+      // the DR-level specimen only when the report references exactly one specimen overall.
+      const obsSpecimen = (obs: ObsLike): GpConnectSpecimen | undefined => {
+        const ref = (obs as unknown as { specimen?: { reference?: string } }).specimen?.reference
+        return resolveSpecimen(bundle, ref) ?? drFallbackSpecimen
       }
 
       // Resolve ProcedureRequest from DiagnosticReport.basedOn
@@ -402,23 +439,53 @@ export function extractInvestigations(bundle: fhir3.Bundle): GpConnectInvestigat
             .map(r => r.target?.reference)
             .filter((r): r is string => !!r)
 
-          if (memberRefs.length > 0) {
+          // A has-member link may point straight to a per-result COMM note (e.g. EMIS's
+          // "(EMISTest) - Abnormal - Contact Patient" flag on a standalone CRP/iron result).
+          // These never appear in DiagnosticReport.result[] themselves, so register them in
+          // resultCommentMap here — the same map the top-level derived-from scan populates —
+          // otherwise the annotation is silently dropped.
+          for (const ref of memberRefs) {
+            const target = resolveReference(bundle, ref) as ObsLike | undefined
+            if (target?.code?.coding?.[0]?.code !== COMMENT_NOTE_CODE || !target.comment) continue
+            const derivedFromRef = ((target as unknown as { related?: RelatedEntry[] }).related ?? [])
+              .find(r => r.type === 'derived-from')?.target?.reference
+            const parentId = derivedFromRef ? extractId(derivedFromRef) : obs.id
+            if (parentId) resultCommentMap.set(parentId, { text: target.comment, id: target.id ?? '' })
+          }
+
+          // A has-member link to a COMMENT_NOTE_CODE observation is a per-result annotation
+          // (e.g. EMIS's "(EMISTest) - Abnormal - Contact Patient" flag), not a child analyte.
+          // An observation whose only has-member links are like this (e.g. a standalone CRP
+          // result linked to its own comment note) is itself a result, not a group container —
+          // resolve and filter before deciding, otherwise it renders as an empty, value-less group.
+          const analyteMemberRefs = memberRefs.filter(ref => {
+            const target = resolveReference(bundle, ref) as ObsLike | undefined
+            return target && target.code?.coding?.[0]?.code !== COMMENT_NOTE_CODE
+          })
+
+          if (analyteMemberRefs.length > 0) {
             const obsCoding = obs.code?.coding
+            // A group header's own comment can either be inline (obs.comment) or, as with
+            // "Urea and electrolytes level"'s "(EMISTest) - Normal - No Action", live in a
+            // has-member-linked COMM note whose derived-from points back at this same header —
+            // already registered in resultCommentMap by the scan above.
+            const linkedGroupComment = obs.id ? resultCommentMap.get(obs.id) : undefined
+            const inlineGroupComment = cleanGroupComment(obs.comment)
             const group: GpConnectTestGroup = {
               id: obs.id ?? crypto.randomUUID(),
               name: resolveObsName(obs, 'Results'),
               snomedCode: extractSnomedCode(obsCoding),
-              comment: cleanGroupComment(obs.comment),
+              comment: inlineGroupComment ?? linkedGroupComment?.text,
+              commentObservationId: inlineGroupComment ? undefined : linkedGroupComment?.id,
               date: formatDate(castRelated.effectiveDateTime ?? obs.issued),
               isTransferDegraded: isTransferDegradedObs(obs) || undefined,
               interpretation: normalizeInterpretation(obs.interpretation, obs.comment),
+              specimen: obsSpecimen(obs),
               results: [],
             }
-            for (const memberRef of memberRefs) {
+            for (const memberRef of analyteMemberRefs) {
               const memberObs = resolveReference(bundle, memberRef) as ObsLike | undefined
               if (!memberObs) continue
-              // Skip comment notes — they annotate the group header, not a result
-              if (memberObs.code?.coding?.[0]?.code === COMMENT_NOTE_CODE) continue
               const memberCoding = memberObs.code?.coding
               group.results.push({
                 id: memberObs.id ?? crypto.randomUUID(),
@@ -431,21 +498,30 @@ export function extractInvestigations(bundle: fhir3.Bundle): GpConnectInvestigat
             }
             testGroups.push(group)
           } else {
-            // Direct result without group container
-            let directGroup = testGroups.find(g => g.id === `${reportId}-direct`)
-            if (!directGroup) {
-              directGroup = { id: `${reportId}-direct`, name: '', results: [] }
-              testGroups.push(directGroup)
-            }
+            // A standalone result referenced directly in DiagnosticReport.result[] (not
+            // reached only via a parent's has-member list, like Serum urea level is via
+            // "Urea and electrolytes") is its own result, not a member of a shared group —
+            // each becomes its own single-result group, whose title is promoted to the
+            // result's own name below (e.g. CRP, iron and TIBC each get their own heading).
             const obsCoding = obs.code?.coding
-            directGroup.results.push({
+            const castObs = obs as unknown as { effectiveDateTime?: string }
+            const singleResultGroup: GpConnectTestGroup = {
               id: obs.id ?? crypto.randomUUID(),
-              reportId,
-              name: resolveObsName(obs, 'Result'),
+              name: '',
               snomedCode: extractSnomedCode(obsCoding),
+              date: formatDate(castObs.effectiveDateTime ?? obs.issued),
               isTransferDegraded: isTransferDegradedObs(obs) || undefined,
-              ...obsResult(obs),
-            })
+              specimen: obsSpecimen(obs),
+              results: [{
+                id: obs.id ?? crypto.randomUUID(),
+                reportId,
+                name: resolveObsName(obs, 'Result'),
+                snomedCode: extractSnomedCode(obsCoding),
+                isTransferDegraded: isTransferDegradedObs(obs) || undefined,
+                ...obsResult(obs),
+              }],
+            }
+            testGroups.push(singleResultGroup)
           }
         }
       } else {
@@ -475,13 +551,14 @@ export function extractInvestigations(bundle: fhir3.Bundle): GpConnectInvestigat
               date: formatDate(castObs.effectiveDateTime ?? obs.issued),
               isTransferDegraded: isTransferDegradedObs(obs) || undefined,
               interpretation: normalizeInterpretation(obs.interpretation, obs.comment),
+              specimen: obsSpecimen(obs),
               results: [],
             }
             testGroups.push(currentGroup)
             prevHadValue = false
           } else {
             if (!currentGroup) {
-              currentGroup = { id: `${reportId}-direct`, name: '', results: [] }
+              currentGroup = { id: `${reportId}-direct`, name: '', specimen: obsSpecimen(obs), results: [] }
               testGroups.push(currentGroup)
             }
             const obsCoding = obs.code?.coding
@@ -499,6 +576,26 @@ export function extractInvestigations(bundle: fhir3.Bundle): GpConnectInvestigat
             prevHadValue = hasValue
           }
         }
+      }
+
+      // Group title fallback: an unnamed group holding exactly one result (e.g. a standalone
+      // "Fasting glucose" test with no panel container) shows that result's name as its title,
+      // instead of a blank header.
+      for (const g of testGroups) {
+        if (!g.name && g.results.length === 1) {
+          g.name = g.results[0].name
+        }
+      }
+
+      // Report-level specimen: shown once when every group shares a single specimen, matching
+      // the previous single-specimen display. When groups reference different specimens (e.g.
+      // serum for renal/lipids vs EDTA for FBC) each TestGroupSection shows its own instead, so
+      // results are never shown against the wrong sample.
+      const distinctSpecimens = new Map<string, GpConnectSpecimen>()
+      for (const g of testGroups) if (g.specimen) distinctSpecimens.set(g.specimen.id, g.specimen)
+      const specimen = distinctSpecimens.size === 1 ? [...distinctSpecimens.values()][0] : undefined
+      if (specimen) {
+        for (const g of testGroups) g.specimen = undefined
       }
 
       // Flat results list (for summary shortcuts + backward compat)
@@ -544,6 +641,7 @@ export function extractInvestigations(bundle: fhir3.Bundle): GpConnectInvestigat
         category,
         performer,
         performerId,
+        performers,
         encounterId,
         specimen,
         procedureRequest,

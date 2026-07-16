@@ -16,6 +16,22 @@ export interface DraftPatient {
   address?: string
   phone?: string
   email?: string
+  preferredLanguage?: string
+  interpreterRequired?: boolean
+  communicationProficiency?: string
+  modeOfCommunication?: string
+  registeredGpTempId?: string
+  contacts?: DraftContact[]
+}
+
+export interface DraftContact {
+  _tempId: string
+  relationship?: string
+  prefix?: string
+  givenName?: string
+  familyName?: string
+  phone?: string
+  gender?: string
 }
 
 export interface DraftPractitioner {
@@ -26,6 +42,7 @@ export interface DraftPractitioner {
   sdsUserId?: string
   sdsRoleProfileId?: string
   gender?: string
+  role?: string
 }
 
 export interface DraftOrganisation {

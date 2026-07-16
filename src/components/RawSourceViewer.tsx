@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { CodeMirrorView } from './CodeMirrorView'
 import type { CodeMirrorViewHandle } from './CodeMirrorView'
+import { InfoHint } from '../onboarding/InfoHint'
 
 interface Props {
   source: string
@@ -142,6 +143,7 @@ export function RawSourceViewer({ source, format, filename }: Props) {
           <span className="text-xs font-mono text-nhs-grey-2 truncate max-w-48">{filename}</span>
           <span className="px-1.5 py-0.5 rounded text-xs font-semibold bg-nhs-grey-4 text-nhs-grey-1 uppercase">{format}</span>
           <span className="text-xs text-nhs-grey-3">{lineCount.toLocaleString()} lines</span>
+          <InfoHint topic="raw-source.vs-inspector" />
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -161,6 +163,7 @@ export function RawSourceViewer({ source, format, filename }: Props) {
           >
             {copied ? '✓ Copied' : 'Copy'}
           </button>
+          <InfoHint topic="raw-source.copy-whole-file" />
         </div>
       </div>
 

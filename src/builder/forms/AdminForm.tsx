@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { DraftRecord, DraftOrganisation, DraftPractitioner, DraftLocation } from '../types'
+import type { DraftRecord, DraftOrganisation, DraftPractitioner, DraftLocation, DraftContact } from '../types'
 import type { DraftAction } from '../hooks/useDraftRecord'
 import { newTempId } from '../hooks/useDraftRecord'
 import { FormSection } from './shared/FormSection'
@@ -24,6 +24,37 @@ const GENDER_OPTS = [
   { value: 'other', label: 'Other' },
   { value: 'unknown', label: 'Unknown' },
 ]
+
+const LANGUAGE_OPTS = [
+  'English', 'Polish', 'Urdu', 'Punjabi', 'Bengali', 'Gujarati', 'Arabic',
+  'Portuguese', 'Romanian', 'Spanish', 'French', 'Somali', 'Turkish',
+  'Chinese (Mandarin)', 'Chinese (Cantonese)',
+].map(l => ({ value: l, label: l }))
+
+const PROFICIENCY_OPTS = ['Excellent', 'Good', 'Fair', 'Poor'].map(p => ({ value: p, label: p }))
+
+const COMMUNICATION_MODE_OPTS = [
+  'Received spoken', 'Received written', 'Expressed spoken', 'Expressed written',
+].map(m => ({ value: m, label: m }))
+
+const PRACTITIONER_ROLE_OPTS = [
+  { value: 'General Practitioner', label: 'General Practitioner' },
+  { value: 'Practice Nurse', label: 'Practice Nurse' },
+  { value: 'Other', label: 'Other' },
+]
+
+const RELATIONSHIP_OPTS = [
+  'Spouse', 'Partner', 'Parent', 'Son', 'Daughter', 'Sibling', 'Friend',
+  'Neighbour', 'Other',
+].map(r => ({ value: r, label: r }))
+
+// GPs and doctors in primary care are conventionally always titled "Dr";
+// practice nurses (any gender) conventionally use Mr/Mrs/Miss rather than "Nurse".
+function defaultPrefixForRole(role: string, gender?: string): string | undefined {
+  if (role === 'General Practitioner') return 'Dr'
+  if (role === 'Practice Nurse') return gender === 'male' ? 'Mr' : 'Mrs'
+  return undefined
+}
 
 // ---------------------------------------------------------------------------
 // OrganisationCard
@@ -167,6 +198,13 @@ function PractitionerCard({
       )}
       {expanded && (
         <div className="p-3 bg-white dark:bg-gray-900 grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <SelectField
+            label="Role"
+            value={prac.role ?? ''}
+            onChange={v => upd({ role: v || undefined, prefix: defaultPrefixForRole(v, prac.gender) ?? prac.prefix })}
+            options={PRACTITIONER_ROLE_OPTS}
+            placeholder="Not set"
+          />
           <Field label="Prefix" value={prac.prefix ?? ''} onChange={v => upd({ prefix: v })} />
           <Field label="Given name" value={prac.givenName ?? ''} onChange={v => upd({ givenName: v })} />
           <Field label="Family name" value={prac.familyName ?? ''} onChange={v => upd({ familyName: v })} required />
@@ -204,8 +242,10 @@ function PractitionerDisplayRow({
         <span className="text-sm font-medium text-nhs-grey-1 dark:text-gray-100 truncate block">
           {label}
         </span>
-        {prac.sdsUserId && (
-          <span className="text-xs text-nhs-grey-3">{prac.sdsUserId}</span>
+        {(prac.role || prac.sdsUserId) && (
+          <span className="text-xs text-nhs-grey-3">
+            {[prac.role, prac.sdsUserId].filter(Boolean).join(' · ')}
+          </span>
         )}
       </div>
       <div className="flex items-center gap-3 shrink-0 ml-2">
@@ -305,11 +345,71 @@ function LocationDisplayRow({
 }
 
 // ---------------------------------------------------------------------------
+// ContactCard — next of kin / emergency contact
+// ---------------------------------------------------------------------------
+
+function ContactCard({
+  contact,
+  onChange,
+  onRemove,
+}: {
+  contact: DraftContact
+  onChange: (updates: Partial<DraftContact>) => void
+  onRemove: () => void
+}) {
+  const label = [contact.prefix, contact.givenName, contact.familyName].filter(Boolean).join(' ') || 'New contact'
+  return (
+    <div className="border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg overflow-hidden mb-2">
+      <div className="flex items-center justify-between px-3 py-2 bg-nhs-grey-5 dark:bg-gray-800">
+        <span className="text-sm font-medium text-nhs-grey-1 dark:text-gray-100">{label}</span>
+        <button
+          type="button"
+          onClick={onRemove}
+          className="text-xs text-nhs-red hover:opacity-70 transition-opacity ml-2"
+        >
+          Remove
+        </button>
+      </div>
+      <div className="p-3 bg-white dark:bg-gray-900 grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <SelectField
+          label="Relationship"
+          value={contact.relationship ?? ''}
+          onChange={v => onChange({ relationship: v || undefined })}
+          options={RELATIONSHIP_OPTS}
+          placeholder="Not set"
+        />
+        <Field label="Prefix" value={contact.prefix ?? ''} onChange={v => onChange({ prefix: v })} />
+        <div />
+        <Field label="Given name" value={contact.givenName ?? ''} onChange={v => onChange({ givenName: v })} />
+        <Field label="Family name" value={contact.familyName ?? ''} onChange={v => onChange({ familyName: v })} />
+        <SelectField
+          label="Gender"
+          value={contact.gender ?? ''}
+          onChange={v => onChange({ gender: v || undefined })}
+          options={GENDER_OPTS}
+          placeholder="Not set"
+        />
+        <Field label="Phone" type="tel" value={contact.phone ?? ''} onChange={v => onChange({ phone: v })} className="col-span-2 sm:col-span-3" />
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // AdminForm
 // ---------------------------------------------------------------------------
 
 export function AdminForm({ draft, dispatch, onAutoPopulate }: Props) {
   const { patient: p, organisation: o } = draft
+  const contacts = p.contacts ?? []
+  const setPatientContacts = (updated: DraftContact[]) =>
+    dispatch({ type: 'SET_PATIENT', payload: { contacts: updated } })
+  const handleAddContact = () =>
+    setPatientContacts([...contacts, { _tempId: newTempId() }])
+  const handleUpdateContact = (tempId: string, updates: Partial<DraftContact>) =>
+    setPatientContacts(contacts.map(c => (c._tempId === tempId ? { ...c, ...updates } : c)))
+  const handleRemoveContact = (tempId: string) =>
+    setPatientContacts(contacts.filter(c => c._tempId !== tempId))
 
   // Organisations modal state
   const [orgModalState, setOrgModalState] = useState<{ tempId: string; snapshot: DraftRecord } | null>(null)
@@ -481,7 +581,78 @@ export function AdminForm({ draft, dispatch, onAutoPopulate }: Props) {
           <Field label="Address" value={p.address ?? ''} onChange={v => setPatient({ address: v })} className="col-span-2 sm:col-span-3" />
           <Field label="Phone" type="tel" value={p.phone ?? ''} onChange={v => setPatient({ phone: v })} />
           <Field label="Email" type="email" value={p.email ?? ''} onChange={v => setPatient({ email: v })} />
+          <SelectField
+            label="Registered GP"
+            value={p.registeredGpTempId ?? ''}
+            onChange={v => setPatient({ registeredGpTempId: v || undefined })}
+            options={draft.practitioners.map(prac => ({
+              value: prac._tempId,
+              label: [prac.prefix, prac.givenName, prac.familyName].filter(Boolean).join(' ') || 'Unnamed practitioner',
+            }))}
+            placeholder="None"
+          />
+          <div />
+          <div />
+          <SelectField
+            label="Preferred language"
+            value={p.preferredLanguage ?? ''}
+            onChange={v => setPatient({ preferredLanguage: v || undefined })}
+            options={LANGUAGE_OPTS}
+            placeholder="Not recorded"
+          />
+          <SelectField
+            label="Communication proficiency"
+            value={p.communicationProficiency ?? ''}
+            onChange={v => setPatient({ communicationProficiency: v || undefined })}
+            options={PROFICIENCY_OPTS}
+            placeholder="Not recorded"
+          />
+          <SelectField
+            label="Mode of communication"
+            value={p.modeOfCommunication ?? ''}
+            onChange={v => setPatient({ modeOfCommunication: v || undefined })}
+            options={COMMUNICATION_MODE_OPTS}
+            placeholder="Not recorded"
+          />
+          <div className="flex items-end gap-2">
+            <label className="flex items-center gap-1.5 text-xs text-nhs-grey-2 pb-1">
+              <input
+                type="checkbox"
+                checked={p.interpreterRequired ?? false}
+                onChange={e => setPatient({ interpreterRequired: e.target.checked })}
+                className="rounded"
+              />
+              Interpreter required
+            </label>
+          </div>
         </div>
+      </FormSection>
+
+      {/* Next of kin */}
+      <FormSection title="Next of kin" count={contacts.length} defaultOpen={false}>
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-sm font-medium text-nhs-grey-2">Emergency contact / next of kin</span>
+          <button
+            type="button"
+            onClick={handleAddContact}
+            className="bg-nhs-blue text-white px-3 py-1.5 rounded text-sm font-medium hover:opacity-90 transition-opacity"
+          >
+            + Add contact
+          </button>
+        </div>
+
+        {contacts.length === 0 && (
+          <p className="text-sm text-nhs-grey-3 mb-2">No next of kin added yet.</p>
+        )}
+
+        {contacts.map(c => (
+          <ContactCard
+            key={c._tempId}
+            contact={c}
+            onChange={updates => handleUpdateContact(c._tempId, updates)}
+            onRemove={() => handleRemoveContact(c._tempId)}
+          />
+        ))}
       </FormSection>
 
       {/* GP Practice */}

@@ -5,6 +5,15 @@ import type { DomainColumn } from './DomainTable'
 import { ReferencedResources } from './ReferencedResources'
 import { ReferenceChip } from './ResourceCard'
 import { type DomainId } from './domains'
+import { SearchFilterBox } from './SearchFilterBox'
+
+function allergySearchText(a: GpConnectAllergy): string {
+  return [
+    a.causativeAgent, a.reaction, a.criticality, a.category, a.dateRecorded, a.status,
+    a.snomedDisplay, a.snomedCode, a.onsetDate, a.verificationStatus, a.recorder, a.asserter,
+    a.endDate, a.endReason, ...a.notes.flatMap(n => [n.text, n.author]),
+  ].filter(Boolean).join(' ').toLowerCase()
+}
 
 interface Props {
   bundle: GpConnectBundle
@@ -139,9 +148,14 @@ function AllergyDetail({ allergy, bundle, onJumpToSource, onJumpToRecord }: { al
 
 export function AllergiesView({ bundle, selectedId, onSelect, onJumpToSource, onJumpToRecord }: Props) {
   const [activeTab, setActiveTab] = useState<'active' | 'resolved'>('active')
+  const [searchQuery, setSearchQuery] = useState('')
   const { allergies } = bundle
-  const active   = allergies.filter(a => a.status === 'active')
-  const resolved = allergies.filter(a => a.status !== 'active')
+  const trimmedQuery = searchQuery.trim().toLowerCase()
+  const filteredAllergies = trimmedQuery
+    ? allergies.filter(a => allergySearchText(a).includes(trimmedQuery))
+    : allergies
+  const active   = filteredAllergies.filter(a => a.status === 'active')
+  const resolved = filteredAllergies.filter(a => a.status !== 'active')
   const total    = allergies.length
   const shown    = activeTab === 'active' ? active : resolved
 
@@ -157,6 +171,14 @@ export function AllergiesView({ bundle, selectedId, onSelect, onJumpToSource, on
         </div>
         <span className="px-2 py-1 bg-nhs-blue text-white text-xs font-semibold rounded">GP Connect STU3</span>
       </div>
+
+      <SearchFilterBox
+        value={searchQuery}
+        onChange={setSearchQuery}
+        placeholder="Search allergies…"
+        matchCount={filteredAllergies.length}
+        totalCount={total}
+      />
 
       {/* Tabs */}
       <div className="flex border-b border-nhs-grey-4">

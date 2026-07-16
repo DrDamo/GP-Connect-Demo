@@ -32,22 +32,24 @@ interface DomainDef {
   dividerBefore?: boolean
 }
 
+// Order matches Clinical View / Inspector's sidebar (see components/clinical/domains.ts),
+// with Admin pinned at the top since Builder alone has that section.
 const DOMAINS: DomainDef[] = [
   {
     id: 'admin',
     label: 'Admin',
     count: d => d.practitioners.length + d.locations.length + d.organisations.length,
   },
-  { id: 'medications', label: 'Medications', count: d => d.medications.length },
-  { id: 'allergies', label: 'Allergies', count: d => d.allergies.length },
   { id: 'problems', label: 'Problems', count: d => d.problems.length },
   { id: 'consultations', label: 'Consultations', count: d => d.consultations.length },
+  { id: 'medications', label: 'Medications', count: d => d.medications.length },
+  { id: 'allergies', label: 'Allergies', count: d => d.allergies.length },
   { id: 'immunisations', label: 'Immunisations', count: d => d.immunisations.length },
-  { id: 'investigations', label: 'Investigations', count: d => d.investigations.length },
-  { id: 'referrals', label: 'Referrals', count: d => d.referrals.length },
-  { id: 'diaryEntries', label: 'Diary Entries', count: d => d.diaryEntries.length },
   { id: 'codedData', label: 'Coded Data', count: d => d.codedData.length },
+  { id: 'investigations', label: 'Investigations', count: d => d.investigations.length },
   { id: 'documents', label: 'Documents', count: d => d.documents.length },
+  { id: 'diaryEntries', label: 'Diary Entries', count: d => d.diaryEntries.length },
+  { id: 'referrals', label: 'Referrals', count: d => d.referrals.length },
   { id: 'lists', label: 'Lists', readOnly: true, dividerBefore: true },
 ]
 

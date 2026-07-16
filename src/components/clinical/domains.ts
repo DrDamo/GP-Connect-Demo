@@ -21,7 +21,33 @@ export interface DomainDef {
   implemented: boolean
 }
 
+// Order here drives the sidebar order in both Clinical View and Inspector
+// (DomainNav just maps over this array) — see user-requested ordering below.
 export const DOMAINS: DomainDef[] = [
+  {
+    id: 'problems',
+    label: 'Problems',
+    description: 'Active and inactive problems and diagnoses',
+    fhirResources: ['Condition', 'List'],
+    tableColumns: ['Problem', 'SNOMED code', 'Clinical status', 'Significance', 'Start date', 'End date'],
+    implemented: true,
+  },
+  {
+    id: 'consultations',
+    label: 'Consultations',
+    description: 'GP consultations and clinical encounter records',
+    fhirResources: ['Encounter', 'Composition', 'List'],
+    tableColumns: ['Date', 'Type', 'Clinician', 'Practice', 'Details'],
+    implemented: true,
+  },
+  {
+    id: 'medications',
+    label: 'Medications',
+    description: 'Acute, repeat, and repeat dispensing prescriptions',
+    fhirResources: ['MedicationStatement', 'MedicationRequest', 'Medication'],
+    tableColumns: ['Drug', 'Dose / Frequency', 'Route', 'Start date', 'Last issued', 'Status'],
+    implemented: true,
+  },
   {
     id: 'allergies',
     label: 'Allergies',
@@ -31,11 +57,27 @@ export const DOMAINS: DomainDef[] = [
     implemented: true,
   },
   {
-    id: 'consultations',
-    label: 'Consultations',
-    description: 'GP consultations and clinical encounter records',
-    fhirResources: ['Encounter', 'Composition', 'List'],
-    tableColumns: ['Date', 'Type', 'Clinician', 'Practice', 'Details'],
+    id: 'immunisations',
+    label: 'Immunisations',
+    description: 'Vaccination and immunisation history',
+    fhirResources: ['Immunization', 'List'],
+    tableColumns: ['Vaccine', 'Date given', 'Status', 'Site', 'Batch no.', 'Performer'],
+    implemented: true,
+  },
+  {
+    id: 'coded-data',
+    label: 'Coded Data',
+    description: 'SNOMED coded entries not captured in other clinical areas',
+    fhirResources: ['Observation', 'List'],
+    tableColumns: ['Date', 'SNOMED code', 'Description', 'Value', 'Associated problem'],
+    implemented: true,
+  },
+  {
+    id: 'investigations',
+    label: 'Investigations',
+    description: 'Laboratory results and diagnostic reports',
+    fhirResources: ['DiagnosticReport', 'Observation', 'Specimen', 'List'],
+    tableColumns: ['Date', 'Investigation', 'Result', 'Reference range', 'Interpretation', 'Performer'],
     implemented: true,
   },
   {
@@ -55,51 +97,11 @@ export const DOMAINS: DomainDef[] = [
     implemented: true,
   },
   {
-    id: 'immunisations',
-    label: 'Immunisations',
-    description: 'Vaccination and immunisation history',
-    fhirResources: ['Immunization', 'List'],
-    tableColumns: ['Vaccine', 'Date given', 'Status', 'Site', 'Batch no.', 'Performer'],
-    implemented: true,
-  },
-  {
-    id: 'medications',
-    label: 'Medications',
-    description: 'Acute, repeat, and repeat dispensing prescriptions',
-    fhirResources: ['MedicationStatement', 'MedicationRequest', 'Medication'],
-    tableColumns: ['Drug', 'Dose / Frequency', 'Route', 'Start date', 'Last issued', 'Status'],
-    implemented: true,
-  },
-  {
-    id: 'investigations',
-    label: 'Investigations',
-    description: 'Laboratory results and diagnostic reports',
-    fhirResources: ['DiagnosticReport', 'Observation', 'Specimen', 'List'],
-    tableColumns: ['Date', 'Investigation', 'Result', 'Reference range', 'Interpretation', 'Performer'],
-    implemented: true,
-  },
-  {
-    id: 'problems',
-    label: 'Problems',
-    description: 'Active and inactive problems and diagnoses',
-    fhirResources: ['Condition', 'List'],
-    tableColumns: ['Problem', 'SNOMED code', 'Clinical status', 'Significance', 'Start date', 'End date'],
-    implemented: true,
-  },
-  {
     id: 'referrals',
     label: 'Referrals',
     description: 'Referral requests to other services and specialties',
     fhirResources: ['ReferralRequest', 'List'],
     tableColumns: ['Date', 'Recipient service', 'Priority', 'Reason', 'Status'],
-    implemented: true,
-  },
-  {
-    id: 'coded-data',
-    label: 'Coded Data',
-    description: 'SNOMED coded entries not captured in other clinical areas',
-    fhirResources: ['Observation', 'List'],
-    tableColumns: ['Date', 'SNOMED code', 'Description', 'Value', 'Associated problem'],
     implemented: true,
   },
   {

@@ -23,6 +23,7 @@ import { useAuth } from '../../auth/AuthContext'
 import { supabase, isSupabaseConfigured } from '../../lib/supabase'
 import type { ValidationIssue } from '../../fhir/types'
 import type { DraftRecord } from '../types'
+import { InfoHint } from '../../onboarding/InfoHint'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -379,19 +380,23 @@ export function BuilderView({
           <button
             type="button"
             onClick={handleAutoPopulate}
+            data-tour="builder-auto-populate"
             className="bg-nhs-blue text-white px-3 py-1.5 rounded text-sm font-medium hover:opacity-90 transition-opacity"
           >
             Auto-populate
           </button>
-          <button
-            type="button"
-            onClick={handleClearAllFinal}
-            className="border border-nhs-grey-4 dark:border-nhs-grey-2 text-nhs-grey-2 px-3 py-1.5 rounded text-sm hover:border-nhs-red hover:text-nhs-red transition-colors"
-          >
-            Clear all
-          </button>
+          <span className="inline-flex items-center gap-1">
+            <button
+              type="button"
+              onClick={handleClearAllFinal}
+              className="border border-nhs-grey-4 dark:border-nhs-grey-2 text-nhs-grey-2 px-3 py-1.5 rounded text-sm hover:border-nhs-red hover:text-nhs-red transition-colors"
+            >
+              Clear all
+            </button>
+            <InfoHint topic="builder.clear-all" />
+          </span>
           {isSupabaseConfigured && user && (
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5" data-tour="builder-save-shared">
               <button
                 type="button"
                 onClick={handleSaveToSharedClick}
@@ -409,8 +414,9 @@ export function BuilderView({
                 </span>
               )}
               {isDirty && currentDraftId && (
-                <span className="text-xs px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded font-medium">
+                <span className="text-xs px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded font-medium inline-flex items-center gap-1">
                   Unsaved changes
+                  <InfoHint topic="builder.dirty-guard" />
                 </span>
               )}
               {saveSuccess && (
@@ -432,6 +438,7 @@ export function BuilderView({
           <button
             type="button"
             onClick={handlePreview}
+            data-tour="builder-preview"
             className="border border-nhs-grey-4 dark:border-nhs-grey-2 text-nhs-grey-2 px-3 py-1.5 rounded text-sm hover:border-nhs-blue hover:text-nhs-blue transition-colors"
           >
             Preview FHIR
@@ -450,6 +457,7 @@ export function BuilderView({
           <button
             type="button"
             onClick={handleLoadIntoViewer}
+            data-tour="builder-load-into-viewer"
             className="bg-nhs-blue text-white px-3 py-1.5 rounded text-sm font-medium hover:opacity-90 transition-opacity flex items-center gap-1"
           >
             Load into viewer
@@ -482,11 +490,13 @@ export function BuilderView({
 
       {/* Body: nav + form + optional preview */}
       <div className="flex-1 flex overflow-hidden">
-        <BuilderDomainNav
-          active={activeDomain}
-          draft={draft}
-          onChange={setActiveDomain}
-        />
+        <div data-tour="builder-domain-nav">
+          <BuilderDomainNav
+            active={activeDomain}
+            draft={draft}
+            onChange={setActiveDomain}
+          />
+        </div>
 
         <div className={`flex-1 overflow-auto p-4 bg-nhs-grey-5 dark:bg-gray-950 ${showPreview ? 'hidden sm:block' : ''}`}>
           {renderForm()}

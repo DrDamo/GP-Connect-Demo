@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import type { GpConnectPatient } from '../../fhir/types'
+import { InfoHint } from '../../onboarding/InfoHint'
 
 interface Props {
   patient?: GpConnectPatient
@@ -25,7 +26,18 @@ export function PatientBanner({ patient, practiceOrganisation, patientId, onJump
     ? patient.gender.charAt(0).toUpperCase() + patient.gender.slice(1)
     : null
 
-  const hasExpandable = !!(patient.address || patient.phone || patient.email || patient.registeredGpName)
+  const hasExpandable = !!(
+    patient.address || patient.phone || patient.email || patient.registeredGpName ||
+    patient.managingOrganisationName || patient.preferredLanguage || patient.contacts?.length
+  )
+
+  const languageSummary = patient.preferredLanguage
+    ? [
+        patient.preferredLanguage,
+        patient.communicationProficiency,
+        patient.modeOfCommunication,
+      ].filter(Boolean).join(' · ')
+    : undefined
 
   return (
     <div
@@ -66,6 +78,9 @@ export function PatientBanner({ patient, practiceOrganisation, patientId, onJump
                     ? <span title={patient.nhsNumberVerificationDisplay ?? 'Number present and verified'} className="text-green-300 cursor-help text-sm leading-none">&#10003;</span>
                     : <span title={patient.nhsNumberVerificationDisplay ?? 'Not verified'} className="text-yellow-300 cursor-help text-sm leading-none">&#9888;</span>
                 )}
+                <span onClick={e => e.stopPropagation()}>
+                  <InfoHint topic="clinical.patient-banner.nhs-verified" />
+                </span>
               </span>
             )}
           </div>
@@ -120,9 +135,56 @@ export function PatientBanner({ patient, practiceOrganisation, patientId, onJump
           {patient.registeredGpName && (
             <>
               <span className="opacity-60 whitespace-nowrap">Registered GP</span>
-              <span className="opacity-90">{patient.registeredGpName}</span>
+              {onJumpToSource && patient.registeredGpId ? (
+                <button
+                  onClick={e => { e.stopPropagation(); onJumpToSource(`Practitioner/${patient.registeredGpId}`) }}
+                  className="opacity-90 text-left hover:underline hover:opacity-100"
+                >
+                  {patient.registeredGpName} &#8599;
+                </button>
+              ) : (
+                <span className="opacity-90">{patient.registeredGpName}</span>
+              )}
             </>
           )}
+          {patient.managingOrganisationName && (
+            <>
+              <span className="opacity-60 whitespace-nowrap">Managing org</span>
+              {onJumpToSource && patient.managingOrganisationId ? (
+                <button
+                  onClick={e => { e.stopPropagation(); onJumpToSource(`Organization/${patient.managingOrganisationId}`) }}
+                  className="opacity-90 text-left hover:underline hover:opacity-100"
+                >
+                  {patient.managingOrganisationName} &#8599;
+                </button>
+              ) : (
+                <span className="opacity-90">{patient.managingOrganisationName}</span>
+              )}
+            </>
+          )}
+          {languageSummary && (
+            <>
+              <span className="opacity-60 whitespace-nowrap">Language</span>
+              <span className="opacity-90">
+                {languageSummary}
+                {patient.interpreterRequired && (
+                  <span className="ml-2 text-[11px] px-1.5 py-0.5 rounded font-medium bg-yellow-400/25 text-yellow-100 border border-yellow-300/40">
+                    Interpreter required
+                  </span>
+                )}
+              </span>
+            </>
+          )}
+          {patient.contacts?.map((c, idx) => (
+            <Fragment key={idx}>
+              <span className="opacity-60 whitespace-nowrap">
+                {idx === 0 ? 'Next of kin' : ''}
+              </span>
+              <span className="opacity-90">
+                {[c.name, c.relationship && `(${c.relationship})`, c.phone].filter(Boolean).join(' ')}
+              </span>
+            </Fragment>
+          ))}
         </div>
       )}
     </div>

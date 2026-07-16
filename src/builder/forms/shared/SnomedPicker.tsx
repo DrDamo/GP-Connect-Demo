@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { FormField } from './FormField'
+import { useAnchoredDropdown } from './useAnchoredDropdown'
+import { InfoHint } from '../../../onboarding/InfoHint'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -282,6 +285,9 @@ export function SnomedPicker({ value, onChange, code, label = 'SNOMED CT', seman
   const dropdownRef = useRef<HTMLDivElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  const dropdownOpen = isOpen && results.length > 0
+  const dropdownPos = useAnchoredDropdown(inputRef, dropdownOpen)
+
   // Proxy mode stores an empty token; direct-server mode stores a JWT.
   // Both are considered connected as long as a serverUrl is present.
   const isConnected = Boolean(config.serverUrl)
@@ -453,16 +459,19 @@ export function SnomedPicker({ value, onChange, code, label = 'SNOMED CT', seman
                   </svg>
                 )}
               </button>
+              <InfoHint topic="builder.snomed-picker" />
             </div>
 
             {/* Error message */}
             {error && <p className="mt-1 text-xs text-nhs-red">{error}</p>}
 
-            {/* Dropdown — anchored to the top of this relative wrapper */}
-            {isOpen && results.length > 0 && (
+            {/* Dropdown — rendered via portal so it isn't clipped by an
+                ancestor with overflow:hidden (e.g. a collapsible card) */}
+            {dropdownOpen && dropdownPos && createPortal(
               <div
                 ref={dropdownRef}
-                className="absolute top-full left-0 right-0 z-40 mt-0.5 bg-white dark:bg-gray-900 border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg shadow-lg overflow-hidden"
+                style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width }}
+                className="z-50 max-h-80 overflow-y-auto bg-white dark:bg-gray-900 border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg shadow-lg"
               >
                 {results.map((r, idx) => (
                   <button
@@ -487,7 +496,8 @@ export function SnomedPicker({ value, onChange, code, label = 'SNOMED CT', seman
                     </span>
                   </button>
                 ))}
-              </div>
+              </div>,
+              document.body,
             )}
           </div>
         </div>

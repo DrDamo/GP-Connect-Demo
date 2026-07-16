@@ -5,6 +5,28 @@ import type { DomainColumn } from './DomainTable'
 import { ReferencedResources } from './ReferencedResources'
 import { ReferenceChip } from './ResourceCard'
 import { type DomainId } from './domains'
+import { InfoHint } from '../../onboarding/InfoHint'
+import { SearchFilterBox } from './SearchFilterBox'
+
+function investigationSearchText(inv: GpConnectInvestigation): string {
+  const specimenText = inv.specimen
+    ? [inv.specimen.type, inv.specimen.collectedDateTime, inv.specimen.receivedTime, inv.specimen.status, inv.specimen.note]
+    : []
+  const prText = inv.procedureRequest
+    ? [inv.procedureRequest.name, inv.procedureRequest.requester, inv.procedureRequest.performer, inv.procedureRequest.status, ...(inv.procedureRequest.notes ?? [])]
+    : []
+  const groupText = inv.testGroups.flatMap(g => [
+    g.name, g.comment,
+    ...g.results.flatMap(r => [
+      r.name, r.value, r.unit, r.referenceRange, r.interpretation, r.comment,
+      ...(r.components ?? []).flatMap(c => [c.name, c.value, c.unit, c.referenceRange, c.interpretation]),
+    ]),
+  ])
+  return [
+    inv.name, inv.category, inv.date, inv.performer, inv.status, inv.filingComment, inv.filingCommentPerformer,
+    ...specimenText, ...prText, ...groupText,
+  ].filter(Boolean).join(' ').toLowerCase()
+}
 
 interface Props {
   bundle: GpConnectBundle
@@ -112,7 +134,9 @@ function ResultsTable({
                     <div>
                       {r.name}
                       {r.isTransferDegraded && (
-                        <span className="inline-block ml-1.5 text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200 font-medium leading-none align-middle">Degrade</span>
+                        <span className="inline-flex items-center gap-1 ml-1.5 text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200 font-medium leading-none align-middle">
+                          Degrade <InfoHint topic="clinical.investigations.degrade-badge" />
+                        </span>
                       )}
                     </div>
                     {onJumpToSource && (
@@ -201,6 +225,9 @@ function SpecimenSection({ specimen, onJumpToSource }: { specimen: GpConnectSpec
           </div>
         )}
       </div>
+      {specimen.note && (
+        <CommentText text={specimen.note} className="p-2 rounded bg-white/60 border border-nhs-blue/10" />
+      )}
     </div>
   )
 }
@@ -280,11 +307,24 @@ function TestGroupSection({
           <span className="text-[10px] font-medium text-nhs-blue/50 uppercase tracking-wider">Test group</span>
         </div>
       </div>
+      {group.specimen && (
+        <SpecimenSection specimen={group.specimen} onJumpToSource={onJumpToSource} />
+      )}
       {group.comment && (
-        <CommentText
-          text={group.comment}
-          className="p-2 rounded bg-white/60 border border-nhs-blue/10"
-        />
+        <div className="flex items-start justify-between gap-2">
+          <CommentText
+            text={group.comment}
+            className="p-2 rounded bg-white/60 border border-nhs-blue/10"
+          />
+          {onJumpToSource && group.commentObservationId && (
+            <button
+              onClick={() => onJumpToSource(`Observation/${group.commentObservationId}`)}
+              className="text-[11px] text-nhs-grey-3 hover:text-nhs-grey-1 hover:underline shrink-0 mt-0.5"
+            >
+              FHIR ↗
+            </button>
+          )}
+        </div>
       )}
       <ResultsTable
         results={group.results}
@@ -303,8 +343,13 @@ function InvestigationDetail({ investigation, bundle, onJumpToSource, onJumpToRe
   const [openResourceId, setOpenResourceId] = useState<string | null>(null)
   const toggle = (id: string) => setOpenResourceId(prev => prev === id ? null : id)
 
+  const performers = investigation.performers ?? []
   const refs = [
-    investigation.performerId ? { type: 'Practitioner' as const, id: investigation.performerId, label: 'Performer' } : null,
+    ...performers.map((p, i) => ({
+      type: p.type,
+      id: p.id,
+      label: performers.length > 1 ? `Performer ${i + 1}` : 'Performer',
+    })),
     investigation.encounterId ? { type: 'Encounter' as const, id: investigation.encounterId, label: 'Encounter' } : null,
   ].filter((r): r is NonNullable<typeof r> => r !== null)
 
@@ -372,10 +417,20 @@ function InvestigationDetail({ investigation, bundle, onJumpToSource, onJumpToRe
                 </div>
               )}
               {investigation.testGroups[0].comment && (
-                <CommentText
-                  text={investigation.testGroups[0].comment}
-                  className="p-2 rounded bg-white/60 border border-nhs-blue/10"
-                />
+                <div className="flex items-start justify-between gap-2">
+                  <CommentText
+                    text={investigation.testGroups[0].comment}
+                    className="p-2 rounded bg-white/60 border border-nhs-blue/10"
+                  />
+                  {onJumpToSource && investigation.testGroups[0].commentObservationId && (
+                    <button
+                      onClick={() => onJumpToSource(`Observation/${investigation.testGroups[0].commentObservationId}`)}
+                      className="text-[11px] text-nhs-grey-3 hover:text-nhs-grey-1 hover:underline shrink-0 mt-0.5"
+                    >
+                      FHIR ↗
+                    </button>
+                  )}
+                </div>
               )}
               <ResultsTable
                 results={investigation.testGroups[0].results}
@@ -426,21 +481,35 @@ function InvestigationDetail({ investigation, bundle, onJumpToSource, onJumpToRe
 
 export function InvestigationsView({ bundle, selectedId, onSelect, onJumpToSource, onJumpToRecord }: Props) {
   const count = bundle.investigations.length
+  const [searchQuery, setSearchQuery] = useState('')
+  const trimmedQuery = searchQuery.trim().toLowerCase()
+  const filteredInvestigations = trimmedQuery
+    ? bundle.investigations.filter(i => investigationSearchText(i).includes(trimmedQuery))
+    : bundle.investigations
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-base font-semibold text-nhs-grey-1">Investigations</h2>
-          <p className="text-xs text-nhs-grey-3 mt-0.5">
+          <p className="text-xs text-nhs-grey-3 mt-0.5 flex items-center gap-1">
             {count} report{count !== 1 ? 's' : ''}
             {onSelect ? ' · click a row to expand' : ''}
+            <InfoHint topic="clinical.investigations.flag-colours" />
+            <InfoHint topic="clinical.investigations.grouping" />
           </p>
         </div>
         <span className="px-2 py-1 bg-nhs-blue text-white text-xs font-semibold rounded">GP Connect STU3</span>
       </div>
+      <SearchFilterBox
+        value={searchQuery}
+        onChange={setSearchQuery}
+        placeholder="Search investigations…"
+        matchCount={filteredInvestigations.length}
+        totalCount={count}
+      />
       <DomainTable
         columns={COLUMNS}
-        items={bundle.investigations}
+        items={filteredInvestigations}
         selectedId={selectedId}
         onSelect={onSelect}
         emptyMessage="No investigation records found in this bundle"

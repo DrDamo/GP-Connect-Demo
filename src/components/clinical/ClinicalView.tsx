@@ -41,7 +41,7 @@ interface Props {
 }
 
 export function ClinicalView({ record, onJumpToSource, onOpenTraining }: Props) {
-  const [activeDomain, setActiveDomain] = useState<DomainId>('medications')
+  const [activeDomain, setActiveDomain] = useState<DomainId>('problems')
   const [selectedId, setSelectedId] = useState<string | undefined>()
   const jumpTargetIdRef = useRef<string | undefined>(undefined)
 
@@ -99,14 +99,16 @@ export function ClinicalView({ record, onJumpToSource, onOpenTraining }: Props) 
 
   return (
     <div className="flex h-full overflow-hidden">
-      <DomainNav active={activeDomain} onSelect={handleDomainSelect} counts={counts} />
+      <div data-tour="clinical-domain-nav">
+        <DomainNav active={activeDomain} onSelect={handleDomainSelect} counts={counts} />
+      </div>
       <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex-shrink-0 border-b border-nhs-grey-4 p-4 pb-3">
+        <div className="flex-shrink-0 border-b border-nhs-grey-4 p-4 pb-3" data-tour="clinical-patient-banner">
           <PatientBanner patient={record.patient} practiceOrganisation={record.practiceOrganisation} patientId={record.patient?.id} onJumpToSource={onJumpToSource} />
         </div>
-        <div className="flex-1 overflow-auto p-4">
+        <div className="flex-1 overflow-auto p-4" data-tour="clinical-domain-content">
         {onOpenTraining && (
-          <div className="flex justify-end mb-3">
+          <div className="flex justify-end items-center gap-1.5 mb-3" data-tour="clinical-training-link">
             <button
               onClick={() => onOpenTraining(activeDomain)}
               className="text-xs text-nhs-blue hover:underline flex items-center gap-1"

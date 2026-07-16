@@ -4,6 +4,13 @@ import type { GpConnectBundle, GpConnectDocument } from '../../fhir/types'
 import { ReferencedResources } from './ReferencedResources'
 import { ReferenceChip } from './ResourceCard'
 import { type DomainId } from './domains'
+import { SearchFilterBox } from './SearchFilterBox'
+
+function documentSearchText(d: GpConnectDocument): string {
+  return [
+    d.date, d.type, d.description, d.author, d.mimeType, d.status, d.custodian, d.attachmentTitle, d.url,
+  ].filter(Boolean).join(' ').toLowerCase()
+}
 
 const MIME_LABELS: Record<string, string> = {
   'application/pdf':    'PDF',
@@ -128,6 +135,11 @@ interface Props {
 }
 
 export function DocumentsView({ bundle, selectedId, onSelect, onJumpToSource, onJumpToRecord }: Props) {
+  const [searchQuery, setSearchQuery] = useState('')
+  const trimmedQuery = searchQuery.trim().toLowerCase()
+  const filteredDocuments = trimmedQuery
+    ? bundle.documents.filter(d => documentSearchText(d).includes(trimmedQuery))
+    : bundle.documents
   return (
     <div className="space-y-4">
       <div className="flex items-start justify-between">
@@ -140,9 +152,16 @@ export function DocumentsView({ bundle, selectedId, onSelect, onJumpToSource, on
         </div>
         <span className="px-2 py-1 bg-nhs-blue text-white text-xs font-semibold rounded">GP Connect STU3</span>
       </div>
+      <SearchFilterBox
+        value={searchQuery}
+        onChange={setSearchQuery}
+        placeholder="Search documents…"
+        matchCount={filteredDocuments.length}
+        totalCount={bundle.documents.length}
+      />
       <DomainTable
         columns={COLUMNS}
-        items={bundle.documents}
+        items={filteredDocuments}
         selectedId={selectedId}
         onSelect={onSelect}
         emptyMessage="No documents found in this bundle"

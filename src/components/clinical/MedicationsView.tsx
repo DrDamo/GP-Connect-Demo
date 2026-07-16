@@ -3,6 +3,22 @@ import type { GpConnectMedication, GpConnectMedicationsRecord } from '../../fhir
 import { ReferencedResources } from './ReferencedResources'
 import { ReferenceChip } from './ResourceCard'
 import { type DomainId } from './domains'
+import { InfoHint } from '../../onboarding/InfoHint'
+import { SearchFilterBox } from './SearchFilterBox'
+
+function medicationSearchText(med: GpConnectMedication): string {
+  return [
+    med.drugName, med.dose, med.frequency, med.dosageInstruction, med.route, med.site,
+    med.status, med.prescriptionType, med.prescribedQuantity, med.expectedSupplyDuration,
+    med.prescriber, med.recorder, med.prescriberOrganisation,
+    med.patientInstructions, med.pharmacyInstructions, med.statusReason, med.additionalInformation,
+    med.startDate, med.lastIssuedDate, med.dateAsserted, med.endDate, med.authorisationExpiryDate,
+    ...med.issues.flatMap(i => [
+      i.issueDate, i.startDate, i.endDate, i.status, i.quantity, i.supplyDuration,
+      i.dosageInstruction, i.patientInstructions, i.pharmacyInstructions, i.recorder,
+    ]),
+  ].filter(Boolean).join(' ').toLowerCase()
+}
 
 interface Props {
   record: GpConnectMedicationsRecord
@@ -54,7 +70,7 @@ function MedicationRow({ med, record, selected, selectedIssueId, onSelect, onSel
   onJumpToSource?: (id: string) => void
   onJumpToRecord?: (domain: DomainId, id: string) => void
 }) {
-  const [expanded, setExpanded] = useState(false)
+  const expanded = !!selected
   const [showDetail, setShowDetail] = useState(false)
   const [detailIssueId, setDetailIssueId] = useState<string | null>(null)
   const [openResourceId, setOpenResourceId] = useState<string | null>(null)
@@ -85,7 +101,7 @@ function MedicationRow({ med, record, selected, selectedIssueId, onSelect, onSel
       {/* Summary row */}
       <tr
         className={`border-b border-nhs-grey-5 cursor-pointer transition-colors ${selected ? 'bg-blue-100 hover:bg-blue-100' : 'hover:bg-blue-50'}`}
-        onClick={() => { setExpanded(e => !e); onSelect?.(med.id) }}
+        onClick={() => onSelect?.(med.id)}
       >
         <td className="py-2.5 px-3">
           <div className="font-medium text-nhs-grey-1 text-sm">{med.drugName}</div>
@@ -262,11 +278,12 @@ function MedicationRow({ med, record, selected, selectedIssueId, onSelect, onSel
 
             {/* ── Issues section ── */}
             <div>
-              <p className="text-xs font-semibold text-nhs-grey-2 uppercase tracking-wide mb-2">
+              <p className="text-xs font-semibold text-nhs-grey-2 uppercase tracking-wide mb-2 flex items-center gap-1">
                 Issues ({med.issues.length})
                 {onSelectIssue && med.issues.length > 0 && (
                   <span className="normal-case font-normal text-nhs-grey-3 ml-1">· click row to inspect FHIR source</span>
                 )}
+                {med.issues.length > 0 && <InfoHint topic="clinical.medications.issues-detail" />}
               </p>
               {med.issues.length > 0 ? (
                 <table className="w-full text-xs">
@@ -381,7 +398,9 @@ function MedicationsTable({ medications, record, selectedId, selectedIssueId, on
             <th className="py-2 px-3">Dose / Frequency</th>
             <th className="py-2 px-3">Start date</th>
             <th className="py-2 px-3">Last issued</th>
-            <th className="py-2 px-3">Status</th>
+            <th className="py-2 px-3">
+              <span className="inline-flex items-center gap-1">Status <InfoHint topic="clinical.medications.status-colours" /></span>
+            </th>
             <th className="py-2 px-3 w-6"></th>
           </tr>
         </thead>
@@ -429,10 +448,16 @@ function getPrescriptionTab(med: GpConnectMedication): MedTab {
 export function MedicationsView({ record, selectedId, selectedIssueId, onSelect, onSelectIssue, onJumpToSource, onJumpToRecord }: Props) {
   const isPast = (m: GpConnectMedication) => ['completed', 'stopped', 'entered-in-error'].includes(m.status)
 
+  const [searchQuery, setSearchQuery] = useState('')
+  const trimmedQuery = searchQuery.trim().toLowerCase()
+  const filteredMeds = trimmedQuery
+    ? record.medications.filter(m => medicationSearchText(m).includes(trimmedQuery))
+    : record.medications
+
   const counts: Record<MedTab, GpConnectMedication[]> = {
     acute: [], repeat: [], 'repeat-dispensing': [], 'prescribed-elsewhere': [], past: [], other: [],
   }
-  for (const med of record.medications) {
+  for (const med of filteredMeds) {
     if (isPast(med)) counts.past.push(med)
     else counts[getPrescriptionTab(med)].push(med)
   }
@@ -443,6 +468,24 @@ export function MedicationsView({ record, selectedId, selectedIssueId, onSelect,
 
   const activeMeds = counts[activeTab]
   const activeTabDef = TAB_DEFS.find(t => t.id === activeTab)!
+
+  const renderTable = (meds: GpConnectMedication[]) => (
+    <MedicationsTable
+      medications={meds}
+      record={record}
+      selectedId={selectedId}
+      selectedIssueId={selectedIssueId}
+      onSelect={onSelect}
+      onSelectIssue={onSelectIssue}
+      onJumpToSource={onJumpToSource}
+      onJumpToRecord={onJumpToRecord}
+    />
+  )
+
+  // Within "Past", still group by the original prescription type so the
+  // clinical categories (Acute / Repeat / Repeat Dispensing / Prescribed
+  // Elsewhere) remain visible rather than one undifferentiated list.
+  const PAST_GROUP_ORDER: MedTab[] = ['acute', 'repeat', 'repeat-dispensing', 'prescribed-elsewhere', 'other']
 
   return (
     <div className="space-y-4">
@@ -456,8 +499,17 @@ export function MedicationsView({ record, selectedId, selectedIssueId, onSelect,
         <span className="px-2 py-1 bg-nhs-blue text-white text-xs font-semibold rounded">GP Connect STU3</span>
       </div>
 
+      <SearchFilterBox
+        value={searchQuery}
+        onChange={setSearchQuery}
+        placeholder="Search medications…"
+        matchCount={filteredMeds.length}
+        totalCount={record.medications.length}
+      />
+
       <div className="border-b border-nhs-grey-4">
-        <div className="flex gap-0 -mb-px">
+        <div className="flex gap-0 -mb-px items-center" data-tour="medications-sub-tabs">
+          <InfoHint topic="clinical.medications.subtabs" className="mr-1.5 shrink-0" />
           {visibleTabs.map(tab => {
             const count = counts[tab.id].length
             const isActive = tab.id === activeTab
@@ -486,16 +538,22 @@ export function MedicationsView({ record, selectedId, selectedIssueId, onSelect,
       {activeMeds.length > 0 ? (
         <div>
           <p className="text-xs text-nhs-grey-3 mb-3">{activeTabDef.description}</p>
-          <MedicationsTable
-            medications={activeMeds}
-            record={record}
-            selectedId={selectedId}
-            selectedIssueId={selectedIssueId}
-            onSelect={onSelect}
-            onSelectIssue={onSelectIssue}
-            onJumpToSource={onJumpToSource}
-            onJumpToRecord={onJumpToRecord}
-          />
+          {activeTab === 'past' ? (
+            <div className="space-y-5">
+              {PAST_GROUP_ORDER.map(groupId => {
+                const groupMeds = activeMeds.filter(m => getPrescriptionTab(m) === groupId)
+                if (groupMeds.length === 0) return null
+                return (
+                  <div key={groupId}>
+                    <p className="text-xs font-semibold text-nhs-grey-2 uppercase tracking-wide mb-2">
+                      {TAB_DEFS.find(t => t.id === groupId)!.label}
+                    </p>
+                    {renderTable(groupMeds)}
+                  </div>
+                )
+              })}
+            </div>
+          ) : renderTable(activeMeds)}
         </div>
       ) : (
         <div className="text-center py-10 text-nhs-grey-3">

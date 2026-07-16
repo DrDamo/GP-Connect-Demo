@@ -1,67 +1,437 @@
 import type {
   DraftRecord,
+  DraftPatient,
+  DraftPractitioner,
+  DraftOrganisation,
+  DraftContact,
 } from './types'
 
+// ---------------------------------------------------------------------------
+// Randomisation helpers
+// ---------------------------------------------------------------------------
+
+function randomInt(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min
+}
+
+function randomItem<T>(items: readonly T[]): T {
+  return items[randomInt(0, items.length - 1)]
+}
+
+/** Pick `count` distinct items from a list without replacement. */
+function randomDistinct<T>(items: readonly T[], count: number): T[] {
+  const pool = [...items]
+  const picked: T[] = []
+  for (let i = 0; i < count && pool.length > 0; i++) {
+    const idx = randomInt(0, pool.length - 1)
+    picked.push(pool[idx])
+    pool.splice(idx, 1)
+  }
+  return picked
+}
+
+function randomDigits(length: number): string {
+  let out = ''
+  for (let i = 0; i < length; i++) out += randomInt(0, 9)
+  return out
+}
+
+function randomLetter(): string {
+  return String.fromCharCode(randomInt(65, 90))
+}
+
+function pad2(n: number): string {
+  return n.toString().padStart(2, '0')
+}
+
+function randomDateString(startYear: number, endYear: number): string {
+  const year = randomInt(startYear, endYear)
+  const month = randomInt(1, 12)
+  const day = randomInt(1, 28) // avoid month-length edge cases
+  return `${year}-${pad2(month)}-${pad2(day)}`
+}
+
+/** Generates a syntactically valid NHS number in the reserved 999 test range. */
+function generateNhsNumber(): string {
+  for (;;) {
+    const digits = [9, 9, 9, ...Array.from({ length: 6 }, () => randomInt(0, 9))]
+    const weights = [10, 9, 8, 7, 6, 5, 4, 3, 2]
+    const sum = digits.reduce((s, d, i) => s + d * weights[i], 0)
+    let check = 11 - (sum % 11)
+    if (check === 11) check = 0
+    if (check === 10) continue // invalid combination — retry
+    return [...digits, check].join('')
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Name pools
+// ---------------------------------------------------------------------------
+
+const MALE_FIRST_NAMES = [
+  'David', 'Peter', 'John', 'Michael', 'Brian', 'Gerald', 'Lester', 'Otis',
+  'Naaif', 'Maitland', 'Westley', 'Norbert', 'Brent', 'Micah', 'Jordan',
+  'Raymund', 'Loren', 'Haywood', 'Garth', 'Roy', 'George', 'Daniel', 'Simon',
+  'Martin', 'Eamon', 'Shiraz', 'Andrew', 'Barney', 'Tom', 'Steven', 'Jamal',
+  'Masood', 'Jason', 'Dominic', 'Animesh', 'Philip', 'Damian', 'Charlie',
+  'Robert', 'James',
+] as const
+
+const FEMALE_FIRST_NAMES = [
+  'Jane', 'Nichole', 'Catherine', 'Anneka', 'Melissa', 'Gemma', 'Heidi',
+  'Elaine', 'Clare', 'Rachel', 'Alice', 'Pippa', 'Hannah', 'Aishah',
+  'Alyssia', 'Sana', 'Emma', 'Agnieszka', 'Faith', 'Gwenda', 'Pollie',
+  'Amanjeet', 'Eileen', 'Barbara', 'Sarah', 'Sophia', 'Gina', 'Susan',
+  'Alexi', 'Keeley', 'Sherri', 'Quianna', 'Cammie', 'Raphaela', 'Amie',
+  'Lizzy', 'Shantel', 'Louise', 'Zoe', 'Lindsey',
+] as const
+
+const SURNAMES = [
+  'Jackson', 'Lindon', 'Steinberg', 'Job', 'Egan', 'McGinn', 'Sutton',
+  'Belle', 'Crank', 'Iizuka', 'Hage', 'Barlas', 'Nagra', 'Noonan',
+  'Brennan', 'Miehm', 'Thompson', 'Meakin', 'Adams', 'Wookey', 'Grace',
+  'Horn', 'Skelly', 'Reardon', 'Kay', 'Edwardson', 'Smith', 'Thrush',
+  'Bristol', 'Phillpotts', 'Mulvihill', 'Gard', 'Hulme', 'Kilgallon',
+  'Elsner', 'Perola', 'Marriner', 'McMunn', 'Munyaradzi', 'Middlebrook',
+  'Longthorpe', 'Gunawardana', 'Hallinan', 'Mahmood', 'Elgie', 'Guerra',
+  'Porteous', 'McAvenue', 'Gilbert', 'Whitcombe', 'Stables', 'Norman',
+  'Clarson', 'Waters', 'Potter', 'Wilson', 'Williams', 'Salisbury',
+  'McCarthy', 'Trevithick', 'Brooks', 'Fraser', 'Turnbull', 'Hunt', 'Syed',
+  'Nazir', 'Parsons', 'Kershaw', 'Askey', 'Sinha', 'Anglin', 'Palmer',
+  'Ahluwalia', 'Ho', 'Lanceley', 'Lyon', 'Arnold', 'Foster', 'Harrison',
+  'Davies', 'Downing', 'Young', 'Hillyard', "O'Brien", 'Malik', 'Turner',
+  'Zafar', 'Rogers', 'Booker', 'Osei', 'Clarke', 'Griffiths',
+] as const
+
+type Gender = DraftPatient['gender']
+
+function randomFirstName(gender: Gender): string {
+  if (gender === 'male') return randomItem(MALE_FIRST_NAMES)
+  if (gender === 'female') return randomItem(FEMALE_FIRST_NAMES)
+  return randomItem([...MALE_FIRST_NAMES, ...FEMALE_FIRST_NAMES])
+}
+
+function randomPatientGender(): Gender {
+  const r = Math.random()
+  if (r < 0.47) return 'male'
+  if (r < 0.94) return 'female'
+  if (r < 0.97) return 'other'
+  return 'unknown'
+}
+
+// Realistic UK title distribution: common titles dominate, with rare
+// honorifics (Dr/Rev/Sir/Lady/Lord) occasionally appearing for either sex.
+function patientPrefix(gender: Gender): string {
+  const r = Math.random()
+  if (gender === 'male') {
+    if (r < 0.90) return 'Mr'
+    if (r < 0.94) return 'Dr'
+    if (r < 0.97) return 'Rev'
+    if (r < 0.99) return 'Sir'
+    return 'Lord'
+  }
+  if (gender === 'female') {
+    if (r < 0.55) return 'Mrs'
+    if (r < 0.85) return 'Miss'
+    if (r < 0.92) return 'Ms'
+    if (r < 0.96) return 'Dr'
+    if (r < 0.98) return 'Rev'
+    return 'Lady'
+  }
+  return ''
+}
+
+function randomGivenName(gender: Gender): string {
+  const first = randomFirstName(gender)
+  if (Math.random() < 0.3) {
+    let middle = randomFirstName(gender)
+    while (middle === first) middle = randomFirstName(gender)
+    return `${first} ${middle}`
+  }
+  return first
+}
+
+// ---------------------------------------------------------------------------
+// Place pools
+// ---------------------------------------------------------------------------
+
+const TOWNS = [
+  { town: 'Leeds', outcode: 'LS7', areaCode: '0113' },
+  { town: 'Bristol', outcode: 'BS10', areaCode: '0117' },
+  { town: 'Manchester', outcode: 'M14', areaCode: '0161' },
+  { town: 'Warrington', outcode: 'WA1', areaCode: '01925' },
+  { town: 'York', outcode: 'YO24', areaCode: '01904' },
+  { town: 'Newcastle upon Tyne', outcode: 'NE6', areaCode: '0191' },
+  { town: 'Sheffield', outcode: 'S10', areaCode: '0114' },
+  { town: 'Birmingham', outcode: 'B15', areaCode: '0121' },
+  { town: 'Nottingham', outcode: 'NG7', areaCode: '0115' },
+  { town: 'Liverpool', outcode: 'L15', areaCode: '0151' },
+] as const
+
+const STREET_BASE_WORDS = [
+  'Wellbrook', 'Sycamore', 'Kirkstall', 'Mill', 'Orchard', 'Chestnut',
+  'Birchwood', 'Elm', 'Foxglove', 'Kingsley', 'Maple', 'Priory', 'Ashfield',
+  'Cedar', 'Thornbury', 'Meadow', 'Oakfield', 'Riverside', 'Hillcrest',
+  'Fernleigh', 'Rosemount', 'Woodgate', 'Springfield', 'Lonsdale',
+  'Greenway', 'Larkspur', 'Bramble', 'Willow', 'Hazelwood', 'Fenwick',
+] as const
+
+const ROAD_TYPES = [
+  'Road', 'Lane', 'Avenue', 'Close', 'Drive', 'Way', 'Court', 'Grove',
+  'Street', 'Gardens', 'Terrace', 'Walk', 'Rise', 'Crescent', 'Mews',
+] as const
+
+// Fictional practice names, built from generic place-word + practice-type
+// combinations rather than reusing real GP practice names — avoids any
+// resemblance to actual NHS test/production practices.
+const PRACTICE_PLACE_WORDS = [
+  'Wellbrook', 'Ashfield', 'Meadowbank', 'Oakfield', 'Riverside', 'Hillside',
+  'Kingsmead', 'Foxglove', 'Elmwood', 'Birchfield', 'Thornbury', 'Priorsgate',
+  'Sycamore', 'Chestnut', 'Maplewood', 'Cedarhurst', 'Northgate', 'Southmead',
+  'Westfield', 'Eastbrook', 'Rosedale', 'Greenacre', 'Fairview', 'Highfield',
+  'Lonsdale', 'Brookfield', 'Ferndale', 'Woodside', 'Millbrook', 'Springvale',
+] as const
+
+const PRACTICE_TYPE_WORDS = [
+  'Surgery', 'Medical Practice', 'Health Centre', 'Group Practice',
+  'Family Practice', 'Medical Centre',
+] as const
+
+function randomPracticeName(exclude?: string): string {
+  for (;;) {
+    const place = randomItem(PRACTICE_PLACE_WORDS)
+    const name = Math.random() < 0.15 ? `The ${place} Practice` : `${place} ${randomItem(PRACTICE_TYPE_WORDS)}`
+    if (name !== exclude) return name
+  }
+}
+
+// Real, well-known NHS hospitals — large public institutions, safe to name
+// directly (unlike small GP practices, which are fictionalised above).
+const HOSPITAL_NAMES = [
+  'Manchester Royal Infirmary', "Queen's Medical Centre, Nottingham",
+  'Royal Stoke University Hospital', 'Royal Derby Hospital',
+  'The Royal London Hospital', 'Leeds General Infirmary',
+  "St James's University Hospital, Leeds", 'North Manchester General Hospital',
+  'Wythenshawe Hospital', "St Thomas' Hospital", "Guy's Hospital",
+  "Addenbrooke's Hospital", 'John Radcliffe Hospital',
+  'Queen Elizabeth Hospital Birmingham', 'Southampton General Hospital',
+  'Bristol Royal Infirmary', 'Freeman Hospital', 'Royal Victoria Infirmary',
+  "King's College Hospital", 'Norfolk and Norwich University Hospital',
+  'Hull Royal Infirmary', 'Northern General Hospital',
+  'Aintree University Hospital', 'Salford Royal Hospital',
+  'Glasgow Royal Infirmary',
+] as const
+
+const PHARMACY_CHAIN_NAMES = [
+  'Boots Pharmacy', 'Superdrug Pharmacy', 'Well Pharmacy', 'Lloyds Pharmacy',
+  'Tesco Pharmacy', 'Asda Pharmacy', "Sainsbury's Pharmacy",
+  'Morrisons Pharmacy', 'Rowlands Pharmacy',
+] as const
+
+function randomPharmacyName(): string {
+  if (Math.random() < 0.5) return randomItem(PHARMACY_CHAIN_NAMES)
+  return `${randomItem(STREET_BASE_WORDS)} Pharmacy`
+}
+
+function randomTempId(): string {
+  return crypto.randomUUID().slice(0, 8)
+}
+
+function randomOrganisation(name: string): DraftOrganisation {
+  const town = randomItem(TOWNS)
+  return {
+    _tempId: randomTempId(),
+    name,
+    odsCode: randomOdsCode(),
+    phone: randomPhone(town.areaCode),
+    address: randomAddress(town),
+  }
+}
+
+function randomStreetName(): string {
+  return `${randomItem(STREET_BASE_WORDS)} ${randomItem(ROAD_TYPES)}`
+}
+
+function randomPostcode(outcode: string): string {
+  return `${outcode} ${randomInt(1, 9)}${randomLetter()}${randomLetter()}`
+}
+
+function randomPhone(areaCode: string): string {
+  return `${areaCode} ${randomDigits(7 - (areaCode.length - 4))}`
+}
+
+function randomAddress(town: { town: string; outcode: string }): string {
+  const number = randomInt(1, 199)
+  return `${number} ${randomStreetName()}, ${town.town}, ${randomPostcode(town.outcode)}`
+}
+
+function randomOdsCode(): string {
+  return `${randomLetter()}${randomDigits(5)}`
+}
+
+function randomSdsSuffix(): string {
+  return randomDigits(7)
+}
+
+// ---------------------------------------------------------------------------
+// Communication / language
+// ---------------------------------------------------------------------------
+
+const OTHER_LANGUAGES = [
+  'Polish', 'Urdu', 'Punjabi', 'Bengali', 'Gujarati', 'Arabic', 'Portuguese',
+  'Romanian', 'Spanish', 'French', 'Somali', 'Turkish', 'Chinese (Mandarin)',
+  'Chinese (Cantonese)',
+] as const
+
+const COMMUNICATION_MODES = [
+  'Received spoken', 'Received written', 'Expressed spoken', 'Expressed written',
+] as const
+
+interface RandomCommunication {
+  preferredLanguage: string
+  communicationProficiency: string
+  modeOfCommunication: string
+  interpreterRequired: boolean
+}
+
+function randomCommunication(): RandomCommunication {
+  if (Math.random() < 0.7) {
+    return {
+      preferredLanguage: 'English',
+      communicationProficiency: 'Excellent',
+      modeOfCommunication: randomItem(COMMUNICATION_MODES),
+      interpreterRequired: false,
+    }
+  }
+  const proficiency = randomItem(['Excellent', 'Good', 'Fair', 'Poor'])
+  return {
+    preferredLanguage: randomItem(OTHER_LANGUAGES),
+    communicationProficiency: proficiency,
+    modeOfCommunication: randomItem(COMMUNICATION_MODES),
+    interpreterRequired: proficiency === 'Poor' || (proficiency === 'Fair' && Math.random() < 0.5),
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Practitioner generation
+// ---------------------------------------------------------------------------
+
+type PractitionerRole = 'General Practitioner' | 'Practice Nurse'
+
+// GPs/doctors in primary care are conventionally always titled "Dr"; practice
+// nurses (any gender) conventionally use Mr/Mrs/Miss rather than "Nurse".
+function randomPractitioner(tempId: string, role: PractitionerRole): DraftPractitioner {
+  const gender: 'male' | 'female' = Math.random() < 0.5 ? 'male' : 'female'
+  const suffix = randomSdsSuffix()
+  const prefix = role === 'General Practitioner' ? 'Dr' : (gender === 'male' ? 'Mr' : randomItem(['Mrs', 'Miss']))
+  return {
+    _tempId: tempId,
+    prefix,
+    givenName: randomFirstName(gender),
+    familyName: randomItem(SURNAMES),
+    sdsUserId: `G${suffix}`,
+    sdsRoleProfileId: `R${suffix}`,
+    gender,
+    role,
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Next of kin
+// ---------------------------------------------------------------------------
+
+const RELATIONSHIPS = [
+  'Spouse', 'Partner', 'Parent', 'Son', 'Daughter', 'Sibling', 'Friend', 'Neighbour',
+] as const
+
+const SHARED_SURNAME_RELATIONSHIPS = new Set(['Spouse', 'Partner', 'Son', 'Daughter'])
+
+function randomContact(patientSurname: string): DraftContact {
+  const gender: 'male' | 'female' = Math.random() < 0.5 ? 'male' : 'female'
+  const relationship = randomItem(RELATIONSHIPS)
+  const sharesSurname = SHARED_SURNAME_RELATIONSHIPS.has(relationship) && Math.random() < 0.8
+  return {
+    _tempId: randomTempId(),
+    relationship,
+    prefix: patientPrefix(gender) || undefined,
+    givenName: randomFirstName(gender),
+    familyName: sharesSurname ? patientSurname : randomItem(SURNAMES),
+    phone: `07${randomDigits(9)}`,
+    gender,
+  }
+}
+
+function randomContacts(patientSurname: string): DraftContact[] {
+  const r = Math.random()
+  const count = r < 0.2 ? 0 : r < 0.9 ? 1 : 2
+  return Array.from({ length: count }, () => randomContact(patientSurname))
+}
+
+// ---------------------------------------------------------------------------
+// Draft factory
+// ---------------------------------------------------------------------------
 
 export function createSampleDraft(): DraftRecord {
+  const gender = randomPatientGender()
+  const town = randomItem(TOWNS)
+  const practiceName = randomPracticeName()
+  const practiceAddress = `1 ${randomStreetName()}, ${town.town}, ${randomPostcode(town.outcode)}`
+  const dob = randomDateString(1935, 2022)
+  const registrationStart = randomDateString(
+    Math.max(Number(dob.slice(0, 4)), 2005),
+    2024,
+  )
+
+  const [patientSurname, ...practitionerNames] = randomDistinct(SURNAMES, 4)
+  const communication = randomCommunication()
+
+  const hospitalNames = randomDistinct(HOSPITAL_NAMES, Math.random() < 0.5 ? 1 : 2)
+  const otherOrganisations: DraftOrganisation[] = [
+    ...hospitalNames.map(name => randomOrganisation(name)),
+    randomOrganisation(randomPracticeName(practiceName)),
+    randomOrganisation(randomPharmacyName()),
+  ]
+
   return {
     patient: {
       _tempId: 'patient-1',
-      nhsNumber: '9990000018',
+      nhsNumber: generateNhsNumber(),
       nhsNumberVerified: true,
-      prefix: 'Mrs',
-      givenName: 'Sarah Jane',
-      familyName: 'Thompson',
-      dateOfBirth: '1965-03-14',
-      gender: 'female',
+      prefix: patientPrefix(gender),
+      givenName: randomGivenName(gender),
+      familyName: patientSurname,
+      dateOfBirth: dob,
+      gender,
       isActive: true,
       registrationType: 'Regular',
-      registrationStart: '2010-04-01',
-      address: '14 Wellbrook Avenue, Leeds, LS7 3PQ',
-      phone: '0113 2468101',
+      registrationStart,
+      address: randomAddress(town),
+      phone: randomPhone(town.areaCode),
+      preferredLanguage: communication.preferredLanguage,
+      communicationProficiency: communication.communicationProficiency,
+      modeOfCommunication: communication.modeOfCommunication,
+      interpreterRequired: communication.interpreterRequired,
+      registeredGpTempId: 'prac-1',
+      contacts: randomContacts(patientSurname),
     },
     organisation: {
       _tempId: 'org-1',
-      name: 'The Wellbrook Surgery',
-      odsCode: 'A81001',
-      phone: '0113 2468100',
-      address: '1 Wellbrook Parade, Leeds, LS7 3PQ',
+      name: practiceName,
+      odsCode: randomOdsCode(),
+      phone: randomPhone(town.areaCode),
+      address: practiceAddress,
     },
-    organisations: [],
+    organisations: otherOrganisations,
     practitioners: [
-      {
-        _tempId: 'prac-1',
-        prefix: 'Dr',
-        givenName: 'Jonathan',
-        familyName: 'Clarke',
-        sdsUserId: 'G8134455',
-        sdsRoleProfileId: 'R8134455',
-        gender: 'male',
-      },
-      {
-        _tempId: 'prac-2',
-        prefix: 'Dr',
-        givenName: 'Amelia',
-        familyName: 'Osei',
-        sdsUserId: 'G8144566',
-        sdsRoleProfileId: 'R8144566',
-        gender: 'female',
-      },
-      {
-        _tempId: 'prac-3',
-        prefix: '',
-        givenName: 'Helen',
-        familyName: 'Griffiths',
-        sdsUserId: 'G8154677',
-        sdsRoleProfileId: 'R8154677',
-        gender: 'female',
-      },
+      { ...randomPractitioner('prac-1', 'General Practitioner'), familyName: practitionerNames[0] },
+      { ...randomPractitioner('prac-2', 'General Practitioner'), familyName: practitionerNames[1] },
+      { ...randomPractitioner('prac-3', 'Practice Nurse'), familyName: practitionerNames[2] },
     ],
     locations: [
       {
         _tempId: 'loc-1',
-        name: 'Wellbrook Surgery — Main Building',
-        address: '1 Wellbrook Parade, Leeds, LS7 3PQ',
+        name: `${practiceName} — Main Building`,
+        address: practiceAddress,
       },
     ],
     medications: [],

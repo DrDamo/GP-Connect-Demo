@@ -1,9 +1,10 @@
 import type { GpConnectImmunisation } from './types'
 import { getEntries, formatDate, resolvePractitionerRef, getExtensionValue, extractSnomedCode, extractId, fhirDateKey } from './utils'
 
+const IMMUNISATIONS_LIST_CODE = '1102181000000102'
+
 export function extractImmunisations(bundle: fhir3.Bundle): GpConnectImmunisation[] {
-  return getEntries<fhir3.Immunization>(bundle, 'Immunization')
-    .sort((a, b) => fhirDateKey(b.date).localeCompare(fhirDateKey(a.date)))
+  const immunizationEntries = getEntries<fhir3.Immunization>(bundle, 'Immunization')
     .map(resource => {
     const cast = resource as unknown as Record<string, unknown>
 
@@ -35,8 +36,10 @@ export function extractImmunisations(bundle: fhir3.Bundle): GpConnectImmunisatio
 
     const practitioners = resource.practitioner ?? []
     function extractPractitionerByRole(roleCode: string) {
-      const match = practitioners.find(p => p.role?.coding?.[0]?.code === roleCode)
-        ?? (roleCode === 'AP' ? practitioners.find(p => !(p.role?.coding?.[0]?.code)) : undefined)
+      // A single practitioner entry can carry more than one role code (e.g. both
+      // EP and AP in its role.coding array) — check all codings, not just the first.
+      const match = practitioners.find(p => p.role?.coding?.some(c => c.code === roleCode))
+        ?? (roleCode === 'AP' ? practitioners.find(p => !(p.role?.coding?.length)) : undefined)
       if (!match) return { name: undefined, id: undefined }
       const ref = (match.actor as fhir3.Reference | undefined)?.reference
       const display = (match.actor as fhir3.Reference | undefined)?.display
@@ -55,9 +58,14 @@ export function extractImmunisations(bundle: fhir3.Bundle): GpConnectImmunisatio
     const locationName = locationResource?.name
 
     const explanationReason = (cast.explanation as any)?.reason?.[0] as fhir3.CodeableConcept | undefined
-    const explanationCode = explanationReason?.coding?.[0]?.code
-    const explanationDisplay = explanationReason?.coding?.[0]?.display
-    const explanationText = explanationReason?.text
+    const explanationReasonNotGiven = (cast.explanation as any)?.reasonNotGiven?.[0] as fhir3.CodeableConcept | undefined
+    // When the vaccine wasn't given, the clinically meaningful reason lives in
+    // explanation.reasonNotGiven (e.g. "Did not attend") rather than explanation.reason.
+    const chosenExplanation = explanationReasonNotGiven ?? explanationReason
+    const explanationCode = chosenExplanation?.coding?.[0]?.code
+    const explanationDisplay = chosenExplanation?.coding?.[0]?.display
+    const explanationText = chosenExplanation?.text
+    const explanationIsReasonNotGiven = !!explanationReasonNotGiven
 
     return {
       id: resource.id ?? crypto.randomUUID(),
@@ -70,7 +78,11 @@ export function extractImmunisations(bundle: fhir3.Bundle): GpConnectImmunisatio
       vaccinationProcedureCode,
       vaccinationProcedureDisplay,
       vaccinationProcedureText,
-      vaccineCodeDisplay: vaccineCodings?.[0]?.display,
+      // The raw vaccineCode's own label — left blank (not falling back to the
+      // procedure name) when vaccineCode is a NullFlavor placeholder, so the
+      // "Vaccine" column faithfully reflects only what vaccineCode itself says.
+      vaccineCodeDisplay: resource.vaccineCode?.text
+        ?? (vaccineCodeIsNullFlavor ? undefined : vaccineCodings?.[0]?.display),
       dateGiven: formatDate(resource.date),
       dateRecorded,
       status: resource.status ?? 'unknown',
@@ -91,8 +103,48 @@ export function extractImmunisations(bundle: fhir3.Bundle): GpConnectImmunisatio
       explanationCode,
       explanationDisplay,
       explanationText,
+      explanationIsReasonNotGiven,
       parentPresent,
       notes: (resource.note ?? []).map(n => n.text ?? '').filter(Boolean),
     }
   })
+
+  // Immunisation-related Observations (declined/consent/contraindication/DNA)
+  // referenced by the primary Immunisations List belong alongside actual
+  // administered vaccines in this view — they also remain in Coded Data,
+  // since that's their canonical FHIR home.
+  const immsList = getEntries<fhir3.List>(bundle, 'List')
+    .find(list => list.code?.coding?.some(c => c.code === IMMUNISATIONS_LIST_CODE))
+  const observationIds = new Set(
+    (immsList?.entry ?? [])
+      .filter(e => e.item.reference?.startsWith('Observation/'))
+      .map(e => extractId(e.item.reference))
+      .filter((id): id is string => !!id)
+  )
+  const observationEntries: GpConnectImmunisation[] = getEntries<fhir3.Observation>(bundle, 'Observation')
+    .filter(obs => obs.id && observationIds.has(obs.id))
+    .map(obs => {
+      const coding = obs.code?.coding
+      const description = obs.code?.text
+        ?? coding?.find(c => c.system === 'http://snomed.info/sct')?.display
+        ?? coding?.[0]?.display
+        ?? 'Unknown'
+      // These Observations carry no vaccineCode of their own — their coded term
+      // belongs in the Procedure column, matching how real Immunizations use
+      // vaccinationProcedureDisplay for their coded entry.
+      const comment = (obs as unknown as { comment?: string }).comment
+      return {
+        id: obs.id!,
+        entryType: 'observation' as const,
+        vaccine: description,
+        vaccinationProcedureDisplay: description,
+        dateGiven: formatDate((obs as unknown as { effectiveDateTime?: string }).effectiveDateTime),
+        status: obs.status ?? 'unknown',
+        notes: comment ? comment.split('\n').map(line => line.trim()).filter(Boolean) : [],
+        codedDataId: obs.id,
+      }
+    })
+
+  return [...immunizationEntries, ...observationEntries]
+    .sort((a, b) => fhirDateKey(b.dateGiven).localeCompare(fhirDateKey(a.dateGiven)))
 }

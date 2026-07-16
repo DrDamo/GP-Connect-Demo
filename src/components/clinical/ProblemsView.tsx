@@ -5,6 +5,14 @@ import type { DomainColumn } from './DomainTable'
 import { ReferencedResources } from './ReferencedResources'
 import { ReferenceChip } from './ResourceCard'
 import { type DomainId } from './domains'
+import { SearchFilterBox } from './SearchFilterBox'
+
+function problemSearchText(p: GpConnectProblem): string {
+  return [
+    p.problem, p.significance, p.clinicalStatus, p.startDate, p.endDate, p.snomedCode, p.snomedDisplay,
+    p.assertedDate, p.asserter, ...p.notes, ...p.linkedItems.map(li => li.description),
+  ].filter(Boolean).join(' ').toLowerCase()
+}
 
 interface Props {
   bundle: GpConnectBundle
@@ -210,15 +218,20 @@ function ProblemSection({
 
 export function ProblemsView({ bundle, selectedId, onSelect, onJumpToSource, onJumpToRecord }: Props) {
   const { problems } = bundle
+  const [searchQuery, setSearchQuery] = useState('')
+  const trimmedQuery = searchQuery.trim().toLowerCase()
+  const filteredProblems = trimmedQuery
+    ? problems.filter(p => problemSearchText(p).includes(trimmedQuery))
+    : problems
 
-  const active          = problems
+  const active          = filteredProblems
     .filter(p => p.clinicalStatus === 'active')
     .sort((a, b) => {
       const order = (s?: string) => s?.toLowerCase() === 'major' ? 0 : 1
       return order(a.significance) - order(b.significance)
     })
-  const significantPast = problems.filter(p => p.clinicalStatus !== 'active' && p.significance?.toLowerCase() === 'major')
-  const minorPast       = problems.filter(p => p.clinicalStatus !== 'active' && p.significance?.toLowerCase() !== 'major')
+  const significantPast = filteredProblems.filter(p => p.clinicalStatus !== 'active' && p.significance?.toLowerCase() === 'major')
+  const minorPast       = filteredProblems.filter(p => p.clinicalStatus !== 'active' && p.significance?.toLowerCase() !== 'major')
 
   const total = problems.length
 
@@ -235,6 +248,14 @@ export function ProblemsView({ bundle, selectedId, onSelect, onJumpToSource, onJ
         </div>
         <span className="px-2 py-1 bg-nhs-blue text-white text-xs font-semibold rounded">GP Connect STU3</span>
       </div>
+
+      <SearchFilterBox
+        value={searchQuery}
+        onChange={setSearchQuery}
+        placeholder="Search problems…"
+        matchCount={filteredProblems.length}
+        totalCount={total}
+      />
 
       <ProblemSection
         title="Active" description="Current ongoing problems"

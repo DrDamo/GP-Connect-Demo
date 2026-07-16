@@ -5,6 +5,14 @@ import type { DomainColumn } from './DomainTable'
 import { ReferencedResources } from './ReferencedResources'
 import { ReferenceChip } from './ResourceCard'
 import { type DomainId } from './domains'
+import { SearchFilterBox } from './SearchFilterBox'
+
+function diaryEntrySearchText(e: GpConnectDiaryEntry): string {
+  return [
+    e.date, e.occurrenceStart, e.occurrenceEnd, e.description, e.priority, e.status, e.snomedCode,
+    e.clinician, e.intent, ...e.notes.flatMap(n => [n.text, n.author]),
+  ].filter(Boolean).join(' ').toLowerCase()
+}
 
 interface Props {
   bundle: GpConnectBundle
@@ -119,6 +127,11 @@ function DiaryEntryDetail({ entry, bundle, onJumpToSource, onJumpToRecord }: { e
 
 export function DiaryEntriesView({ bundle, selectedId, onSelect, onJumpToSource, onJumpToRecord }: Props) {
   const count = bundle.diaryEntries.length
+  const [searchQuery, setSearchQuery] = useState('')
+  const trimmedQuery = searchQuery.trim().toLowerCase()
+  const filteredEntries = trimmedQuery
+    ? bundle.diaryEntries.filter(e => diaryEntrySearchText(e).includes(trimmedQuery))
+    : bundle.diaryEntries
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -131,9 +144,16 @@ export function DiaryEntriesView({ bundle, selectedId, onSelect, onJumpToSource,
         </div>
         <span className="px-2 py-1 bg-nhs-blue text-white text-xs font-semibold rounded">GP Connect STU3</span>
       </div>
+      <SearchFilterBox
+        value={searchQuery}
+        onChange={setSearchQuery}
+        placeholder="Search diary entries…"
+        matchCount={filteredEntries.length}
+        totalCount={count}
+      />
       <DomainTable
         columns={COLUMNS}
-        items={bundle.diaryEntries}
+        items={filteredEntries}
         selectedId={selectedId}
         onSelect={onSelect}
         emptyMessage="No diary entries found in this bundle"

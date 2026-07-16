@@ -11,6 +11,12 @@ import { AuthGate } from './auth/AuthGate'
 import { SharedPatientsView } from './shared/SharedPatientsView'
 import { AccountPage } from './account/AccountPage'
 import { isSupabaseConfigured } from './lib/supabase'
+import { OnboardingProvider, useOnboarding } from './onboarding/OnboardingContext'
+import { GuideNavProvider } from './onboarding/GuideNavContext'
+import { TourOverlay } from './onboarding/TourOverlay'
+import { HelpMenu } from './onboarding/HelpMenu'
+import { InfoHint } from './onboarding/InfoHint'
+import { AppGuideView, type GuidePageId } from './onboarding/AppGuideView'
 import type { DraftRecord } from './builder/types'
 import { parseBundle, normalizePastedJson } from './fhir/parser'
 import { validateMedicationsBundle, cleanDanglingRefs } from './fhir/validator'
@@ -31,7 +37,7 @@ import type { ValidationResult, GpConnectMedicationsRecord } from './fhir/types'
 import type { DomainId } from './components/clinical/domains'
 import sampleBundle from './sample-data/medications-bundle.json'
 
-type ActiveTab = 'clinical' | 'raw' | 'validation' | 'inspector' | 'training' | 'builder' | 'patients' | 'account'
+type ActiveTab = 'clinical' | 'raw' | 'validation' | 'inspector' | 'training' | 'builder' | 'patients' | 'account' | 'app-guide'
 
 interface LoadedBundle {
   source: string
@@ -54,8 +60,44 @@ function AppContent() {
   const [pendingSharedDraft, setPendingSharedDraft] = useState<DraftRecord | null>(null)
   const [pendingSharedDraftId, setPendingSharedDraftId] = useState<string | null>(null)
   const [pendingSharedDraftVersion, setPendingSharedDraftVersion] = useState<number | null>(null)
+  const [guidePage, setGuidePage] = useState<GuidePageId | null>(null)
+  const [guideAnchor, setGuideAnchor] = useState<string | null>(null)
   const prevTabRef = useRef<ActiveTab>('clinical')
   const builderDirtyRef = useRef(false)
+
+  const { startTour, isTourCompleted } = useOnboarding()
+
+  // `tab` keeps its last value (e.g. 'clinical') while the home/get-started
+  // screen is shown, since that screen is gated on `!loaded` rather than a
+  // tab value of its own — so the header help menu needs this derived value
+  // instead of raw `tab` to know what's actually on screen.
+  const STANDALONE_TABS: ActiveTab[] = ['builder', 'account', 'patients', 'app-guide', 'training']
+  const visibleTab: ActiveTab | 'home' =
+    !loaded && !STANDALONE_TABS.includes(tab) ? 'home' : tab
+
+  const handleOpenGuide = useCallback((guideFile: string, anchor: string) => {
+    prevTabRef.current = tab
+    setGuidePage(guideFile as GuidePageId)
+    setGuideAnchor(anchor)
+    setTab('app-guide')
+  }, [tab])
+
+  // Auto-trigger short contextual tours the first time a user reaches each area.
+  useEffect(() => {
+    if (!loaded && !isTourCompleted('home')) startTour('home')
+  }, [loaded, isTourCompleted, startTour])
+
+  useEffect(() => {
+    if (loaded && tab === 'clinical' && !isTourCompleted('clinical-view')) startTour('clinical-view')
+  }, [loaded, tab, isTourCompleted, startTour])
+
+  useEffect(() => {
+    if (tab === 'inspector' && !isTourCompleted('inspector')) startTour('inspector')
+  }, [tab, isTourCompleted, startTour])
+
+  useEffect(() => {
+    if (tab === 'builder' && !isTourCompleted('builder')) startTour('builder')
+  }, [tab, isTourCompleted, startTour])
 
   const handleBuilderDirtyChange = useCallback((isDirty: boolean) => {
     builderDirtyRef.current = isDirty
@@ -187,7 +229,9 @@ function AppContent() {
   }
 
   return (
+    <GuideNavProvider value={{ openGuide: handleOpenGuide }}>
     <div className="h-screen flex flex-col bg-nhs-grey-5 overflow-hidden">
+      <TourOverlay currentTab={tab} setTab={setTab} />
       {/* NHS-style header */}
       <header className="bg-nhs-blue text-white shadow-md shrink-0">
         <div className="max-w-screen-2xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -203,6 +247,7 @@ function AppContent() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <HelpMenu currentTab={visibleTab} onOpenGuide={() => handleOpenGuide('overview', '')} />
             <button
               onClick={cycleTheme}
               className="text-white opacity-70 hover:opacity-100 border border-white/40 hover:border-white/80 p-1.5 rounded transition-all"
@@ -321,6 +366,23 @@ function AppContent() {
             <SharedPatientsView onLoadDraft={handleLoadSharedDraft} />
           </div>
         </main>
+      ) : tab === 'app-guide' ? (
+        <main className="flex-1 flex flex-col min-h-0 max-w-screen-2xl mx-auto w-full px-4 pt-3 pb-4 gap-3">
+          <div className="flex items-center gap-1 border-b border-nhs-grey-4">
+            <button
+              onClick={() => setTab(prevTabRef.current === 'app-guide' ? 'clinical' : prevTabRef.current)}
+              className="px-4 py-2 text-sm font-medium rounded-t transition-colors text-nhs-grey-2 hover:text-nhs-blue"
+            >
+              ← Back
+            </button>
+            <button className="px-4 py-2 text-sm font-medium rounded-t bg-white border border-b-white border-nhs-grey-4 text-nhs-blue -mb-px">
+              App Guide
+            </button>
+          </div>
+          <div className="flex-1 min-h-0 bg-white rounded-lg border border-nhs-grey-4 overflow-hidden">
+            <AppGuideView initialPage={guidePage} initialAnchor={guideAnchor} />
+          </div>
+        </main>
       ) : tab === 'training' ? (
         <main className="flex-1 flex flex-col min-h-0 max-w-screen-2xl mx-auto w-full px-4 pt-3 pb-4 gap-3">
           <div className="flex items-center gap-1 border-b border-nhs-grey-4">
@@ -373,16 +435,21 @@ function AppContent() {
                   </div>
                 </div>
 
-                <FileUpload onLoad={handleLoad} />
+                <div data-tour="home-file-upload">
+                  <FileUpload onLoad={handleLoad} />
+                </div>
 
-                <div>
+                <div data-tour="home-paste-json">
                   {!showPaste ? (
-                    <button
-                      onClick={() => setShowPaste(true)}
-                      className="w-full py-2 px-4 border border-nhs-grey-4 dark:border-gray-600 text-nhs-grey-2 dark:text-gray-300 rounded-lg text-sm hover:border-nhs-blue hover:text-nhs-blue transition-colors"
-                    >
-                      Paste FHIR JSON
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setShowPaste(true)}
+                        className="flex-1 py-2 px-4 border border-nhs-grey-4 dark:border-gray-600 text-nhs-grey-2 dark:text-gray-300 rounded-lg text-sm hover:border-nhs-blue hover:text-nhs-blue transition-colors"
+                      >
+                        Paste FHIR JSON
+                      </button>
+                      <InfoHint topic="home.paste-json" />
+                    </div>
                   ) : (
                     <div className="space-y-2">
                       <textarea
@@ -418,21 +485,27 @@ function AppContent() {
                   </div>
                 )}
 
-                <div className="border-t border-nhs-grey-4 dark:border-gray-700 pt-4 space-y-2">
+                <div className="border-t border-nhs-grey-4 dark:border-gray-700 pt-4 space-y-2" data-tour="home-sample-data">
                   <p className="text-xs font-medium text-nhs-grey-2 dark:text-gray-400 uppercase tracking-wide">Sample data</p>
-                  <button
-                    onClick={handleLoadFullSample}
-                    className="w-full py-2.5 px-4 bg-nhs-blue text-white rounded-lg text-sm font-medium hover:bg-nhs-dark-blue transition-colors"
-                  >
-                    Load full GP Connect sample
-                    <span className="ml-2 opacity-75 text-xs font-normal">all domains · 2.4 MB</span>
-                  </button>
-                  <button
-                    onClick={handleLoadSample}
-                    className="w-full py-2 px-4 border border-nhs-grey-4 dark:border-gray-600 text-nhs-grey-2 dark:text-gray-300 rounded-lg text-sm hover:border-nhs-blue hover:text-nhs-blue transition-colors"
-                  >
-                    Load medications-only sample
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleLoadFullSample}
+                      className="flex-1 py-2.5 px-4 bg-nhs-blue text-white rounded-lg text-sm font-medium hover:bg-nhs-dark-blue transition-colors"
+                    >
+                      Load full GP Connect sample
+                      <span className="ml-2 opacity-75 text-xs font-normal">all domains · 2.4 MB</span>
+                    </button>
+                    <InfoHint topic="home.sample-full" className="text-nhs-grey-2 dark:text-gray-400" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleLoadSample}
+                      className="flex-1 py-2 px-4 border border-nhs-grey-4 dark:border-gray-600 text-nhs-grey-2 dark:text-gray-300 rounded-lg text-sm hover:border-nhs-blue hover:text-nhs-blue transition-colors"
+                    >
+                      Load medications-only sample
+                    </button>
+                    <InfoHint topic="home.sample-meds" className="text-nhs-grey-2 dark:text-gray-400" />
+                  </div>
                   <p className="text-xs text-nhs-grey-3 dark:text-gray-500">
                     Full sample covers all clinical domains: Medications, Allergies, Problems, Consultations, Immunisations, Investigations, Referrals, Diary Entries &amp; Coded Data
                   </p>
@@ -455,6 +528,7 @@ function AppContent() {
                   </div>
                   <button
                     onClick={() => setTab('builder')}
+                    data-tour="home-builder"
                     className="w-full py-2.5 px-4 bg-nhs-blue text-white rounded-lg text-sm font-medium hover:bg-nhs-dark-blue transition-colors"
                   >
                     Build a patient record →
@@ -462,6 +536,7 @@ function AppContent() {
                   {isSupabaseConfigured && (
                     <button
                       onClick={() => setTab('patients')}
+                      data-tour="home-shared-patients"
                       className="w-full py-2 px-4 border border-nhs-grey-4 dark:border-gray-600 text-nhs-grey-2 dark:text-gray-300 rounded-lg text-sm hover:border-nhs-blue hover:text-nhs-blue transition-colors"
                     >
                       Shared patients →
@@ -497,11 +572,12 @@ function AppContent() {
         <main className={`flex-1 flex flex-col w-full p-4 gap-4 min-h-0 ${tab !== 'inspector' ? 'max-w-screen-2xl mx-auto' : ''}`}>
           {/* Tabs */}
           <div className="flex gap-1 border-b border-nhs-grey-4">
-            {(['clinical', 'inspector', 'raw', 'validation', 'training'] as ActiveTab[]).map(t => (
+            {(['clinical', 'inspector', 'raw', 'validation', 'training', 'app-guide'] as ActiveTab[]).map(t => (
               <button
                 key={t}
                 onClick={() => {
                   if (t === 'training') { prevTabRef.current = tab; setTrainingPage(null) }
+                  if (t === 'app-guide') { prevTabRef.current = tab; setGuidePage(null); setGuideAnchor(null) }
                   setTab(t)
                 }}
                 className={`px-4 py-2 text-sm font-medium rounded-t transition-colors capitalize ${
@@ -510,7 +586,7 @@ function AppContent() {
                     : 'text-nhs-grey-2 hover:text-nhs-blue'
                 }`}
               >
-                {t === 'clinical' ? 'Clinical View' : t === 'raw' ? 'Raw Source' : t === 'validation' ? 'Validation' : t === 'inspector' ? 'Inspector' : 'Training'}
+                {t === 'clinical' ? 'Clinical View' : t === 'raw' ? 'Raw Source' : t === 'validation' ? 'Validation' : t === 'inspector' ? 'Inspector' : t === 'app-guide' ? 'App Guide' : 'Training'}
                 {t === 'validation' && loaded.validation.issues.some(i => i.severity === 'error') && (
                   <span className="ml-1.5 px-1.5 py-0.5 text-xs bg-nhs-red text-white rounded-full">
                     {loaded.validation.issues.filter(i => i.severity === 'error').length}
@@ -546,7 +622,7 @@ function AppContent() {
             )}
 
             {tab === 'validation' && (
-              <div className="bg-white rounded-lg border border-nhs-grey-4 p-4">
+              <div className="bg-white rounded-lg border border-nhs-grey-4 h-full overflow-hidden p-4">
                 <ValidationPanel
                   result={loaded.validation}
                   onCleanRefs={() => {
@@ -579,13 +655,16 @@ function AppContent() {
         </p>
       </footer>
     </div>
+    </GuideNavProvider>
   )
 }
 
 export default function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <OnboardingProvider>
+        <AppContent />
+      </OnboardingProvider>
     </AuthProvider>
   )
 }

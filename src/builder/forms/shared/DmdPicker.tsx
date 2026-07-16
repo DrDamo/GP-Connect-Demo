@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { FormField } from './FormField'
+import { useAnchoredDropdown } from './useAnchoredDropdown'
+import { InfoHint } from '../../../onboarding/InfoHint'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -77,6 +80,9 @@ export function DmdPicker({ value, onChange, code, dmdType = 'VMP', label = 'dm+
   const inputRef = useRef<HTMLInputElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const dropdownOpen = isOpen && results.length > 0
+  const dropdownPos = useAnchoredDropdown(inputRef, dropdownOpen)
 
   // Re-read config if SnomedPicker updates it in the same session
   useEffect(() => {
@@ -185,6 +191,7 @@ export function DmdPicker({ value, onChange, code, dmdType = 'VMP', label = 'dm+
           <span className="text-xs text-nhs-grey-3 self-center ml-1">
             {TYPE_LABELS[activeType]}
           </span>
+          <InfoHint topic="builder.dmd-picker" className="self-center" />
         </div>
 
         {/* Search row */}
@@ -227,10 +234,11 @@ export function DmdPicker({ value, onChange, code, dmdType = 'VMP', label = 'dm+
 
           {error && <p className="mt-1 text-xs text-nhs-red">{error}</p>}
 
-          {isOpen && results.length > 0 && (
+          {dropdownOpen && dropdownPos && createPortal(
             <div
               ref={dropdownRef}
-              className="absolute top-full left-0 right-0 z-40 mt-0.5 bg-white dark:bg-gray-900 border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg shadow-lg overflow-hidden"
+              style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width }}
+              className="z-50 max-h-80 overflow-y-auto bg-white dark:bg-gray-900 border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg shadow-lg"
             >
               {results.map((r, idx) => (
                 <button
@@ -250,7 +258,8 @@ export function DmdPicker({ value, onChange, code, dmdType = 'VMP', label = 'dm+
                   </span>
                 </button>
               ))}
-            </div>
+            </div>,
+            document.body,
           )}
         </div>
       </div>

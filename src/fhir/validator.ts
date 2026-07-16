@@ -182,7 +182,11 @@ export function validateBundle(bundle: fhir3.Bundle): ValidationResult {
   for (const e of encounters) {
     const path = `Encounter/${e.id}`
     req(issues, !!e.status, 'error', 'Encounter.status is required', path, e.id)
-    req(issues, !!e.class, 'error', 'Encounter.class is required', path, e.id)
+    // Encounter.class is 1..1 in base FHIR, but GP Connect's CareConnect-GPC-Encounter-1
+    // profile doesn't carry that requirement forward, and most GP source systems (EMIS,
+    // TPP) don't populate it for primary-care encounters — so its absence is a minor data
+    // completeness note, not a structural validation error.
+    req(issues, !!e.class, 'warning', 'Encounter.class is missing', path, e.id)
   }
 
   // Immunization

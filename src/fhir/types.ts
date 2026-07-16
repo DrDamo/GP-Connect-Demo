@@ -100,6 +100,20 @@ export interface GpConnectPatient {
   email?: string
   registeredGpName?: string
   registeredGpId?: string
+  preferredLanguage?: string
+  interpreterRequired?: boolean
+  communicationProficiency?: string
+  modeOfCommunication?: string
+  managingOrganisationName?: string
+  managingOrganisationId?: string
+  contacts?: GpConnectContact[]
+}
+
+export interface GpConnectContact {
+  name?: string
+  relationship?: string
+  phone?: string
+  gender?: string
 }
 
 export interface GpConnectAllergyNote {
@@ -192,6 +206,10 @@ export interface GpConnectConsultation {
 
 export interface GpConnectImmunisation {
   id: string
+  /** 'observation' for immunisation-related Observations (declined/consent/contraindication/DNA)
+   *  pulled in from the Immunisations List alongside actual administered vaccines — these also
+   *  appear in Coded Data since that's their canonical FHIR home. Absent for real Immunizations. */
+  entryType?: 'observation'
   vaccine: string
   snomedCode?: string
   vaccinationProcedureCode?: string
@@ -218,8 +236,12 @@ export interface GpConnectImmunisation {
   explanationCode?: string
   explanationDisplay?: string
   explanationText?: string
+  /** True when explanationCode/Display/Text came from explanation.reasonNotGiven rather than explanation.reason. */
+  explanationIsReasonNotGiven?: boolean
   parentPresent?: boolean
   notes: string[]
+  /** For entryType 'observation' — the id of the matching Coded Data item (same underlying Observation). */
+  codedDataId?: string
 }
 
 export interface GpConnectSpecimen {
@@ -229,6 +251,7 @@ export interface GpConnectSpecimen {
   collectedDateTime?: string
   receivedTime?: string
   status?: string
+  note?: string
 }
 
 export interface GpConnectProcedureRequest {
@@ -273,9 +296,11 @@ export interface GpConnectTestGroup {
   name: string
   snomedCode?: string
   comment?: string
+  commentObservationId?: string
   date?: string
   interpretation?: string
   isTransferDegraded?: boolean
+  specimen?: GpConnectSpecimen
   results: GpConnectInvestigationResult[]
 }
 
@@ -296,6 +321,10 @@ export interface GpConnectInvestigation {
   interpretation?: string
   performer?: string
   performerId?: string
+  // Every actor in DiagnosticReport.performer[] (can mix Organizations,
+  // Practitioners, and HealthcareServices) — performer/performerId above are
+  // just performers[0], kept for the table's Requestor column.
+  performers?: Array<{ type: 'Practitioner' | 'Organisation' | 'HealthcareService'; id: string }>
   encounterId?: string
   specimen?: GpConnectSpecimen
   procedureRequest?: GpConnectProcedureRequest

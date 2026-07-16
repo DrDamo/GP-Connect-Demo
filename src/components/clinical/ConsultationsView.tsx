@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type {
   GpConnectBundle,
   GpConnectConsultation,
+  GpConnectConsultationCategory,
   GpConnectConsultationItem,
   GpConnectConsultationTopic,
 } from '../../fhir/types'
@@ -10,6 +11,8 @@ import type { DomainColumn } from './DomainTable'
 import { ReferencedResources } from './ReferencedResources'
 import { ReferenceChip } from './ResourceCard'
 import { type DomainId } from './domains'
+import { InfoHint } from '../../onboarding/InfoHint'
+import { SearchFilterBox } from './SearchFilterBox'
 
 interface Props {
   bundle: GpConnectBundle
@@ -50,6 +53,8 @@ const RESOURCE_TYPE_BADGE: Record<string, string> = {
 interface ItemContent {
   label: string
   badge: string
+  value?: string
+  comment?: string
   fields: Array<{ key: string; value: string }>
   navId: string
   navDomain?: DomainId
@@ -124,8 +129,9 @@ function resolveContent(bundle: GpConnectBundle, item: GpConnectConsultationItem
           badge: coded.category ?? 'Observation',
           navId: coded.id,
           navDomain: 'coded-data',
+          value: valueText || undefined,
+          comment: coded.comment,
           fields: [
-            valueText    ? { key: 'Value', value: valueText }  : null,
             coded.date   ? { key: 'Date',  value: coded.date } : null,
           ].filter((f): f is { key: string; value: string } => f !== null),
         }
@@ -140,8 +146,9 @@ function resolveContent(bundle: GpConnectBundle, item: GpConnectConsultationItem
             badge: 'Investigation',
             navId: result.reportId,
             navDomain: 'investigations',
+            value: valueText || undefined,
+            comment: result.comment,
             fields: [
-              valueText  ? { key: 'Value',  value: valueText }   : null,
               inv.name   ? { key: 'Report', value: inv.name }    : null,
               inv.date   ? { key: 'Date',   value: inv.date }    : null,
             ].filter((f): f is { key: string; value: string } => f !== null),
@@ -255,69 +262,129 @@ function resolveContent(bundle: GpConnectBundle, item: GpConnectConsultationItem
   }
 }
 
+// Fields whose value duplicates the consultation's own encounter date are
+// redundant within recorded content and are hidden.
+const DATE_FIELD_KEYS = new Set(['Date', 'Date given'])
+
+function itemContentText(bundle: GpConnectBundle, item: GpConnectConsultationItem): string {
+  const content = resolveContent(bundle, item)
+  return [
+    content.label, content.value, content.comment, content.badge, item.narrativeText,
+    ...content.fields.map(f => f.value),
+  ].filter(Boolean).join(' ')
+}
+
+function consultationSearchText(con: GpConnectConsultation, bundle: GpConnectBundle): string {
+  const itemTexts = con.topics.flatMap(t => [
+    t.title,
+    ...t.items.map(i => itemContentText(bundle, i)),
+    ...t.categories.flatMap(c => [c.title, ...c.items.map(i => itemContentText(bundle, i))]),
+  ])
+  return [
+    con.type, con.clinician, con.organisation, con.date, con.endDate,
+    con.encounterClass, con.encounterStatus, ...itemTexts,
+  ].filter(Boolean).join(' ').toLowerCase()
+}
+
 function ConsultationItemCard({
   item,
   bundle,
+  encounterDate,
   onJumpToSource,
   onJumpToRecord,
 }: {
   item: GpConnectConsultationItem
   bundle: GpConnectBundle
+  encounterDate?: string
   onJumpToSource?: (id: string) => void
   onJumpToRecord?: (domain: DomainId, id: string) => void
 }) {
   const content = resolveContent(bundle, item)
+  const fields = content.fields.filter(
+    f => !(DATE_FIELD_KEYS.has(f.key) && encounterDate && f.value === encounterDate)
+  )
+
+  const canJumpToSource = !!(onJumpToSource && item.resourceId)
+  const canJumpToRecord = !!(content.navDomain && onJumpToRecord)
+
   return (
-    <div className="rounded border border-nhs-grey-4 bg-white p-2.5 space-y-1.5">
-      <div className="flex items-start gap-2 min-w-0">
-        <span className="shrink-0 mt-0.5 text-[10px] px-1.5 py-0.5 rounded bg-nhs-blue/10 text-nhs-blue border border-nhs-blue/20 font-semibold">
+    <div
+      onClick={canJumpToSource ? () => onJumpToSource!(item.resourceId) : undefined}
+      className={`rounded border border-nhs-grey-4 bg-white p-2.5 ${canJumpToSource ? 'cursor-pointer hover:border-nhs-blue/40 hover:bg-blue-50/40 transition-colors' : ''}`}
+      title={canJumpToSource ? 'Click to view FHIR source' : undefined}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1 space-y-1.5">
+          {item.narrativeText !== undefined ? (
+            <span className="text-xs text-nhs-grey-1 min-w-0 whitespace-pre-wrap break-words block">{content.label}</span>
+          ) : (
+            <span className="text-xs text-nhs-grey-1 min-w-0 block">
+              <span className="font-medium">{content.label}</span>
+              {content.value && <span className="font-semibold"> {content.value}</span>}
+              {content.comment && <span className="italic text-nhs-grey-3"> — {content.comment}</span>}
+            </span>
+          )}
+          {fields.length > 0 && (
+            <div className="flex flex-wrap gap-x-4 gap-y-0.5">
+              {fields.map(f => (
+                <span key={f.key} className="text-[10px] text-nhs-grey-3">
+                  {f.key}: <span className="text-nhs-grey-2">{f.value}</span>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+        <span
+          onClick={canJumpToRecord ? e => { e.stopPropagation(); onJumpToRecord!(content.navDomain!, content.navId) } : undefined}
+          className={`shrink-0 inline-block text-[10px] px-1.5 py-0.5 rounded bg-nhs-blue/10 text-nhs-blue border border-nhs-blue/20 font-semibold whitespace-nowrap ${canJumpToRecord ? 'cursor-pointer hover:bg-nhs-blue/20' : ''}`}
+          title={canJumpToRecord ? 'Click to go to record' : undefined}
+        >
           {content.badge}
         </span>
-        {item.narrativeText !== undefined ? (
-          <span className="text-xs text-nhs-grey-1 min-w-0 whitespace-pre-wrap break-words">{content.label}</span>
-        ) : (
-          <span className="text-xs font-medium text-nhs-grey-1 min-w-0">{content.label}</span>
-        )}
-      </div>
-      {content.fields.length > 0 && (
-        <div className="flex flex-wrap gap-x-4 gap-y-0.5 pl-0">
-          {content.fields.map(f => (
-            <span key={f.key} className="text-[10px] text-nhs-grey-3">
-              {f.key}: <span className="text-nhs-grey-2">{f.value}</span>
-            </span>
-          ))}
-        </div>
-      )}
-      <div className="flex gap-3">
-        {content.navDomain && onJumpToRecord && (
-          <button
-            onClick={() => onJumpToRecord(content.navDomain!, content.navId)}
-            className="text-[11px] text-nhs-blue hover:underline"
-          >
-            Go to record →
-          </button>
-        )}
-        {onJumpToSource && item.resourceId && (
-          <button
-            onClick={() => onJumpToSource(item.resourceId)}
-            className="text-[11px] text-nhs-grey-3 hover:text-nhs-grey-1 hover:underline"
-          >
-            View FHIR ↗
-          </button>
-        )}
       </div>
     </div>
   )
 }
 
+const CIRCLED_DIGITS = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩', '⑪', '⑫', '⑬', '⑭', '⑮', '⑯', '⑰', '⑱', '⑲', '⑳']
+
+function circledNumber(n: number): string {
+  return CIRCLED_DIGITS[n - 1] ?? `(${n})`
+}
+
+// Some source systems split a topic's categories across several List
+// resources with the same title (e.g. "Additional" appearing 3 times,
+// interspersed with other categories). Merge same-titled categories into
+// one group, in order of first appearance, so all items of a category
+// display together instead of as scattered, disjoint blocks.
+function groupCategoriesByTitle(categories: GpConnectConsultationCategory[]): GpConnectConsultationCategory[] {
+  const order: string[] = []
+  const groups = new Map<string, GpConnectConsultationCategory>()
+  for (const cat of categories) {
+    const key = cat.title ?? ''
+    const existing = groups.get(key)
+    if (existing) {
+      existing.items.push(...cat.items)
+    } else {
+      order.push(key)
+      groups.set(key, { id: cat.id, title: cat.title, items: [...cat.items] })
+    }
+  }
+  return order.map(key => groups.get(key)!)
+}
+
 function TopicSection({
   topic,
+  topicNumber,
   bundle,
+  encounterDate,
   onJumpToSource,
   onJumpToRecord,
 }: {
   topic: GpConnectConsultationTopic
+  topicNumber?: number
   bundle: GpConnectBundle
+  encounterDate?: string
   onJumpToSource?: (id: string) => void
   onJumpToRecord?: (domain: DomainId, id: string) => void
 }) {
@@ -327,41 +394,48 @@ function TopicSection({
 
   return (
     <div className="space-y-2">
-      {topic.title && (
-        <div className="flex items-center justify-between gap-2 border-b border-nhs-grey-4 pb-1">
-          <span className="text-xs font-semibold text-nhs-grey-2">{topic.title}</span>
-          {onJumpToSource && topic.id && (
-            <button
-              onClick={() => onJumpToSource(topic.id)}
-              className="text-[11px] text-nhs-grey-3 hover:text-nhs-grey-1 hover:underline shrink-0"
-            >
-              View FHIR ↗
-            </button>
+      <div className="flex items-center justify-between gap-2 border-b border-nhs-grey-4 pb-1">
+        <span className="flex items-center gap-1.5 text-sm font-semibold text-nhs-grey-2">
+          {topicNumber && (
+            <span className="inline-flex items-center gap-1 text-nhs-blue" aria-label={`Topic ${topicNumber}`}>
+              {circledNumber(topicNumber)}
+              {topicNumber === 1 && <InfoHint topic="clinical.consultations.topic-numbers" />}
+            </span>
           )}
-        </div>
-      )}
+          {topic.title || <span className="italic font-normal text-nhs-grey-3">{'< Untitled >'}</span>}
+        </span>
+        {onJumpToSource && topic.id && (
+          <button
+            onClick={() => onJumpToSource(topic.id)}
+            className="text-[11px] text-nhs-grey-3 hover:text-nhs-grey-1 hover:underline shrink-0"
+          >
+            View FHIR ↗
+          </button>
+        )}
+      </div>
       {hasCategories ? (
-        topic.categories.map(cat => (
-          <div key={cat.id} className="space-y-1.5">
+        groupCategoriesByTitle(topic.categories).map(cat => (
+          <div key={cat.id} className="flex gap-3">
             {cat.title && (
-              <div className="flex items-center justify-between gap-2">
+              <div className="shrink-0 w-28">
                 <span className="text-[10px] font-semibold text-nhs-grey-3 uppercase tracking-wide">{cat.title}</span>
                 {onJumpToSource && cat.id && (
                   <button
                     onClick={() => onJumpToSource(cat.id)}
-                    className="text-[11px] text-nhs-grey-3 hover:text-nhs-grey-1 hover:underline shrink-0 normal-case tracking-normal font-normal"
+                    className="block mt-0.5 text-[11px] text-nhs-grey-3 hover:text-nhs-grey-1 hover:underline normal-case tracking-normal font-normal"
                   >
                     View FHIR ↗
                   </button>
                 )}
               </div>
             )}
-            <div className="space-y-1.5">
+            <div className="flex-1 min-w-0 space-y-1.5">
               {cat.items.map((item, i) => (
                 <ConsultationItemCard
                   key={item.resourceId || i}
                   item={item}
                   bundle={bundle}
+                  encounterDate={encounterDate}
                   onJumpToSource={onJumpToSource}
                   onJumpToRecord={onJumpToRecord}
                 />
@@ -376,6 +450,7 @@ function TopicSection({
               key={item.resourceId || i}
               item={item}
               bundle={bundle}
+              encounterDate={encounterDate}
               onJumpToSource={onJumpToSource}
               onJumpToRecord={onJumpToRecord}
             />
@@ -475,12 +550,17 @@ function ConsultationDetail({
       />
       {hasContent && (
         <div className="border-t border-nhs-blue/20 pt-3 space-y-4">
-          <h4 className="text-xs font-semibold text-nhs-grey-2 uppercase tracking-wide">Recorded content</h4>
-          {consultation.topics.map(topic => (
+          <h4 className="text-xs font-semibold text-nhs-grey-2 uppercase tracking-wide flex items-center gap-1">
+            Recorded content
+            <InfoHint topic="clinical.consultations.item-click-zones" />
+          </h4>
+          {consultation.topics.map((topic, i) => (
             <TopicSection
               key={topic.id}
               topic={topic}
+              topicNumber={consultation.topics.length > 1 ? i + 1 : undefined}
               bundle={bundle}
+              encounterDate={consultation.date}
               onJumpToSource={onJumpToSource}
               onJumpToRecord={onJumpToRecord}
             />
@@ -493,21 +573,34 @@ function ConsultationDetail({
 
 export function ConsultationsView({ bundle, selectedId, onSelect, onJumpToSource, onJumpToRecord }: Props) {
   const count = bundle.consultations.length
+  const [searchQuery, setSearchQuery] = useState('')
+  const trimmedQuery = searchQuery.trim().toLowerCase()
+  const filteredConsultations = trimmedQuery
+    ? bundle.consultations.filter(c => consultationSearchText(c, bundle).includes(trimmedQuery))
+    : bundle.consultations
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-base font-semibold text-nhs-grey-1">Consultations</h2>
-          <p className="text-xs text-nhs-grey-3 mt-0.5">
+          <p className="text-xs text-nhs-grey-3 mt-0.5 flex items-center gap-1">
             {count} record{count !== 1 ? 's' : ''}
             {onSelect ? ' · click a row to expand' : ''}
+            <InfoHint topic="clinical.consultations.items-count" />
           </p>
         </div>
         <span className="px-2 py-1 bg-nhs-blue text-white text-xs font-semibold rounded">GP Connect STU3</span>
       </div>
+      <SearchFilterBox
+        value={searchQuery}
+        onChange={setSearchQuery}
+        placeholder="Search consultations…"
+        matchCount={filteredConsultations.length}
+        totalCount={count}
+      />
       <DomainTable
         columns={COLUMNS}
-        items={bundle.consultations}
+        items={filteredConsultations}
         selectedId={selectedId}
         onSelect={onSelect}
         emptyMessage="No consultation records found in this bundle"

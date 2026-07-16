@@ -5,6 +5,16 @@ import type { DomainColumn } from './DomainTable'
 import { ReferencedResources } from './ReferencedResources'
 import { ReferenceChip } from './ResourceCard'
 import { type DomainId } from './domains'
+import { InfoHint } from '../../onboarding/InfoHint'
+import { SearchFilterBox } from './SearchFilterBox'
+
+function codedDataSearchText(item: GpConnectCodedDataItem): string {
+  return [
+    item.description, item.category, item.snomedCode, item.date, item.value, item.unit,
+    item.performer, item.organisation, item.comment, item.interpretation,
+    ...(item.components ?? []).flatMap(c => [c.name, c.value, c.unit, c.referenceRange, c.interpretation]),
+  ].filter(Boolean).join(' ').toLowerCase()
+}
 
 interface Props {
   bundle: GpConnectBundle
@@ -58,7 +68,7 @@ const COLUMNS: DomainColumn<GpConnectCodedDataItem>[] = [
           return [sys.value + '/' + dia.value, unit].filter(Boolean).join(' ')
         }
       }
-      return '—'
+      return ''
     },
   },
   {
@@ -167,6 +177,11 @@ function CodedDataDetail({ item, bundle, onJumpToSource, onJumpToRecord }: { ite
 
 export function CodedDataView({ bundle, selectedId, onSelect, onJumpToSource, onJumpToRecord }: Props) {
   const count = bundle.codedData.length
+  const [searchQuery, setSearchQuery] = useState('')
+  const trimmedQuery = searchQuery.trim().toLowerCase()
+  const filteredCodedData = trimmedQuery
+    ? bundle.codedData.filter(i => codedDataSearchText(i).includes(trimmedQuery))
+    : bundle.codedData
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -184,10 +199,19 @@ export function CodedDataView({ bundle, selectedId, onSelect, onJumpToSource, on
           <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20A10 10 0 0012 2z" />
         </svg>
         Laboratory investigation results are excluded from this view — see the Investigations section.
+        <InfoHint topic="clinical.coded-data.scope-note" />
+        <InfoHint topic="clinical.coded-data.bp-pairing" />
       </div>
+      <SearchFilterBox
+        value={searchQuery}
+        onChange={setSearchQuery}
+        placeholder="Search coded data…"
+        matchCount={filteredCodedData.length}
+        totalCount={count}
+      />
       <DomainTable
         columns={COLUMNS}
-        items={bundle.codedData}
+        items={filteredCodedData}
         selectedId={selectedId}
         onSelect={onSelect}
         emptyMessage="No coded data records found in this bundle"

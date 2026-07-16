@@ -1,11 +1,24 @@
-import type { GpConnectPatient } from './types'
+import type { GpConnectPatient, GpConnectContact } from './types'
 
 export type AnyResource = fhir3.Resource & { resourceType: string }
 
+// Some vendor exports include the exact same resource id twice within a
+// single bundle (invalid per the FHIR spec, but seen in real GP Connect
+// exports) — de-duplicate by id, keeping the first occurrence, so callers
+// never see the same clinical record rendered as two rows.
 export function getEntries<T extends fhir3.Resource>(bundle: fhir3.Bundle, resourceType: string): T[] {
-  return (bundle.entry ?? [])
-    .map(e => e.resource as AnyResource | undefined)
-    .filter((r): r is T & AnyResource => r?.resourceType === resourceType)
+  const seenIds = new Set<string>()
+  const results: (T & AnyResource)[] = []
+  for (const entry of bundle.entry ?? []) {
+    const r = entry.resource as AnyResource | undefined
+    if (r?.resourceType !== resourceType) continue
+    if (r.id) {
+      if (seenIds.has(r.id)) continue
+      seenIds.add(r.id)
+    }
+    results.push(r as T & AnyResource)
+  }
+  return results
 }
 
 export function resolveReference(bundle: fhir3.Bundle, ref: string | undefined): AnyResource | undefined {
@@ -154,6 +167,19 @@ export function resolveItemDisplay(bundle: fhir3.Bundle, ref: string | undefined
     return undefined
   }
 
+  // Immunization: vaccineCode is often a NullFlavor placeholder ("unknown"/UNK) —
+  // fall back to the VaccinationProcedure extension, which carries the real term.
+  if (resource.resourceType === 'Immunization') {
+    const vaccineCodings = r.vaccineCode?.coding as fhir3.Coding[] | undefined
+    const isNullFlavor = vaccineCodings?.every(c => c.system === 'http://hl7.org/fhir/v3/NullFlavor')
+    const vaccineDisplay = r.vaccineCode?.text ?? (isNullFlavor ? undefined : vaccineCodings?.[0]?.display)
+    if (vaccineDisplay) return vaccineDisplay
+    const vpExt = getExtensionValue(r.extension, 'Extension-CareConnect-VaccinationProcedure-1')
+    const vpCC = vpExt?.valueCodeableConcept as fhir3.CodeableConcept | undefined
+    const vpCoding = vpCC?.coding?.find(c => c.system === 'http://snomed.info/sct') ?? vpCC?.coding?.[0]
+    return vpCoding?.display ?? vpCC?.text
+  }
+
   const codeName =
     (r.code?.coding as fhir3.Coding[] | undefined)?.find(c => c.system === 'http://snomed.info/sct')?.display ??
     r.code?.coding?.[0]?.display ??
@@ -196,7 +222,11 @@ export function resolveItemDisplay(bundle: fhir3.Bundle, ref: string | undefined
     if (name) return [name.prefix?.join(' '), name.given?.join(' '), name.family].filter(Boolean).join(' ')
   }
   if (resource.resourceType === 'Organization') return r.name as string | undefined
-  if (resource.resourceType === 'ReferralRequest') return r.description as string | undefined
+  if (resource.resourceType === 'ReferralRequest') {
+    const reasonCC = (r.reasonCode as fhir3.CodeableConcept[] | undefined)?.[0]
+    const reasonCoding = reasonCC?.coding?.find(c => c.system === 'http://snomed.info/sct') ?? reasonCC?.coding?.[0]
+    return reasonCC?.text ?? reasonCoding?.display ?? (r.description as string | undefined)
+  }
 
   return codeName
 }
@@ -268,6 +298,45 @@ export function extractPatientInfo(bundle: fhir3.Bundle): GpConnectPatient | und
       })()
     : undefined
 
+  // Managing organisation
+  const managingOrgRef = (patient.managingOrganization as fhir3.Reference | undefined)?.reference
+  const managingOrgId = extractId(managingOrgRef)
+  const managingOrgResource = resolveReference(bundle, managingOrgRef) as fhir3.Organization | undefined
+  const managingOrganisationName = managingOrgResource?.name
+
+  // Preferred spoken/written language (NHSCommunication extension)
+  const commExts = (patient.extension ?? []).filter(e => e.url?.includes('NHSCommunication'))
+  const commSubExtsList = commExts.map(
+    e => (e as any).extension as Array<{ url: string; [k: string]: any }> | undefined ?? []
+  )
+  const preferredCommSubExts =
+    commSubExtsList.find(subs => subs.find(s => s.url === 'preferred')?.valueBoolean === true) ??
+    commSubExtsList[0] ?? []
+  const preferredLanguage = preferredCommSubExts.find(e => e.url === 'language')
+    ?.valueCodeableConcept?.coding?.[0]?.display as string | undefined
+  const communicationProficiency = preferredCommSubExts.find(e => e.url === 'communicationProficiency')
+    ?.valueCodeableConcept?.coding?.[0]?.display as string | undefined
+  const modeOfCommunication = preferredCommSubExts.find(e => e.url === 'modeOfCommunication')
+    ?.valueCodeableConcept?.coding?.[0]?.display as string | undefined
+  const interpreterRequired = preferredCommSubExts.find(e => e.url === 'interpreterRequired')
+    ?.valueBoolean as boolean | undefined
+
+  // Next of kin / emergency contact
+  const contacts: GpConnectContact[] = (patient.contact ?? []).map(c => {
+    const cn = c.name
+    const contactName = [
+      (cn?.prefix ?? []).join(' '),
+      (cn?.given ?? []).join(' '),
+      cn?.family,
+    ].filter(Boolean).join(' ') || undefined
+    const relationship = (c.relationship ?? [])
+      .map(r => r.text ?? r.coding?.[0]?.display)
+      .filter(Boolean)
+      .join(', ') || undefined
+    const contactPhone = c.telecom?.find(t => t.system === 'phone')?.value
+    return { name: contactName, relationship, phone: contactPhone, gender: c.gender }
+  })
+
   return {
     id,
     nhsNumber,
@@ -287,5 +356,12 @@ export function extractPatientInfo(bundle: fhir3.Bundle): GpConnectPatient | und
     email,
     registeredGpName: gpName,
     registeredGpId: gpId,
+    preferredLanguage,
+    interpreterRequired,
+    communicationProficiency,
+    modeOfCommunication,
+    managingOrganisationName,
+    managingOrganisationId: managingOrgId,
+    contacts: contacts.length ? contacts : undefined,
   }
 }

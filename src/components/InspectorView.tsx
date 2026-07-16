@@ -18,6 +18,7 @@ import { ListsView } from './clinical/ListsView'
 import { DomainNav } from './clinical/DomainNav'
 import { PatientBanner } from './clinical/PatientBanner'
 import { type DomainId, DOMAIN_MAP } from './clinical/domains'
+import { InfoHint } from '../onboarding/InfoHint'
 
 interface Props {
   record: GpConnectBundle
@@ -39,7 +40,7 @@ function extractId(ref: string): string {
 }
 
 export function InspectorView({ record, source, format, jumpToId, onJumpHandled, onOpenTraining }: Props) {
-  const [activeDomain, setActiveDomain] = useState<DomainId>('medications')
+  const [activeDomain, setActiveDomain] = useState<DomainId>('problems')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null)
   const [jumpedId, setJumpedId] = useState<string | null>(null)
@@ -333,7 +334,7 @@ export function InspectorView({ record, source, format, jumpToId, onJumpHandled,
     )}
     <div className="flex h-full gap-3 min-h-0">
       {/* Left panel: domain nav + clinical content */}
-      <div className="flex-1 flex border border-nhs-grey-4 rounded-lg overflow-hidden min-h-0">
+      <div className="flex-1 flex border border-nhs-grey-4 rounded-lg overflow-hidden min-h-0" data-tour="inspector-domain-nav">
         <DomainNav active={activeDomain} onSelect={setActiveDomain} counts={counts} />
         <div className="flex flex-col flex-1 overflow-hidden min-h-0">
           <div className="px-3 py-2 bg-nhs-grey-5 border-b border-nhs-grey-4 shrink-0">
@@ -422,12 +423,16 @@ export function InspectorView({ record, source, format, jumpToId, onJumpHandled,
       </div>
 
       {/* Right panel: FHIR source */}
-      <div className="flex-1 flex flex-col border border-nhs-grey-4 rounded-lg overflow-hidden min-h-0">
+      <div className="flex-1 flex flex-col border border-nhs-grey-4 rounded-lg overflow-hidden min-h-0" data-tour="inspector-source-pane">
 
         {/* Row 1: title + section navigation */}
         <div className="px-3 py-2 bg-nhs-grey-5 border-b border-nhs-grey-4 shrink-0 flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <h3 className="text-xs font-semibold text-nhs-grey-2 uppercase tracking-wide">FHIR Source</h3>
+            <h3 className="text-xs font-semibold text-nhs-grey-2 uppercase tracking-wide flex items-center gap-1">
+              FHIR Source
+              <InfoHint topic="inspector.text-selection-popup" />
+              <InfoHint topic="inspector.jump-from-elsewhere" />
+            </h3>
             <p className="text-xs text-nhs-grey-3 mt-0.5 truncate">{sourceSubtitle}</p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -465,7 +470,7 @@ export function InspectorView({ record, source, format, jumpToId, onJumpHandled,
         </div>
 
         {/* Row 2: search bar */}
-        <div className="px-3 py-1.5 bg-nhs-grey-5 border-b border-nhs-grey-4 shrink-0 flex items-center gap-2">
+        <div className="px-3 py-1.5 bg-nhs-grey-5 border-b border-nhs-grey-4 shrink-0 flex items-center gap-2" data-tour="inspector-search">
           <div className="flex-1 flex items-center gap-1.5 bg-white border border-nhs-grey-4 rounded px-2 py-1 focus-within:border-nhs-blue transition-colors">
             <svg className="w-3 h-3 text-nhs-grey-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />

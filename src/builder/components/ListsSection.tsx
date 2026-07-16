@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { DraftRecord } from '../types'
+import { InfoHint } from '../../onboarding/InfoHint'
 
 function ChevronRight({ className }: { className?: string }) {
   return (
@@ -202,6 +203,7 @@ export function ListsSection({ draft }: { draft: DraftRecord }) {
         <span className="text-xs px-2 py-0.5 bg-nhs-grey-4 dark:bg-gray-700 text-nhs-grey-2 dark:text-gray-400 rounded-full">
           Read only
         </span>
+        <InfoHint topic="builder.lists-readonly" />
       </div>
       <p className="text-xs text-nhs-grey-3 dark:text-gray-500 mb-4">
         These FHIR Lists are generated automatically as you build the record. They cannot be edited

@@ -1,5 +1,30 @@
 import { useState, useEffect } from 'react'
 import type { GpConnectBundle, GpConnectPractitioner, GpConnectPractitionerRole, GpConnectOrganisation, GpConnectHealthcareService, GpConnectLocation, GpConnectFhirMedication } from '../../fhir/types'
+import { SearchFilterBox } from './SearchFilterBox'
+
+function practitionerSearchText(p: GpConnectPractitioner, roles: GpConnectPractitionerRole[], organisations: GpConnectOrganisation[]): string {
+  const myRoles = roles.filter(r => r.practitionerId === p.id)
+  return [
+    p.name, p.sdsUserId, p.sdsRoleProfileId, p.gender,
+    ...myRoles.flatMap(r => [r.jobRole, organisations.find(o => o.id === r.organisationId)?.name]),
+  ].filter(Boolean).join(' ').toLowerCase()
+}
+
+function organisationSearchText(o: GpConnectOrganisation): string {
+  return [o.name, o.odsCode, o.phone, o.address].filter(Boolean).join(' ').toLowerCase()
+}
+
+function locationSearchText(l: GpConnectLocation): string {
+  return [l.name, l.address].filter(Boolean).join(' ').toLowerCase()
+}
+
+function healthcareServiceSearchText(h: GpConnectHealthcareService): string {
+  return [h.name, h.specialty, h.providedBy, h.comment].filter(Boolean).join(' ').toLowerCase()
+}
+
+function medicationResourceSearchText(m: GpConnectFhirMedication): string {
+  return [m.name, m.snomedCode, ...(m.alternativeCodes ?? []).flatMap(c => [c.label, c.code])].filter(Boolean).join(' ').toLowerCase()
+}
 
 interface Props {
   bundle: GpConnectBundle
@@ -208,15 +233,39 @@ function HealthcareServiceCard({ h, selected, onSelect, onJumpToSource }: {
 type SectionKey = 'practitioners' | 'organisations' | 'locations' | 'healthcareServices' | 'fhirMedications'
 
 export function SupportingResourcesView({ bundle, selectedId, onSelect, onJumpToSource }: Props) {
-  const { practitioners, practitionerRoles, organisations, healthcareServices, locations, fhirMedications } = bundle
-  const total = practitioners.length + organisations.length + healthcareServices.length + locations.length + fhirMedications.length
+  const {
+    practitioners: allPractitioners, practitionerRoles,
+    organisations: allOrganisations, healthcareServices: allHealthcareServices,
+    locations: allLocations, fhirMedications: allFhirMedications,
+  } = bundle
+  const total = allPractitioners.length + allOrganisations.length + allHealthcareServices.length + allLocations.length + allFhirMedications.length
+
+  const [searchQuery, setSearchQuery] = useState('')
+  const trimmedQuery = searchQuery.trim().toLowerCase()
+
+  const practitioners = trimmedQuery
+    ? allPractitioners.filter(p => practitionerSearchText(p, practitionerRoles, allOrganisations).includes(trimmedQuery))
+    : allPractitioners
+  const organisations = trimmedQuery
+    ? allOrganisations.filter(o => organisationSearchText(o).includes(trimmedQuery))
+    : allOrganisations
+  const locations = trimmedQuery
+    ? allLocations.filter(l => locationSearchText(l).includes(trimmedQuery))
+    : allLocations
+  const healthcareServices = trimmedQuery
+    ? allHealthcareServices.filter(h => healthcareServiceSearchText(h).includes(trimmedQuery))
+    : allHealthcareServices
+  const fhirMedications = trimmedQuery
+    ? allFhirMedications.filter(m => medicationResourceSearchText(m).includes(trimmedQuery))
+    : allFhirMedications
+  const matchTotal = practitioners.length + organisations.length + locations.length + healthcareServices.length + fhirMedications.length
 
   const findSection = (id: string): SectionKey | null => {
-    if (practitioners.some(p => p.id === id))      return 'practitioners'
-    if (organisations.some(o => o.id === id))       return 'organisations'
-    if (locations.some(l => l.id === id))           return 'locations'
-    if (healthcareServices.some(h => h.id === id))  return 'healthcareServices'
-    if (fhirMedications.some(m => m.id === id))     return 'fhirMedications'
+    if (allPractitioners.some(p => p.id === id))      return 'practitioners'
+    if (allOrganisations.some(o => o.id === id))       return 'organisations'
+    if (allLocations.some(l => l.id === id))           return 'locations'
+    if (allHealthcareServices.some(h => h.id === id))  return 'healthcareServices'
+    if (allFhirMedications.some(m => m.id === id))     return 'fhirMedications'
     return null
   }
 
@@ -257,10 +306,18 @@ export function SupportingResourcesView({ bundle, selectedId, onSelect, onJumpTo
         <span className="px-2 py-1 bg-nhs-blue text-white text-xs font-semibold rounded">GP Connect STU3</span>
       </div>
 
+      <SearchFilterBox
+        value={searchQuery}
+        onChange={setSearchQuery}
+        placeholder="Search supporting resources…"
+        matchCount={matchTotal}
+        totalCount={total}
+      />
+
       {practitioners.length > 0 && (
         <div>
-          <CollapsibleSectionHeader title="Practitioners" count={practitioners.length} open={openSections.has('practitioners')} onToggle={() => toggle('practitioners')} />
-          {openSections.has('practitioners') && (
+          <CollapsibleSectionHeader title="Practitioners" count={practitioners.length} open={openSections.has('practitioners') || !!trimmedQuery} onToggle={() => toggle('practitioners')} />
+          {(openSections.has('practitioners') || !!trimmedQuery) && (
             <div className="grid grid-cols-1 gap-3">
               {practitioners.map(p => (
                 <PractitionerCard key={p.id} p={p} roles={practitionerRoles} organisations={organisations} selected={selectedId === p.id} onSelect={onSelect} onJumpToSource={onJumpToSource} />
@@ -272,8 +329,8 @@ export function SupportingResourcesView({ bundle, selectedId, onSelect, onJumpTo
 
       {organisations.length > 0 && (
         <div>
-          <CollapsibleSectionHeader title="Organisations" count={organisations.length} open={openSections.has('organisations')} onToggle={() => toggle('organisations')} />
-          {openSections.has('organisations') && (
+          <CollapsibleSectionHeader title="Organisations" count={organisations.length} open={openSections.has('organisations') || !!trimmedQuery} onToggle={() => toggle('organisations')} />
+          {(openSections.has('organisations') || !!trimmedQuery) && (
             <div className="grid grid-cols-1 gap-3">
               {organisations.map(o => (
                 <OrganisationCard key={o.id} o={o} selected={selectedId === o.id} onSelect={onSelect} onJumpToSource={onJumpToSource} />
@@ -285,8 +342,8 @@ export function SupportingResourcesView({ bundle, selectedId, onSelect, onJumpTo
 
       {locations.length > 0 && (
         <div>
-          <CollapsibleSectionHeader title="Locations" count={locations.length} open={openSections.has('locations')} onToggle={() => toggle('locations')} />
-          {openSections.has('locations') && (
+          <CollapsibleSectionHeader title="Locations" count={locations.length} open={openSections.has('locations') || !!trimmedQuery} onToggle={() => toggle('locations')} />
+          {(openSections.has('locations') || !!trimmedQuery) && (
             <div className="grid grid-cols-1 gap-3">
               {locations.map(l => (
                 <LocationCard key={l.id} l={l} selected={selectedId === l.id} onSelect={onSelect} onJumpToSource={onJumpToSource} />
@@ -298,8 +355,8 @@ export function SupportingResourcesView({ bundle, selectedId, onSelect, onJumpTo
 
       {healthcareServices.length > 0 && (
         <div>
-          <CollapsibleSectionHeader title="Healthcare Services" count={healthcareServices.length} open={openSections.has('healthcareServices')} onToggle={() => toggle('healthcareServices')} />
-          {openSections.has('healthcareServices') && (
+          <CollapsibleSectionHeader title="Healthcare Services" count={healthcareServices.length} open={openSections.has('healthcareServices') || !!trimmedQuery} onToggle={() => toggle('healthcareServices')} />
+          {(openSections.has('healthcareServices') || !!trimmedQuery) && (
             <div className="grid grid-cols-1 gap-3">
               {healthcareServices.map(h => (
                 <HealthcareServiceCard key={h.id} h={h} selected={selectedId === h.id} onSelect={onSelect} onJumpToSource={onJumpToSource} />
@@ -311,8 +368,8 @@ export function SupportingResourcesView({ bundle, selectedId, onSelect, onJumpTo
 
       {fhirMedications.length > 0 && (
         <div>
-          <CollapsibleSectionHeader title="Medications" count={fhirMedications.length} open={openSections.has('fhirMedications')} onToggle={() => toggle('fhirMedications')} />
-          {openSections.has('fhirMedications') && (
+          <CollapsibleSectionHeader title="Medications" count={fhirMedications.length} open={openSections.has('fhirMedications') || !!trimmedQuery} onToggle={() => toggle('fhirMedications')} />
+          {(openSections.has('fhirMedications') || !!trimmedQuery) && (
             <div className="grid grid-cols-1 gap-3">
               {fhirMedications.map(m => (
                 <MedicationResourceCard key={m.id} m={m} selected={selectedId === m.id} onSelect={onSelect} onJumpToSource={onJumpToSource} />
@@ -325,6 +382,11 @@ export function SupportingResourcesView({ bundle, selectedId, onSelect, onJumpTo
       {total === 0 && (
         <div className="text-center py-10 text-nhs-grey-3">
           <p className="text-sm">No supporting resources found in this bundle</p>
+        </div>
+      )}
+      {total > 0 && trimmedQuery && matchTotal === 0 && (
+        <div className="text-center py-10 text-nhs-grey-3">
+          <p className="text-sm">No supporting resources match "{searchQuery.trim()}"</p>
         </div>
       )}
     </div>
