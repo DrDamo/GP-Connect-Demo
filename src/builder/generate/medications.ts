@@ -1,5 +1,6 @@
 import type { DraftRecord, DraftMedication, DraftMedicationIssue } from '../types'
 import type { TempIdMap } from '../idMap'
+import { excludeConfidential, nopatMeta } from './security'
 
 const PRESCRIPTION_TYPE_URL = 'https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-PrescriptionType-1'
 const PRESCRIPTION_TYPE_SYSTEM = 'https://fhir.nhs.uk/STU3/CodeSystem/CareConnect-PrescriptionType-1'
@@ -101,6 +102,7 @@ function makeMedication(draft: DraftMedication, map: TempIdMap): { entry: fhir3.
   const resource: fhir3.Medication = {
     resourceType: 'Medication',
     id,
+    ...nopatMeta(draft.notForPfs),
     ...(codings.length > 0
       ? {
           code: {
@@ -144,6 +146,7 @@ function makeMedicationStatement(
   const resource: fhir3.MedicationStatement = {
     resourceType: 'MedicationStatement',
     id,
+    ...nopatMeta(draft.notForPfs),
     extension: extensions,
     status: (draft.status as fhir3.MedicationStatement['status']) ?? 'active',
     taken: 'unk',
@@ -188,6 +191,7 @@ function makePlanRequest(
   const resource = {
     resourceType: 'MedicationRequest' as const,
     id,
+    ...nopatMeta(draft.notForPfs),
     extension: [
       repeatInfoExt,
       prescriptionTypeExt(draft.prescriptionType),
@@ -281,12 +285,10 @@ function makeOrderRequest(
       : {}),
   }
 
-  // Silence unused variable warning for draft - it's used for context
-  void draft
-
   const resource: fhir3.MedicationRequest = {
     resourceType: 'MedicationRequest',
     id,
+    ...nopatMeta(draft.notForPfs),
     status: (issue.status === 'cancelled' ? 'cancelled' : 'completed') as fhir3.MedicationRequest['status'],
     intent: 'order',
     medicationReference: { reference: `Medication/${medId}` },
@@ -311,7 +313,7 @@ export function generateMedications(
 ): fhir3.BundleEntry[] {
   const entries: fhir3.BundleEntry[] = []
 
-  for (const med of draft.medications) {
+  for (const med of excludeConfidential(draft.medications)) {
     const { entry: medEntry, id: medId } = makeMedication(med, map)
     const { entry: planEntry, id: planReqId } = makePlanRequest(med, map, patientRef, medId)
     const stmtEntry = makeMedicationStatement(med, map, patientRef, medId, planReqId)

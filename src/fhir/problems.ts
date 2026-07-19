@@ -1,12 +1,12 @@
 import type { GpConnectProblem, GpConnectLinkedItem } from './types'
-import { getEntries, formatDate, getExtensionValue, resolvePractitionerRef, extractSnomedCode, extractId, fhirDateKey } from './utils'
+import { getEntries, formatDate, getExtensionValue, resolvePractitionerRef, extractSnomedCode, extractOriginalTermText, extractId, fhirDateKey, hasNopatSecurity } from './utils'
 
 function resolveLinkedDescription(bundle: fhir3.Bundle, resourceType: string, id: string): string | undefined {
   const resource = (bundle.entry ?? []).find(e => (e.resource as any)?.id === id)?.resource as any
   if (!resource) return undefined
   switch (resourceType) {
     case 'Observation':
-      return resource.code?.text ?? resource.code?.coding?.[0]?.display
+      return extractOriginalTermText(resource.code)
     case 'Encounter':
       return resource.type?.[0]?.text ?? formatDate(resource.period?.start)
     case 'MedicationRequest':
@@ -15,16 +15,16 @@ function resolveLinkedDescription(bundle: fhir3.Bundle, resourceType: string, id
       if (medRef) {
         const medId = medRef.split('/').pop()
         const med = (bundle.entry ?? []).find(e => (e.resource as any)?.id === medId)?.resource as any
-        return med?.code?.text ?? med?.code?.coding?.[0]?.display
+        return extractOriginalTermText(med?.code)
       }
-      return resource.medicationCodeableConcept?.text ?? resource.medicationCodeableConcept?.coding?.[0]?.display
+      return extractOriginalTermText(resource.medicationCodeableConcept)
     }
     case 'Condition':
     case 'AllergyIntolerance':
     case 'DiagnosticReport':
-      return resource.code?.text ?? resource.code?.coding?.[0]?.display
+      return extractOriginalTermText(resource.code)
     case 'ReferralRequest':
-      return resource.description ?? resource.type?.text ?? resource.type?.coding?.[0]?.display
+      return resource.description ?? extractOriginalTermText(resource.type)
     default:
       return undefined
   }
@@ -46,7 +46,7 @@ export function extractProblems(bundle: fhir3.Bundle): GpConnectProblem[] {
     const sigExt = getExtensionValue(resource.extension, 'Extension-CareConnect-ProblemSignificance-1')
     const sigCode = sigExt?.valueCode as string | undefined
     const sigCC = sigExt?.valueCodeableConcept as fhir3.CodeableConcept | undefined
-    const rawSignificance = sigCode ?? sigCC?.coding?.[0]?.display ?? sigCC?.text
+    const rawSignificance = sigCode ?? extractOriginalTermText(sigCC)
     const significance = rawSignificance
       ? rawSignificance.charAt(0).toUpperCase() + rawSignificance.slice(1)
       : undefined
@@ -79,7 +79,7 @@ export function extractProblems(bundle: fhir3.Bundle): GpConnectProblem[] {
 
     return {
       id: resource.id ?? crypto.randomUUID(),
-      problem: resource.code?.text ?? coding?.[0]?.display ?? 'Unknown',
+      problem: extractOriginalTermText(resource.code) ?? 'Unknown',
       snomedCode: extractSnomedCode(coding),
       snomedDisplay: coding?.find(c => c.system === 'http://snomed.info/sct')?.display ?? coding?.[0]?.display,
       clinicalStatus: resource.clinicalStatus ?? 'unknown',
@@ -92,6 +92,7 @@ export function extractProblems(bundle: fhir3.Bundle): GpConnectProblem[] {
       encounterId,
       notes,
       linkedItems,
+      notForPfs: hasNopatSecurity(resource),
     }
   })
 }

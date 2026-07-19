@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { GpConnectBundle, GpConnectImmunisation } from '../../fhir/types'
-import { DomainTable, StatusBadge } from './DomainTable'
+import { DomainTable, StatusBadge, DegradedTermText } from './DomainTable'
 import type { DomainColumn } from './DomainTable'
 import { ReferencedResources } from './ReferencedResources'
 import { ReferenceChip } from './ResourceCard'
@@ -34,14 +34,16 @@ const COLUMNS: DomainColumn<GpConnectImmunisation>[] = [
     // own), this holds their coded term instead, tagged as such.
     render: item => item.entryType === 'observation' ? (
       <span className="flex items-center gap-1.5">
-        <span className="font-medium text-nhs-grey-1">{item.vaccinationProcedureDisplay}</span>
+        <span className="font-medium text-nhs-grey-1"><DegradedTermText text={item.vaccinationProcedureDisplay} /></span>
         <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-nhs-grey-5 text-nhs-grey-2 border border-nhs-grey-4 font-medium">
           Observation
         </span>
         <InfoHint topic="clinical.immunisations.observation-badge" />
       </span>
     ) : (
-      item.vaccinationProcedureDisplay ?? item.vaccinationProcedureText ?? '—'
+      item.vaccinationProcedureDisplay ?? item.vaccinationProcedureText
+        ? <DegradedTermText text={item.vaccinationProcedureDisplay ?? item.vaccinationProcedureText} />
+        : '—'
     ),
   },
   {
@@ -49,7 +51,7 @@ const COLUMNS: DomainColumn<GpConnectImmunisation>[] = [
     // The base vaccineCode field — left blank (not "Unknown") when it's a
     // NullFlavor placeholder, and Observations have no vaccineCode at all.
     render: item => item.entryType === 'observation' ? '' : (
-      <span className="font-medium text-nhs-grey-1">{item.vaccineCodeDisplay ?? ''}</span>
+      <span className="font-medium text-nhs-grey-1"><DegradedTermText text={item.vaccineCodeDisplay} /></span>
     ),
   },
   { label: 'Administered by',                   render: item => item.administeringPractitioner ?? '—' },

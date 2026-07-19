@@ -1,5 +1,6 @@
 import type { DraftRecord } from '../types'
 import type { TempIdMap } from '../idMap'
+import { excludeConfidential, nopatMeta } from './security'
 
 const VACCINATION_PROCEDURE_EXT = 'https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-VaccinationProcedure-1'
 const PARENT_PRESENT_EXT = 'https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-ParentPresent-1'
@@ -10,7 +11,7 @@ export function generateImmunisations(
   map: TempIdMap,
   patientRef: string,
 ): fhir3.BundleEntry[] {
-  return draft.immunisations.map(imm => {
+  return excludeConfidential(draft.immunisations).map(imm => {
     const { id, fullUrl } = map.entry(imm._tempId)
 
     const practitioners: fhir3.ImmunizationPractitioner[] = []
@@ -53,6 +54,7 @@ export function generateImmunisations(
     const resource: fhir3.Immunization = {
       resourceType: 'Immunization',
       id,
+      ...nopatMeta(imm.notForPfs),
       status: imm.status ?? 'completed',
       notGiven: imm.notGiven ?? false,
       vaccineCode: {

@@ -3,6 +3,7 @@ import { useDraftRecord } from '../hooks/useDraftRecord'
 import { createSampleDraft } from '../sampleData'
 import { buildBundle } from '../generate/index'
 import { validateBundle } from '../../fhir/validator'
+import { checkAndDegradeSnomedCodes } from '../../fhir/snomedDegrade'
 import { BuilderPatientBanner } from '../components/BuilderPatientBanner'
 import { BuilderDomainNav, type BuilderDomain } from './BuilderDomainNav'
 import { BuilderPreviewPanel } from './BuilderPreviewPanel'
@@ -68,6 +69,7 @@ export function BuilderView({
   const [showPreview, setShowPreview] = useState(false)
   const [previewJson, setPreviewJson] = useState('')
   const [previewIssues, setPreviewIssues] = useState<ValidationIssue[]>([])
+  const [checkingSnomedPreview, setCheckingSnomedPreview] = useState(false)
   const [buildError, setBuildError] = useState<string | null>(null)
 
   // Shared save state
@@ -167,10 +169,22 @@ export function BuilderView({
   const handlePreview = useCallback(() => {
     setBuildError(null)
     try {
-      const { json, issues } = generateBundle()
+      const { bundle, json, issues } = generateBundle()
       setPreviewJson(json)
       setPreviewIssues(issues)
       setShowPreview(true)
+
+      setCheckingSnomedPreview(true)
+      checkAndDegradeSnomedCodes(bundle, { mutate: true })
+        .then(result => {
+          setCheckingSnomedPreview(false)
+          if (result.issues.length === 0) return
+          setPreviewIssues([...issues, ...result.issues])
+          if (result.degradedCount > 0) {
+            setPreviewJson(JSON.stringify(bundle, null, 2))
+          }
+        })
+        .catch(() => setCheckingSnomedPreview(false))
     } catch (err) {
       setBuildError(err instanceof Error ? err.message : String(err))
     }
@@ -186,19 +200,27 @@ export function BuilderView({
     }
   }, [generateBundle, onLoad])
 
-  const handleSaveJson = useCallback(() => {
+  const handleSaveJson = useCallback(async () => {
     setBuildError(null)
     try {
-      const { json, issues } = generateBundle()
-      const hasErrors = issues.some(i => i.severity === 'error')
+      const { bundle, issues } = generateBundle()
+
+      setCheckingSnomedPreview(true)
+      const snomedResult = await checkAndDegradeSnomedCodes(bundle, { mutate: true })
+      setCheckingSnomedPreview(false)
+
+      const allIssues = [...issues, ...snomedResult.issues]
+      const json = JSON.stringify(bundle, null, 2)
+      const hasErrors = allIssues.some(i => i.severity === 'error')
       setPreviewJson(json)
-      setPreviewIssues(issues)
+      setPreviewIssues(allIssues)
       if (hasErrors) {
         setShowPreview(true)
       } else {
         downloadJson(json, 'gp-connect-bundle.json')
       }
     } catch (err) {
+      setCheckingSnomedPreview(false)
       setBuildError(err instanceof Error ? err.message : String(err))
     }
   }, [generateBundle])
@@ -507,6 +529,7 @@ export function BuilderView({
             <BuilderPreviewPanel
               bundleJson={previewJson}
               validationIssues={previewIssues}
+              checkingSnomed={checkingSnomedPreview}
               onLoadIntoViewer={handleLoadFromPreview}
               onDownload={handleDownloadFromPreview}
               onClose={() => setShowPreview(false)}

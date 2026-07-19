@@ -1,5 +1,5 @@
 import type { GpConnectPractitioner, GpConnectPractitionerRole, GpConnectOrganisation, GpConnectHealthcareService, GpConnectLocation, GpConnectFhirMedication } from './types'
-import { getEntries, resolvePractitionerName, extractSnomedCode } from './utils'
+import { getEntries, resolvePractitionerName, extractSnomedCode, extractOriginalTermText } from './utils'
 
 export function extractPractitioners(bundle: fhir3.Bundle): GpConnectPractitioner[] {
   return getEntries<fhir3.Practitioner>(bundle, 'Practitioner').map(p => {
@@ -41,7 +41,7 @@ export function extractPractitionerRoles(bundle: fhir3.Bundle): GpConnectPractit
       const practitionerId = practRef.includes('/') ? practRef.split('/').pop()! : practRef
       const orgRef = pr.organization?.reference ?? ''
       const organisationId = orgRef.includes('/') ? orgRef.split('/').pop() : undefined
-      const jobRole = pr.code?.[0]?.coding?.[0]?.display ?? pr.code?.[0]?.text
+      const jobRole = extractOriginalTermText(pr.code?.[0])
       return { id: pr.id ?? '', practitionerId, jobRole, organisationId }
     })
     .filter(r => r.id && r.practitionerId)
@@ -86,7 +86,7 @@ export function extractHealthcareServices(bundle: fhir3.Bundle): GpConnectHealth
     .filter((r): r is HcsCast & { resourceType: string } => r?.resourceType === 'HealthcareService')
 
   return entries.map(hcs => {
-    const specialty = hcs.specialty?.[0]?.coding?.[0]?.display ?? hcs.specialty?.[0]?.text
+    const specialty = extractOriginalTermText(hcs.specialty?.[0])
     const providedByRef = hcs.providedBy?.reference
     const providedBy = providedByRef
       ? resolvePractitionerName(bundle, providedByRef) // falls through to undefined for Org refs
@@ -123,7 +123,7 @@ export function extractFhirMedications(bundle: fhir3.Bundle): GpConnectFhirMedic
       .filter(c => c.code)
     return {
       id: med.id ?? '',
-      name: med.code?.text ?? codings[0]?.display ?? 'Unknown',
+      name: extractOriginalTermText(med.code) ?? 'Unknown',
       snomedCode: extractSnomedCode(codings),
       alternativeCodes: alternativeCodes.length ? alternativeCodes : undefined,
     }

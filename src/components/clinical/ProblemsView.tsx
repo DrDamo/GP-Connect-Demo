@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { GpConnectBundle, GpConnectProblem } from '../../fhir/types'
-import { DomainTable, StatusBadge } from './DomainTable'
+import { DomainTable, StatusBadge, DegradedTermText } from './DomainTable'
 import type { DomainColumn } from './DomainTable'
 import { ReferencedResources } from './ReferencedResources'
 import { ReferenceChip } from './ResourceCard'
@@ -53,7 +53,7 @@ const ACTIVE_COLUMNS: DomainColumn<GpConnectProblem>[] = [
   { label: 'Start date',      className: 'w-28', render: item => item.startDate ?? 'Unknown' },
   {
     label: 'Problem',
-    render: item => <span className="font-medium text-nhs-grey-1">{item.problem}</span>,
+    render: item => <span className="font-medium text-nhs-grey-1"><DegradedTermText text={item.problem} /></span>,
   },
   { label: 'Significance',    className: 'w-28', render: item => <SignificanceBadge value={item.significance} /> },
   { label: 'Clinical status', className: 'w-28', render: item => <StatusBadge value={item.clinicalStatus} /> },
@@ -63,7 +63,7 @@ const PAST_COLUMNS: DomainColumn<GpConnectProblem>[] = [
   { label: 'Start date',      className: 'w-28', render: item => item.startDate ?? 'Unknown' },
   {
     label: 'Problem',
-    render: item => <span className="font-medium text-nhs-grey-1">{item.problem}</span>,
+    render: item => <span className="font-medium text-nhs-grey-1"><DegradedTermText text={item.problem} /></span>,
   },
   { label: 'Significance',    className: 'w-28', render: item => <SignificanceBadge value={item.significance} /> },
   { label: 'Clinical status', className: 'w-28', render: item => <StatusBadge value={item.clinicalStatus} /> },

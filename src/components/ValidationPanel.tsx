@@ -102,6 +102,89 @@ function TypeGroup({ group, cfg, open, onToggle }: {
   )
 }
 
+function DegradeRow({ issue }: { issue: ValidationIssue }) {
+  const d = issue.snomedDegrade
+  if (!d) return null
+  return (
+    <div className="rounded border border-red-300 bg-red-50 p-2 text-xs dark:border-red-800 dark:bg-red-950/30">
+      {issue.path && (
+        <div className="mb-1 break-all font-mono text-nhs-grey-3 dark:text-gray-400">{issue.path}</div>
+      )}
+      <div className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5">
+        <span className="font-semibold text-nhs-grey-2 dark:text-gray-300">Original:</span>
+        <span className="break-all">
+          <span className="font-mono">{d.originalCode}</span>
+          {d.originalDisplay && <span className="text-nhs-grey-2 dark:text-gray-300"> — {d.originalDisplay}</span>}
+        </span>
+        <span className="font-semibold text-nhs-grey-2 dark:text-gray-300">Degraded to:</span>
+        <span className="break-all">
+          <span className="font-mono">{d.degradedCode}</span>
+          <span className="text-nhs-grey-2 dark:text-gray-300"> — {d.degradedDisplay}</span>
+        </span>
+      </div>
+    </div>
+  )
+}
+
+function DegradeSection({ issues, open, onToggle }: {
+  issues: ValidationIssue[]
+  open: boolean
+  onToggle: () => void
+}) {
+  return (
+    <div className="rounded-lg border border-red-300 dark:border-red-800 overflow-hidden shrink-0">
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50 transition-colors text-left"
+      >
+        <span className="flex items-center gap-2">
+          <span className="w-5 h-5 flex items-center justify-center rounded-full text-xs font-bold bg-nhs-red text-white">⇄</span>
+          <span className="text-sm font-semibold text-nhs-grey-1 dark:text-gray-100">SNOMED CT code degrades</span>
+          <span className="px-1.5 py-0.5 rounded-full bg-red-200 text-red-800 dark:bg-red-800 dark:text-red-100 text-[11px] font-semibold">{issues.length}</span>
+        </span>
+        <span className="text-xs text-nhs-grey-3">{open ? '▲ Collapse' : '▼ Expand'}</span>
+      </button>
+      {open && (
+        <div className="p-2 space-y-1.5">
+          {issues.map((issue, i) => <DegradeRow key={i} issue={issue} />)}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function PassedSection({ titles, open, onToggle }: {
+  titles: string[]
+  open: boolean
+  onToggle: () => void
+}) {
+  return (
+    <div className="rounded-lg border border-nhs-grey-4 overflow-hidden shrink-0">
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-nhs-grey-5 hover:bg-nhs-grey-4/40 transition-colors text-left"
+      >
+        <span className="flex items-center gap-2">
+          <span className="w-5 h-5 flex items-center justify-center rounded-full text-xs font-bold bg-nhs-green text-white">✓</span>
+          <span className="text-sm font-semibold text-nhs-grey-1">Passed</span>
+          <span className="px-1.5 py-0.5 rounded-full bg-nhs-grey-4 text-nhs-grey-2 text-[11px] font-semibold">{titles.length}</span>
+        </span>
+        <span className="text-xs text-nhs-grey-3">{open ? '▲ Collapse' : '▼ Expand'}</span>
+      </button>
+      {open && (
+        <div className="p-2 space-y-1">
+          {titles.map(title => (
+            <div key={title} className="flex gap-2 p-1.5 text-xs text-nhs-grey-1">
+              <span className="font-bold shrink-0 text-nhs-green">✓</span>
+              <span>{title}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function SeveritySection({ severity, issues, open, onToggle, openGroups, onToggleGroup }: {
   severity: ValidationSeverity
   issues: ValidationIssue[]
@@ -147,13 +230,20 @@ export function ValidationPanel({ result, onCleanRefs }: Props) {
   const warnings = result.issues.filter(i => i.severity === 'warning')
   const danglingCount = warnings.filter(i => i.message.includes('does not resolve')).length
 
-  const bySeverity = groupBySeverity(result.issues)
+  // SNOMED code degrades get their own section (each shown individually,
+  // never grouped) rather than being folded into the generic Warnings list.
+  const degradeIssues = result.issues.filter(i => i.snomedDegrade)
+  const otherIssues = result.issues.filter(i => !i.snomedDegrade)
+
+  const bySeverity = groupBySeverity(otherIssues)
   // Default: open whichever is the most severe non-empty section, collapse the rest.
   const defaultOpenSeverity = SEVERITY_ORDER.find(s => (bySeverity[s]?.length ?? 0) > 0)
   const [openSeverities, setOpenSeverities] = useState<Set<ValidationSeverity>>(
     () => new Set(defaultOpenSeverity ? [defaultOpenSeverity] : [])
   )
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set())
+  const [degradeOpen, setDegradeOpen] = useState(true)
+  const [passedOpen, setPassedOpen] = useState(false)
 
   const toggleSeverity = (s: ValidationSeverity) =>
     setOpenSeverities(prev => {
@@ -192,6 +282,11 @@ export function ValidationPanel({ result, onCleanRefs }: Props) {
               {warnings.length} warning{warnings.length !== 1 ? 's' : ''}
             </span>
           )}
+          {result.passed.length > 0 && (
+            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-nhs-green text-white">
+              {result.passed.length} passed
+            </span>
+          )}
           {result.issues.length === 0 && (
             <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-nhs-green text-white">No issues</span>
           )}
@@ -220,10 +315,31 @@ export function ValidationPanel({ result, onCleanRefs }: Props) {
         </div>
       )}
 
-      {/* Issues — accordion by severity, then by issue type */}
-      {result.issues.length > 0 && (
+      {/* Issues — accordion by severity, then by issue type. SNOMED code
+          degrades get their own section, right after Errors, with each
+          instance listed individually rather than grouped. Checks that
+          passed get their own section too, last, since they're the least
+          urgent. */}
+      {(result.issues.length > 0 || result.passed.length > 0) && (
         <div className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1">
-          {SEVERITY_ORDER.filter(s => (bySeverity[s]?.length ?? 0) > 0).map(severity => (
+          {(bySeverity.error?.length ?? 0) > 0 && (
+            <SeveritySection
+              severity="error"
+              issues={bySeverity.error!}
+              open={openSeverities.has('error')}
+              onToggle={() => toggleSeverity('error')}
+              openGroups={openGroups}
+              onToggleGroup={toggleGroup}
+            />
+          )}
+          {degradeIssues.length > 0 && (
+            <DegradeSection
+              issues={degradeIssues}
+              open={degradeOpen}
+              onToggle={() => setDegradeOpen(v => !v)}
+            />
+          )}
+          {SEVERITY_ORDER.filter(s => s !== 'error' && (bySeverity[s]?.length ?? 0) > 0).map(severity => (
             <SeveritySection
               key={severity}
               severity={severity}
@@ -234,6 +350,13 @@ export function ValidationPanel({ result, onCleanRefs }: Props) {
               onToggleGroup={toggleGroup}
             />
           ))}
+          {result.passed.length > 0 && (
+            <PassedSection
+              titles={result.passed}
+              open={passedOpen}
+              onToggle={() => setPassedOpen(v => !v)}
+            />
+          )}
         </div>
       )}
     </div>

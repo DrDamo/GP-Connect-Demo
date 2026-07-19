@@ -9,6 +9,7 @@ import { DmdPicker } from './shared/DmdPicker'
 import { BuilderModal } from '../components/BuilderModal'
 import { DeleteConfirmDialog } from '../components/DeleteConfirmDialog'
 import { LinkSection } from './shared/LinkSection'
+import { ConfidentialityCheckboxes } from './shared/ConfidentialityCheckboxes'
 import { TrashIcon, PencilIcon } from '../components/Icons'
 
 // ---------------------------------------------------------------------------
@@ -297,6 +298,12 @@ function MedicationCard({
 
       <Field label="Patient instructions" value={med.patientInstructions ?? ''} onChange={v => upd({ patientInstructions: v })} />
       <Field label="Pharmacy instructions" value={med.pharmacyInstructions ?? ''} onChange={v => upd({ pharmacyInstructions: v })} />
+
+      <ConfidentialityCheckboxes
+        confidential={med.confidential}
+        notForPfs={med.notForPfs}
+        onChange={upd}
+      />
 
       <LinkSection
         draft={draft}

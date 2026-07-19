@@ -9,6 +9,7 @@ import { SnomedPicker } from './shared/SnomedPicker'
 import { BuilderModal } from '../components/BuilderModal'
 import { DeleteConfirmDialog } from '../components/DeleteConfirmDialog'
 import { LinkSection } from './shared/LinkSection'
+import { ConfidentialityCheckboxes } from './shared/ConfidentialityCheckboxes'
 import { TrashIcon } from '../components/Icons'
 
 // ---------------------------------------------------------------------------
@@ -182,6 +183,12 @@ function DiaryEntryCard({
             draft={draft}
             value={entry.clinicianTempId}
             onChange={v => upd({ clinicianTempId: v })}
+          />
+
+          <ConfidentialityCheckboxes
+            confidential={entry.confidential}
+            notForPfs={entry.notForPfs}
+            onChange={upd}
           />
 
           <LinkSection

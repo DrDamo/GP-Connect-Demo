@@ -1,12 +1,13 @@
 import type { DraftRecord } from '../types'
 import type { TempIdMap } from '../idMap'
+import { excludeConfidential, nopatMeta } from './security'
 
 export function generateCodedData(
   draft: DraftRecord,
   map: TempIdMap,
   patientRef: string,
 ): fhir3.BundleEntry[] {
-  return draft.codedData.map(item => {
+  return excludeConfidential(draft.codedData).map(item => {
     const { id, fullUrl } = map.entry(item._tempId)
 
     const hasUnit = Boolean(item.unit)
@@ -21,6 +22,7 @@ export function generateCodedData(
     const resource: fhir3.Observation & { comment?: string } = {
       resourceType: 'Observation',
       id,
+      ...nopatMeta(item.notForPfs),
       status: (item.status as fhir3.Observation['status']) ?? 'final',
       code: {
         coding: [

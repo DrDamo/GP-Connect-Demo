@@ -106,6 +106,10 @@ export interface DraftMedication {
   reauthorisedFromTempId?: string
   linkedProblemTempIds?: string[]
   linkedConsultationTempId?: string
+  /** Excluded entirely from generated output; a "confidential items withheld" warning is added to this domain's List instead. */
+  confidential?: boolean
+  /** Output as normal, but tagged with a NOPAT security label (withheld from patient-facing services). */
+  notForPfs?: boolean
 }
 
 export interface DraftAllergy {
@@ -125,6 +129,8 @@ export interface DraftAllergy {
   associatedText?: string
   linkedProblemTempIds?: string[]
   linkedConsultationTempId?: string
+  confidential?: boolean
+  notForPfs?: boolean
 }
 
 export interface DraftProblem {
@@ -140,6 +146,8 @@ export interface DraftProblem {
   associatedText?: string
   linkedProblemTempIds?: string[]
   linkedConsultationTempId?: string
+  confidential?: boolean
+  notForPfs?: boolean
 }
 
 export type DraftConsultationItemType = 'note' | 'coded'
@@ -147,10 +155,18 @@ export type DraftConsultationItemType = 'note' | 'coded'
 export interface DraftConsultationItem {
   _tempId: string
   itemType: DraftConsultationItemType
+  date?: string
   narrativeText?: string
   snomedCode?: string
+  /** SNOMED semantic tag of the linked code (e.g. "observable entity"), captured
+   * at selection time — gates whether the value/units/range fields are shown. */
+  semanticTag?: string
   description?: string
   value?: string
+  unit?: string
+  minRange?: string
+  maxRange?: string
+  interpretation?: 'normal' | 'abnormal' | 'potentially-abnormal'
   associatedText?: string
 }
 
@@ -174,11 +190,14 @@ export interface DraftConsultation {
   date?: string
   endDate?: string
   typeDisplay?: string
+  typeCode?: string
   clinicianTempId?: string
   orgTempId?: string
   encounterClass?: string
   topics: DraftConsultationTopic[]
   linkedProblemTempIds?: string[]
+  confidential?: boolean
+  notForPfs?: boolean
 }
 
 export interface DraftImmunisation {
@@ -204,6 +223,8 @@ export interface DraftImmunisation {
   associatedText?: string
   linkedProblemTempIds?: string[]
   linkedConsultationTempId?: string
+  confidential?: boolean
+  notForPfs?: boolean
 }
 
 export interface DraftInvestigationResult {
@@ -228,6 +249,8 @@ export interface DraftInvestigation {
   results: DraftInvestigationResult[]
   linkedProblemTempIds?: string[]
   linkedConsultationTempId?: string
+  confidential?: boolean
+  notForPfs?: boolean
 }
 
 export interface DraftReferral {
@@ -243,6 +266,8 @@ export interface DraftReferral {
   associatedText?: string
   linkedProblemTempIds?: string[]
   linkedConsultationTempId?: string
+  confidential?: boolean
+  notForPfs?: boolean
 }
 
 export interface DraftDiaryEntry {
@@ -259,6 +284,8 @@ export interface DraftDiaryEntry {
   associatedText?: string
   linkedProblemTempIds?: string[]
   linkedConsultationTempId?: string
+  confidential?: boolean
+  notForPfs?: boolean
 }
 
 export interface DraftCodedDataItem {
@@ -274,6 +301,8 @@ export interface DraftCodedDataItem {
   performerTempId?: string
   linkedProblemTempIds?: string[]
   linkedConsultationTempId?: string
+  confidential?: boolean
+  notForPfs?: boolean
 }
 
 export interface DraftDocument {
@@ -288,6 +317,8 @@ export interface DraftDocument {
   status?: string
   linkedProblemTempIds?: string[]
   linkedConsultationTempId?: string
+  confidential?: boolean
+  notForPfs?: boolean
 }
 
 export interface DraftRecord {

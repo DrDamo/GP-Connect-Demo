@@ -1,5 +1,6 @@
 import type { DraftRecord } from '../types'
 import type { TempIdMap } from '../idMap'
+import { excludeConfidential, nopatMeta } from './security'
 
 const SIGNIFICANCE_EXT = 'https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-ProblemSignificance-1'
 const SIGNIFICANCE_SYSTEM = 'https://fhir.nhs.uk/STU3/CodeSystem/CareConnect-ProblemSignificance-1'
@@ -11,7 +12,7 @@ export function generateProblems(
   patientRef: string,
   relatedContent: Map<string, string[]>,
 ): fhir3.BundleEntry[] {
-  return draft.problems.map(p => {
+  return excludeConfidential(draft.problems).map(p => {
     const { id, fullUrl } = map.entry(p._tempId)
 
     const significanceCode = p.significance ?? 'minor'
@@ -40,6 +41,7 @@ export function generateProblems(
     const resource: fhir3.Condition = {
       resourceType: 'Condition',
       id,
+      ...nopatMeta(p.notForPfs),
       extension: extensions,
       clinicalStatus: p.clinicalStatus ?? 'active',
       verificationStatus: 'confirmed',

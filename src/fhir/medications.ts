@@ -1,14 +1,106 @@
 import type { GpConnectMedication, GpConnectMedicationIssue } from './types'
 import {
-  getEntries, resolveReference, formatDate, getExtensionValue, extractSnomedCode,
-  getOrganisationName, resolvePractitionerRef, extractId, fhirDateKey,
+  getEntries, resolveReference, formatDate, getExtensionValue, extractSnomedCode, extractOriginalTermText,
+  getOrganisationName, resolvePractitionerRef, extractId, fhirDateKey, hasNopatSecurity,
 } from './utils'
+
+// ---------------------------------------------------------------------------
+// Current vs past classification — GP supplier quirks
+// ---------------------------------------------------------------------------
+//
+// TPP (SystmOne) reports MedicationStatement/Request status accurately —
+// "active" while a course is genuinely ongoing — so current/past can be read
+// straight off status, which is exactly the original (pre-supplier-aware)
+// rule this app already used. EMIS Web marks an Acute "completed" as soon as
+// it's issued, regardless of whether the course has actually finished, so a
+// completed Acute needs date arithmetic to tell current from past. Medicus
+// is documented (by the person who asked for this) to behave the same way
+// as EMIS here; there's no known bundle marker to distinguish it from EMIS
+// yet, so both fall under the same non-TPP branch below. Repeat / repeat
+// dispensing / prescribed-elsewhere rules aren't defined for EMIS/Medicus
+// yet either — those fall back to the TPP-style status-only rule until
+// that's built.
+//
+// Note: this only controls which section (current/past) a medication is
+// grouped under — the actual FHIR status is always displayed unchanged.
+
+function detectIsTpp(bundle: fhir3.Bundle): boolean {
+  const systems = getEntries<fhir3.Medication>(bundle, 'Medication')
+    .flatMap(m => m.code?.coding?.map(c => c.system ?? '') ?? [])
+  if (systems.some(s => s.includes('tpp'))) return true
+  // Anything else (EMIS's 'emis-drug-codes', an unrecognised system, or no
+  // Medication resources at all) defaults to the non-TPP branch — it
+  // degrades to the same result as the TPP rule for active/stopped/etc.,
+  // and only differs for completed Acutes.
+  return false
+}
+
+function daysFromDuration(duration: fhir3.Duration | undefined): number | undefined {
+  if (duration?.value === undefined) return undefined
+  const unit = (duration.code ?? duration.unit ?? 'd').toLowerCase()
+  if (unit.startsWith('d')) return duration.value
+  if (unit.startsWith('wk') || unit.startsWith('week')) return duration.value * 7
+  if (unit.startsWith('mo')) return duration.value * 30
+  if (unit.startsWith('a') || unit.startsWith('y')) return duration.value * 365
+  return duration.value
+}
+
+function parseFhirDate(raw: string | undefined): Date | undefined {
+  if (!raw) return undefined
+  const parsed = new Date(raw)
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed
+}
+
+function classifyIsCurrent(params: {
+  status: string
+  prescriptionType?: string
+  isTpp: boolean
+  startRaw?: string
+  endRaw?: string
+  supplyDuration?: fhir3.Duration
+}): boolean {
+  const { status, prescriptionType, isTpp, startRaw, endRaw, supplyDuration } = params
+  const legacyIsPast = status === 'completed' || status === 'stopped' || status === 'entered-in-error'
+
+  if (isTpp || prescriptionType !== 'acute') {
+    return !legacyIsPast
+  }
+
+  // EMIS/Medicus Acute rules
+  if (status === 'stopped' || status === 'entered-in-error') return false
+  if (status !== 'completed') return true // active, or any other unlisted status
+
+  // Completed: not reliably "finished" under EMIS/Medicus — work out
+  // whether the course has actually run its course yet.
+  const today = new Date()
+
+  const end = parseFhirDate(endRaw)
+  if (end) return today <= end
+
+  const start = parseFhirDate(startRaw)
+  const supplyDays = daysFromDuration(supplyDuration)
+  if (start && supplyDays !== undefined) {
+    const projectedEnd = new Date(start)
+    projectedEnd.setDate(projectedEnd.getDate() + supplyDays)
+    return today <= projectedEnd
+  }
+
+  if (start) {
+    const threeMonthsOut = new Date(start)
+    threeMonthsOut.setMonth(threeMonthsOut.getMonth() + 3)
+    return today <= threeMonthsOut
+  }
+
+  // No usable dates at all — shouldn't happen for real data; default to
+  // current so nothing silently disappears from view.
+  return true
+}
 
 function getMedRef(bundle: fhir3.Bundle, med: fhir3.MedicationStatement | fhir3.MedicationRequest): { name: string; code?: string; resourceId?: string } {
   const cc = (med as fhir3.MedicationStatement).medicationCodeableConcept
     ?? (med as fhir3.MedicationRequest).medicationCodeableConcept
   if (cc) {
-    return { name: cc.text ?? cc.coding?.[0]?.display ?? 'Unknown', code: extractSnomedCode(cc.coding) }
+    return { name: extractOriginalTermText(cc) ?? 'Unknown', code: extractSnomedCode(cc.coding) }
   }
   const ref = ((med as fhir3.MedicationStatement).medicationReference
     ?? (med as fhir3.MedicationRequest).medicationReference) as fhir3.Reference | undefined
@@ -16,7 +108,7 @@ function getMedRef(bundle: fhir3.Bundle, med: fhir3.MedicationStatement | fhir3.
     const resolved = resolveReference(bundle, ref.reference) as fhir3.Medication | undefined
     if (resolved?.code) {
       return {
-        name: resolved.code.text ?? resolved.code.coding?.[0]?.display ?? 'Unknown',
+        name: extractOriginalTermText(resolved.code) ?? 'Unknown',
         code: extractSnomedCode(resolved.code.coding),
         resourceId: extractId(ref.reference),
       }
@@ -62,6 +154,7 @@ export function extractMedications(bundle: fhir3.Bundle): GpConnectMedication[] 
   const statements = getEntries<fhir3.MedicationStatement>(bundle, 'MedicationStatement')
     .sort((a, b) => fhirDateKey(b.dateAsserted).localeCompare(fhirDateKey(a.dateAsserted)))
   const requests = getEntries<fhir3.MedicationRequest>(bundle, 'MedicationRequest')
+  const isTpp = detectIsTpp(bundle)
 
   const medications: GpConnectMedication[] = statements.map(stmt => {
     const { name, code } = getMedicationName(bundle, stmt)
@@ -73,11 +166,10 @@ export function extractMedications(bundle: fhir3.Bundle): GpConnectMedication[] 
         ? `${dosage.doseRange.low?.value ?? ''} – ${dosage.doseRange.high?.value ?? ''} ${dosage.doseRange.high?.unit ?? ''}`.trim()
         : undefined
 
-    const frequency = dosage?.timing?.code?.text ?? dosage?.timing?.code?.coding?.[0]?.display
+    const frequency = extractOriginalTermText(dosage?.timing?.code)
 
-    const route = dosage?.route?.coding?.[0]?.display ?? dosage?.route?.text
-    const site = (dosage?.site as fhir3.CodeableConcept | undefined)?.coding?.[0]?.display
-      ?? (dosage?.site as fhir3.CodeableConcept | undefined)?.text
+    const route = extractOriginalTermText(dosage?.route)
+    const site = extractOriginalTermText(dosage?.site as fhir3.CodeableConcept | undefined)
 
     const effectivePeriod = stmt.effectivePeriod
     const effectiveDateTime = stmt.effectiveDateTime
@@ -139,8 +231,7 @@ export function extractMedications(bundle: fhir3.Bundle): GpConnectMedication[] 
     const statusReasonSubs = (statusReasonExt as unknown as { extension?: fhir3.Extension[] } | undefined)?.extension
     const statusReasonVal = statusReasonSubs?.find(e => e.url === 'statusReason')
     const statusReason = (statusReasonVal?.valueString
-      ?? (statusReasonVal?.valueCodeableConcept as fhir3.CodeableConcept | undefined)?.text
-      ?? (statusReasonVal?.valueCodeableConcept as fhir3.CodeableConcept | undefined)?.coding?.[0]?.display
+      ?? extractOriginalTermText(statusReasonVal?.valueCodeableConcept as fhir3.CodeableConcept | undefined)
     ) || undefined
     const statusChangeDate = formatDate(
       statusReasonSubs?.find(e => e.url === 'statusChangeDate')?.valueDateTime as string | undefined
@@ -216,6 +307,15 @@ export function extractMedications(bundle: fhir3.Bundle): GpConnectMedication[] 
       ? `${esd.value} ${esd.unit ?? esd.code ?? ''}`.trim()
       : undefined
 
+    const isCurrent = classifyIsCurrent({
+      status: stmt.status ?? 'unknown',
+      prescriptionType,
+      isTpp,
+      startRaw: effectivePeriod?.start ?? effectiveDateTime,
+      endRaw: effectivePeriod?.end,
+      supplyDuration: esd,
+    })
+
     const noteText = stmt.note?.[0]?.text
 
     const patientInstructions = dosage?.patientInstruction || undefined
@@ -258,6 +358,8 @@ export function extractMedications(bundle: fhir3.Bundle): GpConnectMedication[] 
       medicationStatementId: stmt.id ?? '',
       medicationRequestIds: requestIds,
       issues,
+      isCurrent,
+      notForPfs: hasNopatSecurity(stmt) || hasNopatSecurity(linkedRequest),
     }
   })
 
@@ -286,10 +388,9 @@ export function extractMedications(bundle: fhir3.Bundle): GpConnectMedication[] 
       : dosage?.doseRange
         ? `${dosage.doseRange.low?.value ?? ''} – ${dosage.doseRange.high?.value ?? ''} ${dosage.doseRange.high?.unit ?? ''}`.trim()
         : undefined
-    const frequency = dosage?.timing?.code?.text ?? dosage?.timing?.code?.coding?.[0]?.display
-    const route = dosage?.route?.coding?.[0]?.display ?? dosage?.route?.text
-    const site = (dosage?.site as fhir3.CodeableConcept | undefined)?.coding?.[0]?.display
-      ?? (dosage?.site as fhir3.CodeableConcept | undefined)?.text
+    const frequency = extractOriginalTermText(dosage?.timing?.code)
+    const route = extractOriginalTermText(dosage?.route)
+    const site = extractOriginalTermText(dosage?.site as fhir3.CodeableConcept | undefined)
 
     const vp = planReq.dispenseRequest?.validityPeriod
     const startDate = formatDate(vp?.start ?? planReq.authoredOn)
@@ -321,8 +422,7 @@ export function extractMedications(bundle: fhir3.Bundle): GpConnectMedication[] 
     const statusReasonSubs = (statusReasonExt as unknown as { extension?: fhir3.Extension[] } | undefined)?.extension
     const statusReasonVal = statusReasonSubs?.find(e => e.url === 'statusReason')
     const statusReason = (statusReasonVal?.valueString
-      ?? (statusReasonVal?.valueCodeableConcept as fhir3.CodeableConcept | undefined)?.text
-      ?? (statusReasonVal?.valueCodeableConcept as fhir3.CodeableConcept | undefined)?.coding?.[0]?.display
+      ?? extractOriginalTermText(statusReasonVal?.valueCodeableConcept as fhir3.CodeableConcept | undefined)
     ) || undefined
     const statusChangeDate = formatDate(
       statusReasonSubs?.find(e => e.url === 'statusChangeDate')?.valueDateTime as string | undefined
@@ -332,6 +432,15 @@ export function extractMedications(bundle: fhir3.Bundle): GpConnectMedication[] 
     const expectedSupplyDuration = esd?.value !== undefined
       ? `${esd.value} ${esd.unit ?? esd.code ?? ''}`.trim()
       : undefined
+
+    const isCurrent = classifyIsCurrent({
+      status: planReq.status ?? 'unknown',
+      prescriptionType,
+      isTpp,
+      startRaw: vp?.start ?? planReq.authoredOn,
+      endRaw: vp?.end,
+      supplyDuration: esd,
+    })
 
     const reqRef = (planReq as unknown as Record<string, unknown>)['requester'] as { agent?: fhir3.Reference } | undefined
     const { name: prescriber, id: prescriberId } = resolvePractitionerRef(bundle, reqRef?.agent?.reference)
@@ -427,6 +536,8 @@ export function extractMedications(bundle: fhir3.Bundle): GpConnectMedication[] 
       medicationStatementId: '',
       medicationRequestIds: [planReq.id ?? ''],
       issues,
+      isCurrent,
+      notForPfs: hasNopatSecurity(planReq),
     }
   })
 

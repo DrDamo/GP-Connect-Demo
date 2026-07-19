@@ -413,10 +413,11 @@ function draftReducer(state: DraftRecord, action: DraftAction): DraftRecord {
     case 'ADD_CONSULTATION_TOPIC': {
       const consTempId = action.payload
       const problemTempId = newTempId()
+      const consultationDate = state.consultations.find(c => c._tempId === consTempId)?.date
       const defaultCategories: DraftConsultationCategory[] = ['History', 'Examination', 'Assessment', 'Plan'].map(title => ({
         _tempId: newTempId(),
         title,
-        items: [{ _tempId: newTempId(), itemType: 'note' }],
+        items: [{ _tempId: newTempId(), itemType: 'note', date: consultationDate }],
       }))
       return {
         ...state,
@@ -556,7 +557,8 @@ function draftReducer(state: DraftRecord, action: DraftAction): DraftRecord {
 
     case 'ADD_CONSULTATION_ITEM': {
       const { consTempId, topicTempId, catTempId } = action.payload
-      const newItem: DraftConsultationItem = { _tempId: newTempId(), itemType: 'note' }
+      const consultationDate = state.consultations.find(c => c._tempId === consTempId)?.date
+      const newItem: DraftConsultationItem = { _tempId: newTempId(), itemType: 'note', date: consultationDate }
       return {
         ...state,
         consultations: state.consultations.map(c =>
@@ -799,6 +801,7 @@ function draftReducer(state: DraftRecord, action: DraftAction): DraftRecord {
           status: 'active',
           route: 'oral',
           startDate: new Date().toISOString().split('T')[0],
+          prescriptionType: 'acute',
         }],
       }
 
@@ -812,16 +815,27 @@ function draftReducer(state: DraftRecord, action: DraftAction): DraftRecord {
         }],
       }
 
-    case 'ADD_PROBLEM_WITH_ID':
+    case 'ADD_PROBLEM_WITH_ID': {
+      const today = new Date().toISOString().split('T')[0]
       return {
         ...state,
-        problems: [...state.problems, { _tempId: action.payload }],
+        problems: [...state.problems, {
+          _tempId: action.payload,
+          clinicalStatus: 'active',
+          startDate: today,
+          assertedDate: today,
+        }],
       }
+    }
 
     case 'ADD_CONSULTATION_WITH_ID':
       return {
         ...state,
-        consultations: [...state.consultations, { _tempId: action.payload, topics: [] }],
+        consultations: [...state.consultations, {
+          _tempId: action.payload,
+          topics: [],
+          date: new Date().toISOString().split('T')[0],
+        }],
       }
 
     case 'ADD_IMMUNISATION_WITH_ID':

@@ -8,6 +8,7 @@ import { PractitionerSelect } from './shared/PractitionerSelect'
 import { BuilderModal } from '../components/BuilderModal'
 import { DeleteConfirmDialog } from '../components/DeleteConfirmDialog'
 import { LinkSection } from './shared/LinkSection'
+import { ConfidentialityCheckboxes } from './shared/ConfidentialityCheckboxes'
 import { TrashIcon } from '../components/Icons'
 
 // ---------------------------------------------------------------------------
@@ -174,6 +175,12 @@ function ReferralCard({
             draft={draft}
             value={referral.requesterTempId}
             onChange={v => upd({ requesterTempId: v })}
+          />
+
+          <ConfidentialityCheckboxes
+            confidential={referral.confidential}
+            notForPfs={referral.notForPfs}
+            onChange={upd}
           />
 
           <LinkSection

@@ -1,5 +1,5 @@
 import type { GpConnectReferral, GpConnectReferralRecipient, GpConnectReferralDocument } from './types'
-import { getEntries, formatDate, resolveReference, resolvePractitionerRef, extractSnomedCode, extractId, fhirDateKey } from './utils'
+import { getEntries, formatDate, resolveReference, resolvePractitionerRef, extractOriginalTermText, extractId, fhirDateKey, hasNopatSecurity } from './utils'
 
 function extractName(resource: Record<string, unknown>): string | undefined {
   const name = resource.name
@@ -44,13 +44,10 @@ export function extractReferrals(bundle: fhir3.Bundle): GpConnectReferral[] {
       ?? recipientRefs[0]
 
     const specialty = resource.specialty
-    const recipient = preferred?.name
-      ?? specialty?.text
-      ?? extractSnomedCode(specialty?.coding)
-      ?? specialty?.coding?.[0]?.display
+    const recipient = preferred?.name ?? extractOriginalTermText(specialty)
 
     const reasonCode = resource.reasonCode?.[0]
-    const reason = reasonCode?.text ?? reasonCode?.coding?.[0]?.display
+    const reason = extractOriginalTermText(reasonCode)
 
     const requesterRef = (cast.requester as { agent?: fhir3.Reference } | undefined)?.agent?.reference
     const description = cast.description as string | undefined
@@ -65,8 +62,8 @@ export function extractReferrals(bundle: fhir3.Bundle): GpConnectReferral[] {
       if (!docId) continue
       const doc = resolveReference(bundle, refStr) as Record<string, unknown> | undefined
       if (!doc) continue
-      const type = doc.type as { text?: string; coding?: Array<{ display?: string }> } | undefined
-      const title = type?.text ?? type?.coding?.[0]?.display ?? 'Document'
+      const type = doc.type as fhir3.CodeableConcept | undefined
+      const title = extractOriginalTermText(type) ?? 'Document'
       const entry: GpConnectReferralDocument = { id: docId, title }
       const docDesc = doc.description as string | undefined
       const created = doc.created as string | undefined
@@ -91,6 +88,7 @@ export function extractReferrals(bundle: fhir3.Bundle): GpConnectReferral[] {
       notes: (resource.note ?? []).map(n => n.text ?? '').filter(Boolean),
       status: resource.status ?? 'unknown',
       supportingDocs,
+      notForPfs: hasNopatSecurity(resource),
     }
   })
 }

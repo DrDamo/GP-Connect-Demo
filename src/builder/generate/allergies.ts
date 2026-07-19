@@ -1,5 +1,6 @@
 import type { DraftRecord, DraftAllergy } from '../types'
 import type { TempIdMap } from '../idMap'
+import { excludeConfidential, nopatMeta } from './security'
 
 const END_EXT = 'https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-AllergyIntoleranceEnd-1'
 
@@ -24,6 +25,7 @@ function makeAllergyResource(
   const resource: fhir3.AllergyIntolerance = {
     resourceType: 'AllergyIntolerance',
     id,
+    ...nopatMeta(draft.notForPfs),
     clinicalStatus: draft.status === 'resolved' ? 'resolved' : 'active',
     verificationStatus: 'confirmed',
     ...(draft.category ? { category: [draft.category] } : {}),
@@ -85,7 +87,7 @@ export function generateAllergies(
   const activeEntries: fhir3.BundleEntry[] = []
   const resolvedResources: fhir3.AllergyIntolerance[] = []
 
-  for (const allergy of draft.allergies) {
+  for (const allergy of excludeConfidential(draft.allergies)) {
     const resource = makeAllergyResource(allergy, map, patientRef)
     if (allergy.status === 'resolved') {
       resolvedResources.push(resource)

@@ -22,6 +22,7 @@ const SEVERITY_ICON: Record<string, string> = {
 export interface BuilderPreviewPanelProps {
   bundleJson: string
   validationIssues: ValidationIssue[]
+  checkingSnomed?: boolean
   onLoadIntoViewer: () => void
   onDownload: () => void
   onClose: () => void
@@ -30,6 +31,7 @@ export interface BuilderPreviewPanelProps {
 export function BuilderPreviewPanel({
   bundleJson,
   validationIssues,
+  checkingSnomed,
   onLoadIntoViewer,
   onDownload,
   onClose,
@@ -81,6 +83,16 @@ export function BuilderPreviewPanel({
           </button>
         </div>
       </div>
+
+      {checkingSnomed && (
+        <div className="shrink-0 flex items-center gap-2 px-4 py-1.5 text-xs text-nhs-blue bg-blue-50 dark:bg-blue-950/40 border-b border-nhs-grey-4 dark:border-nhs-grey-2">
+          <svg className="h-3.5 w-3.5 shrink-0 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+          </svg>
+          Checking all SNOMED CT codes…
+        </div>
+      )}
 
       {/* Tab bar (only shown when there are issues) */}
       {hasIssues && (

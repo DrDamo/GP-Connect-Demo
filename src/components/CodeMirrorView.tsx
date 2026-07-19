@@ -151,11 +151,17 @@ export const CodeMirrorView = memo(forwardRef<CodeMirrorViewHandle, Props>(funct
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Replace document when source changes (skip the initial mount run).
+  // Pixel scroll position is captured and restored around the swap — a full
+  // document replace gives CodeMirror no meaningful position to preserve on
+  // its own, and callers (e.g. toggling between original/degraded source)
+  // rely on the viewport staying put for direct comparison.
   useEffect(() => {
     if (skipFirstSourceRef.current) { skipFirstSourceRef.current = false; return }
     const view = viewRef.current
     if (!view) return
+    const scrollTop = view.scrollDOM.scrollTop
     view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: source } })
+    view.scrollDOM.scrollTop = scrollTop
   }, [source])
 
   // Reconfigure language extension.

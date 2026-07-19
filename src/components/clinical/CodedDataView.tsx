@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { GpConnectBundle, GpConnectCodedDataItem } from '../../fhir/types'
-import { DomainTable } from './DomainTable'
+import { DomainTable, DegradedTermText } from './DomainTable'
 import type { DomainColumn } from './DomainTable'
 import { ReferencedResources } from './ReferencedResources'
 import { ReferenceChip } from './ResourceCard'
@@ -40,7 +40,7 @@ const COLUMNS: DomainColumn<GpConnectCodedDataItem>[] = [
     render: item => (
       <div>
         <div className="font-medium text-nhs-grey-1">
-          {item.description}
+          <DegradedTermText text={item.description} />
           {item.isTransferDegraded && (
             <span className="inline-block ml-1.5 text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200 font-medium leading-none align-middle">Degrade</span>
           )}

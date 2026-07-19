@@ -1,5 +1,5 @@
 import type { GpConnectAllergy, GpConnectAllergyNote } from './types'
-import { getEntries, formatDate, resolvePractitionerRef, getExtensionValue, extractSnomedCode, extractId, fhirDateKey } from './utils'
+import { getEntries, formatDate, resolvePractitionerRef, getExtensionValue, extractSnomedCode, extractOriginalTermText, extractId, fhirDateKey, hasNopatSecurity } from './utils'
 
 const END_EXT = 'Extension-CareConnect-GPC-AllergyIntoleranceEnd-1'
 
@@ -23,7 +23,7 @@ export function extractAllergies(bundle: fhir3.Bundle): GpConnectAllergy[] {
     const snomedCode = extractSnomedCode(coding)
     const snomedDisplay = snomedCoding?.display
 
-    const reactionManifestation = resource.reaction?.[0]?.manifestation?.[0]?.coding?.[0]?.display
+    const reactionManifestation = extractOriginalTermText(resource.reaction?.[0]?.manifestation?.[0])
     const reactionDescription = (resource.reaction?.[0] as unknown as { description?: string })?.description
 
     const rawNotes = (resource.note ?? []) as unknown as Array<{
@@ -57,7 +57,7 @@ export function extractAllergies(bundle: fhir3.Bundle): GpConnectAllergy[] {
 
     return {
       id: resource.id ?? crypto.randomUUID(),
-      causativeAgent: resource.code?.text ?? snomedDisplay ?? coding?.[0]?.display ?? 'Unknown',
+      causativeAgent: extractOriginalTermText(resource.code) ?? 'Unknown',
       snomedCode,
       snomedDisplay,
       category: resource.category?.[0] as string | undefined,
@@ -75,6 +75,7 @@ export function extractAllergies(bundle: fhir3.Bundle): GpConnectAllergy[] {
       encounterId,
       endDate: formatDate(endDateRaw),
       endReason,
+      notForPfs: hasNopatSecurity(resource),
     }
   })
 }

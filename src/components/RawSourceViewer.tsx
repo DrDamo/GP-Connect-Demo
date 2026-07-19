@@ -7,9 +7,13 @@ interface Props {
   source: string
   format: 'json' | 'xml'
   filename: string
+  /** Whether this bundle has a pre-degradation source to compare against. */
+  hasOriginalSource?: boolean
+  showOriginalSource?: boolean
+  onToggleOriginalSource?: () => void
 }
 
-export function RawSourceViewer({ source, format, filename }: Props) {
+export function RawSourceViewer({ source, format, filename, hasOriginalSource, showOriginalSource, onToggleOriginalSource }: Props) {
   const [copied, setCopied] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchMatchIdx, setSearchMatchIdx] = useState(0)
@@ -82,10 +86,14 @@ export function RawSourceViewer({ source, format, filename }: Props) {
     }, [])
   }, [source, searchQuery])
 
+  // Keyed on searchQuery only (not searchMatchLines/source) — jumping to the
+  // first match should happen when the user types a new search, not merely
+  // because the underlying source text changed (e.g. toggling original vs
+  // degraded source), which should leave the viewport exactly where it was.
   useEffect(() => {
     setSearchMatchIdx(0)
     if (searchMatchLines.length > 0) codeViewRef.current?.scrollToLine(searchMatchLines[0])
-  }, [searchMatchLines]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [searchQuery]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSearchPrev = useCallback(() => {
     if (searchMatchLines.length === 0) return
@@ -146,6 +154,26 @@ export function RawSourceViewer({ source, format, filename }: Props) {
           <InfoHint topic="raw-source.vs-inspector" />
         </div>
         <div className="flex items-center gap-2">
+          {hasOriginalSource && (
+            <div className="flex items-center rounded border border-nhs-grey-4 overflow-hidden" title="Some SNOMED CT codes were degraded on import — compare the file as uploaded against the converted version">
+              <button
+                onClick={() => showOriginalSource && onToggleOriginalSource?.()}
+                className={`px-2 py-1 text-xs font-medium transition-colors whitespace-nowrap ${
+                  !showOriginalSource ? 'bg-nhs-blue text-white' : 'bg-white text-nhs-grey-2 hover:bg-nhs-grey-5'
+                }`}
+              >
+                Degraded
+              </button>
+              <button
+                onClick={() => !showOriginalSource && onToggleOriginalSource?.()}
+                className={`px-2 py-1 text-xs font-medium transition-colors whitespace-nowrap border-l border-nhs-grey-4 ${
+                  showOriginalSource ? 'bg-nhs-blue text-white' : 'bg-white text-nhs-grey-2 hover:bg-nhs-grey-5'
+                }`}
+              >
+                Original
+              </button>
+            </div>
+          )}
           <button
             onClick={() => setShowIndentGuides(v => !v)}
             title="Toggle indent guides"

@@ -8,6 +8,7 @@ import { PractitionerSelect } from './shared/PractitionerSelect'
 import { BuilderModal } from '../components/BuilderModal'
 import { DeleteConfirmDialog } from '../components/DeleteConfirmDialog'
 import { LinkSection } from './shared/LinkSection'
+import { ConfidentialityCheckboxes } from './shared/ConfidentialityCheckboxes'
 import { TrashIcon } from '../components/Icons'
 
 // ---------------------------------------------------------------------------
@@ -177,6 +178,13 @@ function DocumentCard({
               {orgName}
             </div>
           </div>
+
+          <ConfidentialityCheckboxes
+            confidential={doc.confidential}
+            notForPfs={doc.notForPfs}
+            onChange={upd}
+          />
+
           <LinkSection
             draft={draft}
             linkedProblemTempIds={doc.linkedProblemTempIds ?? []}

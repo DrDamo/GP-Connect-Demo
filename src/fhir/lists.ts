@@ -1,6 +1,6 @@
 import type * as fhir3 from 'fhir/r3'
 import type { GpConnectList, GpConnectListEntry, ListCategory } from './types'
-import { getEntries, resolveItemDisplay, extractId, fhirDateKey } from './utils'
+import { getEntries, resolveItemDisplay, extractOriginalTermText, extractId, fhirDateKey, hasNopatSecurity } from './utils'
 import { titleIndexKey } from './lineIndex'
 
 const PRIMARY_LIST_CODES = new Set([
@@ -59,9 +59,9 @@ export function extractLists(bundle: fhir3.Bundle): GpConnectList[] {
         (list as unknown as { encounter?: { reference?: string } }).encounter?.reference
       )
 
-      const title = list.title ?? list.code?.coding?.[0]?.display ?? list.code?.text
-      const orderedBy = list.orderedBy?.coding?.[0]?.display ?? list.orderedBy?.text
-      const emptyReason = list.emptyReason?.coding?.[0]?.display ?? list.emptyReason?.text
+      const title = list.title ?? extractOriginalTermText(list.code)
+      const orderedBy = extractOriginalTermText(list.orderedBy)
+      const emptyReason = extractOriginalTermText(list.emptyReason)
       const note = list.note?.map(n => n.text).filter(Boolean).join('; ') || undefined
       const listCode = list.code?.coding?.[0]?.code
       const warningExt = (list.extension ?? []).find(e =>
@@ -83,7 +83,7 @@ export function extractLists(bundle: fhir3.Bundle): GpConnectList[] {
           ? ((containedResource as unknown as { resourceType?: string })?.resourceType ?? '')
           : (ref?.split('/')[0] ?? '')
         const display = e.item.display ?? (isLocal ? resolved : resolveItemDisplay(bundle, ref))
-        const flag = e.flag?.coding?.[0]?.display ?? e.flag?.text
+        const flag = extractOriginalTermText(e.flag)
 
         return {
           resourceId,
@@ -109,6 +109,7 @@ export function extractLists(bundle: fhir3.Bundle): GpConnectList[] {
         encounterId,
         listCode,
         warningCode,
+        notForPfs: hasNopatSecurity(list),
       }
     })
     .filter(l => !INTERNAL_CATEGORIES.has(l.category))

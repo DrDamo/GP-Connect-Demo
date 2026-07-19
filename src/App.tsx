@@ -20,6 +20,8 @@ import { AppGuideView, type GuidePageId } from './onboarding/AppGuideView'
 import type { DraftRecord } from './builder/types'
 import { parseBundle, normalizePastedJson } from './fhir/parser'
 import { validateMedicationsBundle, cleanDanglingRefs } from './fhir/validator'
+import { checkAndDegradeSnomedCodes } from './fhir/snomedDegrade'
+import { SnomedCheckingBanner } from './components/SnomedCheckingBanner'
 import { extractMedications } from './fhir/medications'
 import { extractAllergies } from './fhir/allergies'
 import { extractProblems } from './fhir/problems'
@@ -41,6 +43,8 @@ type ActiveTab = 'clinical' | 'raw' | 'validation' | 'inspector' | 'training' | 
 
 interface LoadedBundle {
   source: string
+  /** Source text before the SNOMED CT check degraded any codes — only set when a degradation happened, so a toggle can compare against it. */
+  originalSource?: string
   filename: string
   label: string
   format: 'json' | 'xml'
@@ -51,7 +55,10 @@ interface LoadedBundle {
 function AppContent() {
   const { user, profile, isLoading, logout } = useAuth()
   const [loaded, setLoaded] = useState<LoadedBundle | null>(null)
-  const [tab, setTab] = useState<ActiveTab>('clinical')
+  const [checkingSnomed, setCheckingSnomed] = useState(false)
+  const [showOriginalSource, setShowOriginalSource] = useState(false)
+  const snomedCheckTokenRef = useRef(0)
+  const [tab, setTab] = useState<ActiveTab>('inspector')
   const [trainingPage, setTrainingPage] = useState<DomainId | null>(null)
   const [parseError, setParseError] = useState<string | null>(null)
   const [jumpToId, setJumpToId] = useState<string | null>(null)
@@ -62,7 +69,7 @@ function AppContent() {
   const [pendingSharedDraftVersion, setPendingSharedDraftVersion] = useState<number | null>(null)
   const [guidePage, setGuidePage] = useState<GuidePageId | null>(null)
   const [guideAnchor, setGuideAnchor] = useState<string | null>(null)
-  const prevTabRef = useRef<ActiveTab>('clinical')
+  const prevTabRef = useRef<ActiveTab>('inspector')
   const builderDirtyRef = useRef(false)
 
   const { startTour, isTourCompleted } = useOnboarding()
@@ -148,6 +155,28 @@ function AppContent() {
 
   const cycleTheme = () => setThemeMode(m => m === 'light' ? 'dark' : m === 'dark' ? 'system' : 'light')
 
+  const buildRecordFromBundle = useCallback((data: fhir3.Bundle): GpConnectMedicationsRecord => ({
+    patient: extractPatientInfo(data),
+    practiceOrganisation: getOrganisationName(data),
+    medications: extractMedications(data),
+    allergies: extractAllergies(data),
+    problems: extractProblems(data),
+    consultations: extractConsultations(data),
+    immunisations: extractImmunisations(data),
+    investigations: extractInvestigations(data),
+    referrals: extractReferrals(data),
+    diaryEntries: extractDiaryEntries(data),
+    codedData: extractCodedData(data),
+    documents: extractDocuments(data),
+    fhirMedications: extractFhirMedications(data),
+    practitioners: extractPractitioners(data),
+    practitionerRoles: extractPractitionerRoles(data),
+    organisations: extractOrganisations(data),
+    healthcareServices: extractHealthcareServices(data),
+    locations: extractLocations(data),
+    lists: extractLists(data),
+  }), [])
+
   const handleLoad = useCallback((text: string, filename: string, label?: string) => {
     setParseError(null)
     const parsed = parseBundle(text)
@@ -156,30 +185,43 @@ function AppContent() {
       return
     }
     const validation = validateMedicationsBundle(parsed.data)
-    const record: GpConnectMedicationsRecord = {
-      patient: extractPatientInfo(parsed.data),
-      practiceOrganisation: getOrganisationName(parsed.data),
-      medications: extractMedications(parsed.data),
-      allergies: extractAllergies(parsed.data),
-      problems: extractProblems(parsed.data),
-      consultations: extractConsultations(parsed.data),
-      immunisations: extractImmunisations(parsed.data),
-      investigations: extractInvestigations(parsed.data),
-      referrals: extractReferrals(parsed.data),
-      diaryEntries: extractDiaryEntries(parsed.data),
-      codedData: extractCodedData(parsed.data),
-      documents: extractDocuments(parsed.data),
-      fhirMedications: extractFhirMedications(parsed.data),
-      practitioners: extractPractitioners(parsed.data),
-      practitionerRoles: extractPractitionerRoles(parsed.data),
-      organisations: extractOrganisations(parsed.data),
-      healthcareServices: extractHealthcareServices(parsed.data),
-      locations: extractLocations(parsed.data),
-      lists: extractLists(parsed.data),
-    }
+    const record = buildRecordFromBundle(parsed.data)
     setLoaded({ source: text, filename, label: label ?? filename, format: parsed.format, validation, record })
-    setTab('clinical')
-  }, [])
+    setShowOriginalSource(false)
+    setTab('inspector')
+
+    const loadToken = ++snomedCheckTokenRef.current
+    setCheckingSnomed(true)
+    checkAndDegradeSnomedCodes(parsed.data, { mutate: parsed.format === 'json' })
+      .then(result => {
+        if (snomedCheckTokenRef.current !== loadToken) return // a newer file was loaded meanwhile
+        setCheckingSnomed(false)
+        if (result.issues.length === 0 && result.passed.length === 0) return
+        setLoaded(prev => {
+          if (!prev) return prev
+          const mergedValidation: ValidationResult = {
+            ...prev.validation,
+            issues: [...prev.validation.issues, ...result.issues],
+            passed: [...prev.validation.passed, ...result.passed],
+          }
+          if (result.degradedCount === 0) {
+            return { ...prev, validation: mergedValidation }
+          }
+          const updatedSource = JSON.stringify(parsed.data, null, 2)
+          return {
+            ...prev,
+            source: updatedSource,
+            originalSource: prev.source,
+            record: buildRecordFromBundle(parsed.data),
+            validation: mergedValidation,
+          }
+        })
+      })
+      .catch(() => {
+        if (snomedCheckTokenRef.current !== loadToken) return
+        setCheckingSnomed(false)
+      })
+  }, [buildRecordFromBundle])
 
   const handleLoadSample = useCallback(() => {
     const text = JSON.stringify(sampleBundle, null, 2)
@@ -307,11 +349,11 @@ function AppContent() {
                   builderDirtyRef.current &&
                   !window.confirm('You have unsaved changes in the Record Builder. Leave without saving your draft?')
                 ) return
-                setTab('clinical')
+                setTab('inspector')
               }}
               className="px-4 py-2 text-sm font-medium rounded-t transition-colors text-nhs-grey-2 hover:text-nhs-blue"
             >
-              ← {loaded ? 'Clinical view' : 'Load a bundle'}
+              ← {loaded ? 'Inspector view' : 'Load a bundle'}
             </button>
             <button className="px-4 py-2 text-sm font-medium rounded-t bg-white border border-b-white border-nhs-grey-4 text-nhs-blue -mb-px">
               Build a Record
@@ -336,7 +378,7 @@ function AppContent() {
         <main className="flex-1 flex flex-col min-h-0 max-w-screen-2xl mx-auto w-full px-4 pt-3 pb-4 gap-3">
           <div className="flex items-center gap-1 border-b border-nhs-grey-4">
             <button
-              onClick={() => setTab(prevTabRef.current === 'account' ? 'clinical' : prevTabRef.current)}
+              onClick={() => setTab(prevTabRef.current === 'account' ? 'inspector' : prevTabRef.current)}
               className="px-4 py-2 text-sm font-medium rounded-t transition-colors text-nhs-grey-2 hover:text-nhs-blue"
             >
               ← Back
@@ -353,10 +395,10 @@ function AppContent() {
         <main className="flex-1 flex flex-col min-h-0 max-w-screen-2xl mx-auto w-full px-4 pt-3 pb-4 gap-3">
           <div className="flex items-center gap-1 border-b border-nhs-grey-4">
             <button
-              onClick={() => setTab('clinical')}
+              onClick={() => setTab('inspector')}
               className="px-4 py-2 text-sm font-medium rounded-t transition-colors text-nhs-grey-2 hover:text-nhs-blue"
             >
-              ← {loaded ? 'Clinical view' : 'Load a bundle'}
+              ← {loaded ? 'Inspector view' : 'Load a bundle'}
             </button>
             <button className="px-4 py-2 text-sm font-medium rounded-t bg-white border border-b-white border-nhs-grey-4 text-nhs-blue -mb-px">
               Shared Patients
@@ -370,7 +412,7 @@ function AppContent() {
         <main className="flex-1 flex flex-col min-h-0 max-w-screen-2xl mx-auto w-full px-4 pt-3 pb-4 gap-3">
           <div className="flex items-center gap-1 border-b border-nhs-grey-4">
             <button
-              onClick={() => setTab(prevTabRef.current === 'app-guide' ? 'clinical' : prevTabRef.current)}
+              onClick={() => setTab(prevTabRef.current === 'app-guide' ? 'inspector' : prevTabRef.current)}
               className="px-4 py-2 text-sm font-medium rounded-t transition-colors text-nhs-grey-2 hover:text-nhs-blue"
             >
               ← Back
@@ -387,12 +429,12 @@ function AppContent() {
         <main className="flex-1 flex flex-col min-h-0 max-w-screen-2xl mx-auto w-full px-4 pt-3 pb-4 gap-3">
           <div className="flex items-center gap-1 border-b border-nhs-grey-4">
             <button
-              onClick={() => setTab(prevTabRef.current === 'training' ? 'clinical' : prevTabRef.current)}
+              onClick={() => setTab(prevTabRef.current === 'training' ? 'inspector' : prevTabRef.current)}
               className="px-4 py-2 text-sm font-medium rounded-t transition-colors text-nhs-grey-2 hover:text-nhs-blue"
             >
               ← Back
             </button>
-            {(['clinical', 'inspector', 'raw', 'validation'] as ActiveTab[]).filter(() => !!loaded).map(t => (
+            {(['inspector', 'clinical', 'raw', 'validation'] as ActiveTab[]).filter(() => !!loaded).map(t => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -557,7 +599,7 @@ function AppContent() {
                     </div>
                   </div>
                   <button
-                    onClick={() => { prevTabRef.current = 'clinical'; setTrainingPage(null); setTab('training') }}
+                    onClick={() => { prevTabRef.current = 'inspector'; setTrainingPage(null); setTab('training') }}
                     className="w-full py-2.5 px-4 bg-nhs-blue text-white rounded-lg text-sm font-medium hover:bg-nhs-dark-blue transition-colors"
                   >
                     View training resources →
@@ -572,7 +614,7 @@ function AppContent() {
         <main className={`flex-1 flex flex-col w-full p-4 gap-4 min-h-0 ${tab !== 'inspector' ? 'max-w-screen-2xl mx-auto' : ''}`}>
           {/* Tabs */}
           <div className="flex gap-1 border-b border-nhs-grey-4">
-            {(['clinical', 'inspector', 'raw', 'validation', 'training', 'app-guide'] as ActiveTab[]).map(t => (
+            {(['inspector', 'clinical', 'raw', 'validation', 'training', 'app-guide'] as ActiveTab[]).map(t => (
               <button
                 key={t}
                 onClick={() => {
@@ -601,23 +643,42 @@ function AppContent() {
             ))}
           </div>
 
+          {checkingSnomed && <SnomedCheckingBanner />}
+
           {/* Tab panels */}
           <div className={`flex-1 min-h-0 ${tab === 'inspector' ? 'overflow-hidden' : 'overflow-auto'}`}>
             {tab === 'clinical' && (
-              <div className="bg-white rounded-lg border border-nhs-grey-4 h-full overflow-hidden">
+              <div className="rounded-lg border border-nhs-grey-4 h-full overflow-hidden">
                 <ClinicalView record={loaded.record} onJumpToSource={handleJumpToSource} onOpenTraining={handleOpenTraining} />
               </div>
             )}
 
             {tab === 'inspector' && (
               <div className="h-full">
-                <InspectorView record={loaded.record} source={loaded.source} format={loaded.format} jumpToId={jumpToId} onJumpHandled={() => setJumpToId(null)} onOpenTraining={handleOpenTraining} />
+                <InspectorView
+                  record={loaded.record}
+                  source={showOriginalSource && loaded.originalSource ? loaded.originalSource : loaded.source}
+                  format={loaded.format}
+                  jumpToId={jumpToId}
+                  onJumpHandled={() => setJumpToId(null)}
+                  onOpenTraining={handleOpenTraining}
+                  hasOriginalSource={!!loaded.originalSource}
+                  showOriginalSource={showOriginalSource}
+                  onToggleOriginalSource={() => setShowOriginalSource(v => !v)}
+                />
               </div>
             )}
 
             {tab === 'raw' && (
               <div className="bg-white rounded-lg border border-nhs-grey-4 h-full flex flex-col overflow-hidden">
-                <RawSourceViewer source={loaded.source} format={loaded.format} filename={loaded.filename} />
+                <RawSourceViewer
+                  source={showOriginalSource && loaded.originalSource ? loaded.originalSource : loaded.source}
+                  format={loaded.format}
+                  filename={loaded.filename}
+                  hasOriginalSource={!!loaded.originalSource}
+                  showOriginalSource={showOriginalSource}
+                  onToggleOriginalSource={() => setShowOriginalSource(v => !v)}
+                />
               </div>
             )}
 

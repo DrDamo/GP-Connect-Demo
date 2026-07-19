@@ -12,7 +12,9 @@ import {
   getOrganisationName,
   extractId,
   resolveItemDisplay,
+  extractOriginalTermText,
   fhirDateKey,
+  hasNopatSecurity,
 } from './utils'
 
 // SNOMED codes for consultation structure lists
@@ -108,7 +110,7 @@ export function extractConsultations(bundle: fhir3.Bundle): GpConnectConsultatio
     const organisationId = resolvedOrg?.id ?? extractId(serviceProviderRef)
 
     const typeEntry = enc.type?.[0]
-    const type = typeEntry?.coding?.[0]?.display ?? typeEntry?.text
+    const type = extractOriginalTermText(typeEntry)
 
     const encCast = enc as unknown as { class?: { code?: string; display?: string }; status?: string }
     const encounterClass = encCast.class?.display ?? encCast.class?.code
@@ -144,6 +146,7 @@ export function extractConsultations(bundle: fhir3.Bundle): GpConnectConsultatio
       encounterClass,
       encounterStatus,
       topics,
+      notForPfs: hasNopatSecurity(enc),
     }
   })
 }

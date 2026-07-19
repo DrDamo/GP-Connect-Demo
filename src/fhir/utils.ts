@@ -90,6 +90,12 @@ export function getExtensionValue(extensions: fhir3.Extension[] | undefined, url
   return extensions?.find(e => e.url === url || e.url?.endsWith(url))
 }
 
+/** Whether a resource carries the NOPAT security label (withheld from patient-facing services) —
+ * see https://simplifier.net/guide/gpconnect-data-model/Home/Build/FHIR-resources — "Resources not to be disclosed to a patient". */
+export function hasNopatSecurity(resource: { meta?: fhir3.Meta } | undefined): boolean {
+  return (resource?.meta?.security ?? []).some(s => s.code === 'NOPAT')
+}
+
 /** Extract SNOMED CT code from a coding array, preferring system='http://snomed.info/sct' over coding[0].
  *  Needed because EMIS places proprietary/Read v2 codes as coding[0] with SNOMED as coding[1]. */
 export function extractSnomedCode(codings: fhir3.Coding[] | undefined): string | undefined {
@@ -100,6 +106,57 @@ export function extractSnomedCode(codings: fhir3.Coding[] | undefined): string |
 export function extractSnomedDisplay(codings: fhir3.Coding[] | undefined): string | undefined {
   if (!codings?.length) return undefined
   return codings.find(c => c.system === 'http://snomed.info/sct')?.display ?? codings[0].display
+}
+
+// GP Connect (STU3) carries the SNOMED description display via the complex
+// "coding-sctdescid" extension — a wrapper extension with nested
+// descriptionId/descriptionDisplay sub-extensions, NOT a flat valueString —
+// e.g. { url: '.../Extension-coding-sctdescid', extension: [
+//   { url: 'descriptionId', valueId: '...' },
+//   { url: 'descriptionDisplay', valueString: '...' },
+// ] }. This is the CareConnect/GP Connect STU3 shape (confirmed against a
+// real EMIS-exported bundle); the UK Core R4 IG names an equivalent
+// extension slightly differently, but this app only ever sees STU3 data.
+const CODING_SCT_DESC_ID_EXT = 'Extension-coding-sctdescid'
+
+function findDescriptionDisplay(coding: fhir3.Coding): string | undefined {
+  const wrapper = getExtensionValue(coding.extension, CODING_SCT_DESC_ID_EXT)
+  const subExtensions = (wrapper as unknown as { extension?: fhir3.Extension[] } | undefined)?.extension
+  const valueString = subExtensions?.find(e => e.url === 'descriptionDisplay')?.valueString
+  return typeof valueString === 'string' && valueString ? valueString : undefined
+}
+
+// A coding counts as "the one the user selected" if it says so explicitly,
+// or — per the UK Core guidance below — if userSelected is simply absent
+// and it's the only coding present (nothing else it could have been).
+function isEffectivelyUserSelected(coding: fhir3.Coding, codingCount: number): boolean {
+  if (coding.userSelected === true) return true
+  return coding.userSelected === undefined && codingCount === 1
+}
+
+/**
+ * Original term text precedence per the UK Core CodeableConcept guidance —
+ * https://simplifier.net/guide/uk-core-implementation-guide/home/guidance/codeableconcept-guidance.html?version=1.0.0#Original-term-text
+ * 1. CodeableConcept.text, if present.
+ * 2. The user-selected coding's description-display extension, if present.
+ * 3. The user-selected coding's display.
+ * 4. (Not covered by the guidance — a fallback for when no coding is
+ *    identifiably user-selected) the SNOMED CT coding's display, or the
+ *    first coding's display.
+ */
+export function extractOriginalTermText(cc: fhir3.CodeableConcept | undefined): string | undefined {
+  if (!cc) return undefined
+  if (cc.text) return cc.text
+
+  const codings = cc.coding ?? []
+  const selected = codings.find(c => isEffectivelyUserSelected(c, codings.length))
+  if (selected) {
+    const descDisplay = findDescriptionDisplay(selected)
+    if (descDisplay) return descDisplay
+    if (selected.display) return selected.display
+  }
+
+  return extractSnomedDisplay(codings)
 }
 
 export function resolveResourceName(bundle: fhir3.Bundle, ref: string | undefined): string | undefined {
@@ -149,20 +206,20 @@ export function resolveItemDisplay(bundle: fhir3.Bundle, ref: string | undefined
   if (!resource) return undefined
   const r = resource as Record<string, any>
 
-  // Encounter: type is an array — pick first entry's text or display
+  // Encounter: type is an array — pick first entry's original term text
   if (resource.resourceType === 'Encounter') {
-    const typeArr = r.type as Array<{ text?: string; coding?: Array<{ display?: string }> }> | undefined
-    return typeArr?.[0]?.text ?? typeArr?.[0]?.coding?.[0]?.display
+    const typeArr = r.type as fhir3.CodeableConcept[] | undefined
+    return extractOriginalTermText(typeArr?.[0])
   }
 
   // MedicationStatement / MedicationRequest: follow medicationReference to Medication resource
   if (resource.resourceType === 'MedicationStatement' || resource.resourceType === 'MedicationRequest') {
-    const inline: string | undefined = r.medicationCodeableConcept?.coding?.[0]?.display ?? r.medicationCodeableConcept?.text
+    const inline = extractOriginalTermText(r.medicationCodeableConcept as fhir3.CodeableConcept | undefined)
     if (inline) return inline
     const medRef = (r.medicationReference as { reference?: string } | undefined)?.reference
     if (medRef) {
       const med = resolveReference(bundle, medRef) as Record<string, any> | undefined
-      return med?.code?.coding?.[0]?.display ?? med?.code?.text
+      return extractOriginalTermText(med?.code as fhir3.CodeableConcept | undefined)
     }
     return undefined
   }
@@ -172,24 +229,18 @@ export function resolveItemDisplay(bundle: fhir3.Bundle, ref: string | undefined
   if (resource.resourceType === 'Immunization') {
     const vaccineCodings = r.vaccineCode?.coding as fhir3.Coding[] | undefined
     const isNullFlavor = vaccineCodings?.every(c => c.system === 'http://hl7.org/fhir/v3/NullFlavor')
-    const vaccineDisplay = r.vaccineCode?.text ?? (isNullFlavor ? undefined : vaccineCodings?.[0]?.display)
+    const vaccineDisplay = isNullFlavor ? r.vaccineCode?.text : extractOriginalTermText(r.vaccineCode as fhir3.CodeableConcept | undefined)
     if (vaccineDisplay) return vaccineDisplay
     const vpExt = getExtensionValue(r.extension, 'Extension-CareConnect-VaccinationProcedure-1')
     const vpCC = vpExt?.valueCodeableConcept as fhir3.CodeableConcept | undefined
-    const vpCoding = vpCC?.coding?.find(c => c.system === 'http://snomed.info/sct') ?? vpCC?.coding?.[0]
-    return vpCoding?.display ?? vpCC?.text
+    return extractOriginalTermText(vpCC)
   }
 
   const codeName =
-    (r.code?.coding as fhir3.Coding[] | undefined)?.find(c => c.system === 'http://snomed.info/sct')?.display ??
-    r.code?.coding?.[0]?.display ??
-    r.code?.text ??
-    r.vaccineCode?.coding?.[0]?.display ??
-    r.vaccineCode?.text ??
-    r.medicationCodeableConcept?.coding?.[0]?.display ??
-    r.medicationCodeableConcept?.text ??
-    r.type?.coding?.[0]?.display ??
-    r.type?.text ??
+    extractOriginalTermText(r.code as fhir3.CodeableConcept | undefined) ??
+    extractOriginalTermText(r.vaccineCode as fhir3.CodeableConcept | undefined) ??
+    extractOriginalTermText(r.medicationCodeableConcept as fhir3.CodeableConcept | undefined) ??
+    extractOriginalTermText(r.type as fhir3.CodeableConcept | undefined) ??
     r.description as string | undefined
 
   if (resource.resourceType === 'Observation') {
@@ -201,7 +252,7 @@ export function resolveItemDisplay(bundle: fhir3.Bundle, ref: string | undefined
       const u = r.valueQuantity.unit ?? r.valueQuantity.code ?? ''
       valueStr = [v, u].filter(Boolean).join(' ')
     } else if (r.valueCodeableConcept) {
-      valueStr = r.valueCodeableConcept.coding?.[0]?.display ?? r.valueCodeableConcept.text
+      valueStr = extractOriginalTermText(r.valueCodeableConcept as fhir3.CodeableConcept | undefined)
     } else if (typeof r.valueBoolean === 'boolean') {
       valueStr = r.valueBoolean ? 'Yes' : 'No'
     } else if (r.component?.length) {
@@ -224,8 +275,7 @@ export function resolveItemDisplay(bundle: fhir3.Bundle, ref: string | undefined
   if (resource.resourceType === 'Organization') return r.name as string | undefined
   if (resource.resourceType === 'ReferralRequest') {
     const reasonCC = (r.reasonCode as fhir3.CodeableConcept[] | undefined)?.[0]
-    const reasonCoding = reasonCC?.coding?.find(c => c.system === 'http://snomed.info/sct') ?? reasonCC?.coding?.[0]
-    return reasonCC?.text ?? reasonCoding?.display ?? (r.description as string | undefined)
+    return extractOriginalTermText(reasonCC) ?? (r.description as string | undefined)
   }
 
   return codeName
@@ -330,7 +380,7 @@ export function extractPatientInfo(bundle: fhir3.Bundle): GpConnectPatient | und
       cn?.family,
     ].filter(Boolean).join(' ') || undefined
     const relationship = (c.relationship ?? [])
-      .map(r => r.text ?? r.coding?.[0]?.display)
+      .map(r => extractOriginalTermText(r))
       .filter(Boolean)
       .join(', ') || undefined
     const contactPhone = c.telecom?.find(t => t.system === 'phone')?.value

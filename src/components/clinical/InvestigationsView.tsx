@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { GpConnectBundle, GpConnectInvestigation, GpConnectTestGroup, GpConnectInvestigationResult, GpConnectSpecimen, GpConnectProcedureRequest } from '../../fhir/types'
-import { DomainTable, StatusBadge } from './DomainTable'
+import { DomainTable, StatusBadge, DegradedTermText } from './DomainTable'
 import type { DomainColumn } from './DomainTable'
 import { ReferencedResources } from './ReferencedResources'
 import { ReferenceChip } from './ResourceCard'
@@ -40,7 +40,7 @@ const COLUMNS: DomainColumn<GpConnectInvestigation>[] = [
   { label: 'Date', className: 'w-28', render: item => item.date ?? 'Unknown' },
   {
     label: 'Report',
-    render: item => <span className="font-medium text-nhs-grey-1">{item.name}</span>,
+    render: item => <span className="font-medium text-nhs-grey-1"><DegradedTermText text={item.name} /></span>,
   },
   {
     label: 'Flag',

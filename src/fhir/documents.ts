@@ -1,5 +1,5 @@
 import type { GpConnectDocument } from './types'
-import { getEntries, formatDate, resolvePractitionerRef, resolveReference, extractId, fhirDateKey } from './utils'
+import { getEntries, formatDate, resolvePractitionerRef, resolveReference, extractOriginalTermText, extractId, fhirDateKey, hasNopatSecurity } from './utils'
 
 export function extractDocuments(bundle: fhir3.Bundle): GpConnectDocument[] {
   return getEntries<fhir3.DocumentReference>(bundle, 'DocumentReference')
@@ -10,7 +10,6 @@ export function extractDocuments(bundle: fhir3.Bundle): GpConnectDocument[] {
     )))
     .map(resource => {
     const attachment = resource.content?.[0]?.attachment
-    const typeCoding = resource.type?.coding?.[0]
 
     // Author may be a Practitioner or Organization reference
     const authorArr = Array.isArray(resource.author) ? resource.author : resource.author ? [resource.author] : []
@@ -35,7 +34,7 @@ export function extractDocuments(bundle: fhir3.Bundle): GpConnectDocument[] {
     return {
       id: resource.id ?? crypto.randomUUID(),
       date: formatDate(resource.created ?? attachment?.creation),
-      type: resource.type?.text ?? typeCoding?.display ?? 'Document',
+      type: extractOriginalTermText(resource.type) ?? 'Document',
       description: resource.description,
       attachmentTitle: attachmentTitle !== resource.description ? attachmentTitle : undefined,
       mimeType: attachment?.contentType,
@@ -47,6 +46,7 @@ export function extractDocuments(bundle: fhir3.Bundle): GpConnectDocument[] {
       custodianId,
       status: resource.status ?? 'unknown',
       attachmentSize,
+      notForPfs: hasNopatSecurity(resource),
     }
   })
 }

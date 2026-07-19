@@ -9,6 +9,7 @@ import { SnomedPicker } from './shared/SnomedPicker'
 import { BuilderModal } from '../components/BuilderModal'
 import { DeleteConfirmDialog } from '../components/DeleteConfirmDialog'
 import { LinkSection } from './shared/LinkSection'
+import { ConfidentialityCheckboxes } from './shared/ConfidentialityCheckboxes'
 import { TrashIcon } from '../components/Icons'
 
 // ---------------------------------------------------------------------------
@@ -30,6 +31,29 @@ const SIGNIFICANCE_OPTS = [
   { value: 'major', label: 'Major' },
   { value: 'minor', label: 'Minor' },
 ]
+
+type ProblemGroup = 'active' | 'major-inactive' | 'minor-inactive' | 'other'
+
+const PROBLEM_GROUP_ORDER: ProblemGroup[] = ['active', 'major-inactive', 'minor-inactive', 'other']
+
+const PROBLEM_GROUP_LABELS: Record<ProblemGroup, string> = {
+  active: 'Active',
+  'major-inactive': 'Major Inactive',
+  'minor-inactive': 'Minor Inactive',
+  other: 'Other',
+}
+
+// 'resolved' counts as inactive for grouping purposes, same as 'inactive' —
+// both need a significance to land in Major/Minor Inactive, otherwise they
+// fall into 'other' alongside anything with no clinical status set at all.
+function getProblemGroup(problem: DraftProblem): ProblemGroup {
+  if (problem.clinicalStatus === 'active') return 'active'
+  if (problem.clinicalStatus === 'inactive' || problem.clinicalStatus === 'resolved') {
+    if (problem.significance === 'major') return 'major-inactive'
+    if (problem.significance === 'minor') return 'minor-inactive'
+  }
+  return 'other'
+}
 
 function ProblemCard({
   problem,
@@ -120,7 +144,13 @@ function ProblemCard({
 
           <div className="grid grid-cols-3 gap-2">
             <Field label="Start date" type="date" value={problem.startDate ?? ''} onChange={v => upd({ startDate: v })} />
-            <Field label="End date" type="date" value={problem.endDate ?? ''} onChange={v => upd({ endDate: v })} />
+            <Field
+              label="End date"
+              type="date"
+              value={problem.endDate ?? ''}
+              onChange={v => upd({ endDate: v })}
+              required={problem.clinicalStatus === 'inactive'}
+            />
             <Field label="Asserted date" type="date" value={problem.assertedDate ?? ''} onChange={v => upd({ assertedDate: v })} />
           </div>
 
@@ -129,6 +159,12 @@ function ProblemCard({
             draft={draft}
             value={problem.asserterTempId}
             onChange={v => upd({ asserterTempId: v })}
+          />
+
+          <ConfidentialityCheckboxes
+            confidential={problem.confidential}
+            notForPfs={problem.notForPfs}
+            onChange={upd}
           />
 
           <LinkSection
@@ -264,14 +300,25 @@ export function ProblemForm({ draft, dispatch }: Props) {
         <p className="text-sm text-nhs-grey-3 mb-3">No problems added yet.</p>
       )}
 
-      {draft.problems.map(problem => (
-        <ProblemDisplayRow
-          key={problem._tempId}
-          problem={problem}
-          onEdit={() => handleEdit(problem)}
-          onDelete={() => setDeleteTarget(problem._tempId)}
-        />
-      ))}
+      {PROBLEM_GROUP_ORDER.map(group => {
+        const groupProblems = draft.problems.filter(p => getProblemGroup(p) === group)
+        if (groupProblems.length === 0) return null
+        return (
+          <div key={group} className="mb-4">
+            <h3 className="text-xs font-semibold text-nhs-grey-2 uppercase tracking-wide mb-1.5">
+              {PROBLEM_GROUP_LABELS[group]}
+            </h3>
+            {groupProblems.map(problem => (
+              <ProblemDisplayRow
+                key={problem._tempId}
+                problem={problem}
+                onEdit={() => handleEdit(problem)}
+                onDelete={() => setDeleteTarget(problem._tempId)}
+              />
+            ))}
+          </div>
+        )
+      })}
 
       {modalState && activeProblem && (
         <BuilderModal title={modalTitle} onDone={handleDone} onCancel={handleCancel}>

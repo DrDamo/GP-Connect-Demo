@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { GpConnectBundle, GpConnectReferral } from '../../fhir/types'
-import { DomainTable, StatusBadge } from './DomainTable'
+import { DomainTable, StatusBadge, DegradedTermText } from './DomainTable'
 import type { DomainColumn } from './DomainTable'
 import { ReferencedResources } from './ReferencedResources'
 import { ReferenceChip } from './ResourceCard'
@@ -25,7 +25,7 @@ interface Props {
 
 const COLUMNS: DomainColumn<GpConnectReferral>[] = [
   { label: 'Date', render: item => item.date ?? 'Unknown' },
-  { label: 'Reason', render: item => item.reason ?? '—' },
+  { label: 'Reason', render: item => item.reason ? <DegradedTermText text={item.reason} /> : '—' },
   {
     label: 'Priority',
     render: item => item.priority

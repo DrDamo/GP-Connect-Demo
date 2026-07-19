@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { GpConnectBundle, GpConnectDiaryEntry } from '../../fhir/types'
-import { DomainTable, StatusBadge } from './DomainTable'
+import { DomainTable, StatusBadge, DegradedTermText } from './DomainTable'
 import type { DomainColumn } from './DomainTable'
 import { ReferencedResources } from './ReferencedResources'
 import { ReferenceChip } from './ResourceCard'
@@ -25,7 +25,7 @@ interface Props {
 const COLUMNS: DomainColumn<GpConnectDiaryEntry>[] = [
   { label: 'Recorded date', className: 'w-32', render: item => item.date ?? 'Unknown' },
   { label: 'Start date',    className: 'w-32', render: item => item.occurrenceStart ?? '—' },
-  { label: 'Description',  render: item => <span className="font-medium text-nhs-grey-1">{item.description}</span> },
+  { label: 'Description',  render: item => <span className="font-medium text-nhs-grey-1"><DegradedTermText text={item.description} /></span> },
   {
     label: 'Priority',
     className: 'w-28',

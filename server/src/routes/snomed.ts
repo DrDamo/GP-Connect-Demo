@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { expandValueSet } from '../fhir/expand.js'
-import { snomedValueSetUrl, toSnomedResult } from '../fhir/mappers.js'
+import { lookupCode, validateCodesBatch } from '../fhir/lookup.js'
+import { snomedValueSetUrl, toSnomedResult, toSnomedDetail } from '../fhir/mappers.js'
 
 export const snomedRouter = Router()
 
@@ -23,6 +24,55 @@ snomedRouter.get('/search', async (req, res) => {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     console.error('[snomed/search]', message)
+    res.status(502).json({ error: message })
+  }
+})
+
+// GET /api/snomed/lookup?code=73211009&system=http://snomed.info/sct
+// system defaults to SNOMED CT. Response: { raw: Parameters, detail: SnomedDetail } —
+// raw is the full FHIR CodeSystem/$lookup response (for inspecting anything
+// the mapper doesn't surface), detail pulls out inactive/parent/child/
+// designations/attributes generically (see toSnomedDetail — there's no fixed
+// attribute set for arbitrary SNOMED concepts the way there is for dm+d).
+snomedRouter.get('/lookup', async (req, res) => {
+  const code = typeof req.query.code === 'string' ? req.query.code.trim() : ''
+  const system = typeof req.query.system === 'string' && req.query.system
+    ? req.query.system
+    : 'http://snomed.info/sct'
+
+  if (!code) {
+    res.status(400).json({ error: 'code is required' })
+    return
+  }
+
+  try {
+    const raw = await lookupCode(system, code)
+    res.json({ raw, detail: toSnomedDetail(raw) })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('[snomed/lookup]', message)
+    res.status(502).json({ error: message })
+  }
+})
+
+// POST /api/snomed/validate-batch  { codes: string[] }
+// Response: { results: { [code]: boolean } } — whether each code is a valid
+// SNOMED CT concept ID. Used to check every SNOMED coding in a loaded GP
+// Connect bundle in one round trip rather than one $lookup per code.
+snomedRouter.post('/validate-batch', async (req, res) => {
+  const codes = req.body?.codes
+
+  if (!Array.isArray(codes) || !codes.every(c => typeof c === 'string')) {
+    res.status(400).json({ error: 'codes must be an array of strings' })
+    return
+  }
+
+  try {
+    const results = await validateCodesBatch(codes)
+    res.json({ results })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('[snomed/validate-batch]', message)
     res.status(502).json({ error: message })
   }
 })

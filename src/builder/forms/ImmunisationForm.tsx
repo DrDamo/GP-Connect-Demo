@@ -9,6 +9,7 @@ import { SnomedPicker } from './shared/SnomedPicker'
 import { BuilderModal } from '../components/BuilderModal'
 import { DeleteConfirmDialog } from '../components/DeleteConfirmDialog'
 import { LinkSection } from './shared/LinkSection'
+import { ConfidentialityCheckboxes } from './shared/ConfidentialityCheckboxes'
 import { TrashIcon } from '../components/Icons'
 
 // ---------------------------------------------------------------------------
@@ -240,6 +241,12 @@ function ImmunisationCard({
           />
         )}
       </div>
+
+      <ConfidentialityCheckboxes
+        confidential={imm.confidential}
+        notForPfs={imm.notForPfs}
+        onChange={upd}
+      />
 
       <LinkSection
         draft={draft}

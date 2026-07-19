@@ -1,5 +1,6 @@
 import type { DraftRecord, DraftInvestigationResult } from '../types'
 import type { TempIdMap } from '../idMap'
+import { excludeConfidential, nopatMeta } from './security'
 
 const SNOMED = 'http://snomed.info/sct'
 
@@ -7,6 +8,7 @@ function makeObservation(
   result: DraftInvestigationResult,
   map: TempIdMap,
   patientRef: string,
+  notForPfs: boolean | undefined,
 ): { entry: fhir3.BundleEntry; ref: string } {
   const { id, fullUrl } = map.entry(result._tempId)
 
@@ -36,6 +38,7 @@ function makeObservation(
   const resource: fhir3.Observation & { comment?: string } = {
     resourceType: 'Observation',
     id,
+    ...nopatMeta(notForPfs),
     status: 'final',
     code: {
       coding: [
@@ -66,10 +69,10 @@ export function generateInvestigations(
 ): fhir3.BundleEntry[] {
   const entries: fhir3.BundleEntry[] = []
 
-  for (const inv of draft.investigations) {
+  for (const inv of excludeConfidential(draft.investigations)) {
     const { id, fullUrl } = map.entry(inv._tempId)
 
-    const observationResults = inv.results.map(r => makeObservation(r, map, patientRef))
+    const observationResults = inv.results.map(r => makeObservation(r, map, patientRef, inv.notForPfs))
     for (const { entry } of observationResults) entries.push(entry)
 
     const issuedDate = inv.date ? new Date(inv.date).toISOString() : new Date().toISOString()
@@ -77,6 +80,7 @@ export function generateInvestigations(
     const report: fhir3.DiagnosticReport = {
       resourceType: 'DiagnosticReport',
       id,
+      ...nopatMeta(inv.notForPfs),
       status: (inv.status as fhir3.DiagnosticReport['status']) ?? 'final',
       code: {
         coding: [

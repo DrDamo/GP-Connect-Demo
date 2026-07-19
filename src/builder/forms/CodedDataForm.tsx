@@ -9,6 +9,7 @@ import { SnomedPicker } from './shared/SnomedPicker'
 import { BuilderModal } from '../components/BuilderModal'
 import { DeleteConfirmDialog } from '../components/DeleteConfirmDialog'
 import { LinkSection } from './shared/LinkSection'
+import { ConfidentialityCheckboxes } from './shared/ConfidentialityCheckboxes'
 import { TrashIcon } from '../components/Icons'
 
 // ---------------------------------------------------------------------------
@@ -182,6 +183,13 @@ function CodedDataCard({
             value={item.performerTempId}
             onChange={v => upd({ performerTempId: v })}
           />
+
+          <ConfidentialityCheckboxes
+            confidential={item.confidential}
+            notForPfs={item.notForPfs}
+            onChange={upd}
+          />
+
           <LinkSection
             draft={draft}
             linkedProblemTempIds={item.linkedProblemTempIds ?? []}

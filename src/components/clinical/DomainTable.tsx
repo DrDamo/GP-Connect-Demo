@@ -1,5 +1,8 @@
-import { Fragment, useEffect, useRef } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import type React from 'react'
+import { SNOMED_SYSTEM } from '../../fhir/snomedDegrade'
+import { useAnchoredDropdown } from '../../hooks/useAnchoredDropdown'
 
 export interface DomainColumn<T> {
   label: string
@@ -37,7 +40,82 @@ export function StatusBadge({ value }: { value: string }) {
   )
 }
 
-export function DomainTable<T extends { id: string }>({
+// Tags any item carrying a NOPAT security label (see src/fhir/utils.ts hasNopatSecurity) —
+// shown wherever the record was withheld from patient-facing services.
+export function NotForPfsBadge() {
+  return (
+    <span
+      className="inline-block px-2 py-0.5 text-xs font-semibold rounded border bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700"
+      title="Tagged with a NOPAT security label — withheld from patient-facing services"
+    >
+      Not for PFS
+    </span>
+  )
+}
+
+// Matches the marker degradeCoding() (src/fhir/snomedDegrade.ts) appends to
+// CodeableConcept.text when a SNOMED CT concept ID can't be verified — kept
+// in the FHIR text itself so the original code/term survives even outside
+// this app, and parsed back out here purely for display styling.
+const DEGRADED_TEXT_PATTERN = /^(.*) \(degraded from SNOMED CT (\d+)\)$/
+
+// Amber "Degrade" tag — matches the pre-existing badge used elsewhere for
+// GP2GP records that arrived already degraded (see CodedDataView.tsx /
+// InvestigationsView.tsx), reused here for codes THIS app degraded on
+// import. Hovering it reveals the original coding; positioned via a portal
+// (position: fixed, viewport coordinates from useAnchoredDropdown) so it
+// isn't clipped by an ancestor with overflow:hidden/auto — a plain
+// `position: absolute` tooltip was getting cut off inside scrollable panels.
+function DegradeBadge({ originalCode, originalTerm }: { originalCode: string; originalTerm: string }) {
+  const [hovered, setHovered] = useState(false)
+  const anchorRef = useRef<HTMLSpanElement>(null)
+  const pos = useAnchoredDropdown(anchorRef, hovered)
+
+  return (
+    <>
+      <span
+        ref={anchorRef}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        className="inline-block ml-1.5 cursor-help text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200 font-medium leading-none align-middle"
+      >
+        Degrade
+      </span>
+      {hovered && pos && createPortal(
+        <div
+          style={{ position: 'fixed', top: pos.top, left: pos.left }}
+          className="pointer-events-none z-50 w-80 rounded-md border border-nhs-grey-4 bg-white p-2.5 text-xs font-normal leading-snug text-nhs-grey-1 shadow-lg dark:border-nhs-grey-2 dark:bg-gray-800 dark:text-gray-200"
+        >
+          <span className="block font-semibold text-nhs-grey-1 dark:text-gray-100">Original coding, before conversion</span>
+          <span className="mt-1 block">This SNOMED CT code could not be verified against the terminology server, so it was converted to a transfer-degraded coding:</span>
+          <pre className="mt-1.5 whitespace-pre-wrap rounded border border-nhs-grey-4 bg-nhs-grey-5 p-1.5 font-mono text-[11px] text-nhs-grey-1 dark:border-nhs-grey-2 dark:bg-gray-900 dark:text-gray-200">
+{JSON.stringify({ system: SNOMED_SYSTEM, code: originalCode, display: originalTerm }, null, 2)}
+          </pre>
+        </div>,
+        document.body
+      )}
+    </>
+  )
+}
+
+// Renders a display string plain (same colour as everything else) when it
+// carries the transfer-degrade marker, with a "Degrade" tag alongside it —
+// lets users tell a converted code apart from one that was always this way,
+// and recover the original code via the tag's hover tooltip.
+export function DegradedTermText({ text }: { text?: string }) {
+  if (!text) return <>{text}</>
+  const match = text.match(DEGRADED_TEXT_PATTERN)
+  if (!match) return <>{text}</>
+  const [, originalTerm, originalCode] = match
+  return (
+    <>
+      {originalTerm}
+      <DegradeBadge originalCode={originalCode} originalTerm={originalTerm} />
+    </>
+  )
+}
+
+export function DomainTable<T extends { id: string; notForPfs?: boolean }>({
   columns,
   items,
   selectedId,
@@ -68,13 +146,21 @@ export function DomainTable<T extends { id: string }>({
     )
   }
 
+  // Auto-added to every domain table (rather than each view defining its own)
+  // so "Not for PFS" tagging stays consistent — only shown when at least one
+  // row actually has it, so tables with no NOPAT items are unaffected.
+  const showNotForPfsColumn = items.some(item => item.notForPfs)
+  const effectiveColumns: DomainColumn<T>[] = showNotForPfsColumn
+    ? [...columns, { label: '', className: 'w-px whitespace-nowrap', render: item => item.notForPfs ? <NotForPfsBadge /> : null }]
+    : columns
+
   return (
     <div className="border border-nhs-grey-5 rounded-lg overflow-hidden">
       <table className="w-full text-left">
         <thead>
           <tr className="bg-nhs-grey-5 text-xs font-semibold text-nhs-grey-2 uppercase tracking-wide">
-            {columns.map(col => (
-              <th key={col.label} className={`py-2 px-3 ${col.className ?? ''}`}>
+            {effectiveColumns.map((col, idx) => (
+              <th key={col.label || `col-${idx}`} className={`py-2 px-3 ${col.className ?? ''}`}>
                 {col.label}
               </th>
             ))}
@@ -100,15 +186,15 @@ export function DomainTable<T extends { id: string }>({
                         : ''
                   }`}
                 >
-                  {columns.map(col => (
-                    <td key={col.label} className={`py-2.5 px-3 text-sm text-nhs-grey-2 ${col.className ?? ''}`}>
+                  {effectiveColumns.map((col, idx) => (
+                    <td key={col.label || `col-${idx}`} className={`py-2.5 px-3 text-sm text-nhs-grey-2 ${col.className ?? ''}`}>
                       {col.render(item)}
                     </td>
                   ))}
                 </tr>
                 {isSelected && expandedContent && (
                   <tr className="border-b border-nhs-grey-5">
-                    <td colSpan={columns.length} className="px-3 pb-3 pt-0">
+                    <td colSpan={effectiveColumns.length} className="px-3 pb-3 pt-0">
                       {expandedContent(item)}
                     </td>
                   </tr>

@@ -1,12 +1,13 @@
 import type { DraftRecord } from '../types'
 import type { TempIdMap } from '../idMap'
+import { excludeConfidential, nopatMeta } from './security'
 
 export function generateDocuments(
   draft: DraftRecord,
   map: TempIdMap,
   patientRef: string,
 ): fhir3.BundleEntry[] {
-  return draft.documents.map(doc => {
+  return excludeConfidential(draft.documents).map(doc => {
     const { id, fullUrl } = map.entry(doc._tempId)
 
     const attachment: fhir3.Attachment =
@@ -20,6 +21,7 @@ export function generateDocuments(
     const resource: fhir3.DocumentReference = {
       resourceType: 'DocumentReference',
       id,
+      ...nopatMeta(doc.notForPfs),
       status: (doc.status as fhir3.DocumentReference['status']) ?? 'current',
       indexed: doc.date ?? new Date().toISOString(),
       ...(doc.type ? { type: { text: doc.type } } : { type: {} }),

@@ -5,6 +5,7 @@ import type {
   DraftOrganisation,
   DraftContact,
 } from './types'
+import { nhsNumberCheckDigit } from '../fhir/nhsNumber'
 
 // ---------------------------------------------------------------------------
 // Randomisation helpers
@@ -54,13 +55,10 @@ function randomDateString(startYear: number, endYear: number): string {
 /** Generates a syntactically valid NHS number in the reserved 999 test range. */
 function generateNhsNumber(): string {
   for (;;) {
-    const digits = [9, 9, 9, ...Array.from({ length: 6 }, () => randomInt(0, 9))]
-    const weights = [10, 9, 8, 7, 6, 5, 4, 3, 2]
-    const sum = digits.reduce((s, d, i) => s + d * weights[i], 0)
-    let check = 11 - (sum % 11)
-    if (check === 11) check = 0
-    if (check === 10) continue // invalid combination — retry
-    return [...digits, check].join('')
+    const firstNine = [9, 9, 9, ...Array.from({ length: 6 }, () => randomInt(0, 9))].join('')
+    const check = nhsNumberCheckDigit(firstNine)
+    if (check === null) continue // invalid combination — retry
+    return firstNine + check
   }
 }
 
@@ -505,6 +503,7 @@ export function createFullSampleDraft(): DraftRecord {
           items: [{
             _tempId: 'item-1',
             itemType: 'note',
+            date: '2024-02-14',
             narrativeText: 'Patient reports well-controlled blood pressure at home readings.',
           }],
         }],

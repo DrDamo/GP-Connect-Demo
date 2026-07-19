@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { GpConnectBundle, GpConnectAllergy } from '../../fhir/types'
-import { DomainTable, StatusBadge } from './DomainTable'
+import { DomainTable, StatusBadge, DegradedTermText } from './DomainTable'
 import type { DomainColumn } from './DomainTable'
 import { ReferencedResources } from './ReferencedResources'
 import { ReferenceChip } from './ResourceCard'
@@ -26,7 +26,7 @@ interface Props {
 const COLUMNS: DomainColumn<GpConnectAllergy>[] = [
   {
     label: 'Causative agent',
-    render: item => <div className="font-medium text-nhs-grey-1">{item.causativeAgent}</div>,
+    render: item => <div className="font-medium text-nhs-grey-1"><DegradedTermText text={item.causativeAgent} /></div>,
   },
   { label: 'Reaction', render: item => item.reaction ?? '—' },
   {

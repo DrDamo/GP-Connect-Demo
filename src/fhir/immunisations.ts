@@ -1,5 +1,5 @@
 import type { GpConnectImmunisation } from './types'
-import { getEntries, formatDate, resolvePractitionerRef, getExtensionValue, extractSnomedCode, extractId, fhirDateKey } from './utils'
+import { getEntries, formatDate, resolvePractitionerRef, getExtensionValue, extractSnomedCode, extractOriginalTermText, extractId, fhirDateKey, hasNopatSecurity } from './utils'
 
 const IMMUNISATIONS_LIST_CODE = '1102181000000102'
 
@@ -69,8 +69,7 @@ export function extractImmunisations(bundle: fhir3.Bundle): GpConnectImmunisatio
 
     return {
       id: resource.id ?? crypto.randomUUID(),
-      vaccine: resource.vaccineCode?.text
-        ?? (vaccineCodeIsNullFlavor ? undefined : vaccineCodings?.[0]?.display)
+      vaccine: (vaccineCodeIsNullFlavor ? resource.vaccineCode?.text : extractOriginalTermText(resource.vaccineCode))
         ?? vaccinationProcedureDisplay
         ?? vaccinationProcedureText
         ?? 'Unknown',
@@ -81,8 +80,7 @@ export function extractImmunisations(bundle: fhir3.Bundle): GpConnectImmunisatio
       // The raw vaccineCode's own label — left blank (not falling back to the
       // procedure name) when vaccineCode is a NullFlavor placeholder, so the
       // "Vaccine" column faithfully reflects only what vaccineCode itself says.
-      vaccineCodeDisplay: resource.vaccineCode?.text
-        ?? (vaccineCodeIsNullFlavor ? undefined : vaccineCodings?.[0]?.display),
+      vaccineCodeDisplay: vaccineCodeIsNullFlavor ? resource.vaccineCode?.text : extractOriginalTermText(resource.vaccineCode),
       dateGiven: formatDate(resource.date),
       dateRecorded,
       status: resource.status ?? 'unknown',
@@ -90,7 +88,7 @@ export function extractImmunisations(bundle: fhir3.Bundle): GpConnectImmunisatio
       site: site?.text,
       siteDisplay: site?.coding?.[0]?.display,
       siteCode: site?.coding?.[0]?.code,
-      route: routeCC?.coding?.[0]?.display ?? routeCC?.text,
+      route: extractOriginalTermText(routeCC),
       batchNumber: resource.lotNumber,
       expirationDate: formatDate(cast.expirationDate as string | undefined),
       administeringPractitioner,
@@ -106,6 +104,7 @@ export function extractImmunisations(bundle: fhir3.Bundle): GpConnectImmunisatio
       explanationIsReasonNotGiven,
       parentPresent,
       notes: (resource.note ?? []).map(n => n.text ?? '').filter(Boolean),
+      notForPfs: hasNopatSecurity(resource),
     }
   })
 
@@ -124,11 +123,7 @@ export function extractImmunisations(bundle: fhir3.Bundle): GpConnectImmunisatio
   const observationEntries: GpConnectImmunisation[] = getEntries<fhir3.Observation>(bundle, 'Observation')
     .filter(obs => obs.id && observationIds.has(obs.id))
     .map(obs => {
-      const coding = obs.code?.coding
-      const description = obs.code?.text
-        ?? coding?.find(c => c.system === 'http://snomed.info/sct')?.display
-        ?? coding?.[0]?.display
-        ?? 'Unknown'
+      const description = extractOriginalTermText(obs.code) ?? 'Unknown'
       // These Observations carry no vaccineCode of their own — their coded term
       // belongs in the Procedure column, matching how real Immunizations use
       // vaccinationProcedureDisplay for their coded entry.
@@ -142,6 +137,7 @@ export function extractImmunisations(bundle: fhir3.Bundle): GpConnectImmunisatio
         status: obs.status ?? 'unknown',
         notes: comment ? comment.split('\n').map(line => line.trim()).filter(Boolean) : [],
         codedDataId: obs.id,
+        notForPfs: hasNopatSecurity(obs),
       }
     })
 

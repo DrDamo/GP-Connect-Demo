@@ -18,6 +18,14 @@ const EMPTY_REASON_SYSTEM = 'https://fhir.nhs.uk/STU3/CodeSystem/CareConnect-Lis
 const LIST_PROFILE = 'https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-List-1'
 const SECONDARY_LIST_SYSTEM = 'https://fhir.hl7.org.uk/STU3/CodeSystem/GPConnect-SecondaryListValues-1'
 const ACTUAL_PROBLEM_EXT = 'https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-ActualProblem-1'
+const WARNING_CODE_EXT = 'https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-ListWarningCode-1'
+
+// https://simplifier.net/guide/gp-connect-access-record-structured/.../Warning-codes — the
+// associated text MUST also be added to List.note whenever this code is used.
+const CONFIDENTIAL_ITEMS_WARNING = {
+  code: 'confidential-items',
+  note: 'Items excluded due to confidentiality and/or patient preferences.',
+}
 
 export interface DomainEntries {
   medicationStatementRefs: string[]
@@ -37,6 +45,7 @@ function makeDomainList(
   patientRef: string,
   refs: string[],
   today: string,
+  hasConfidentialExclusions: boolean,
 ): fhir3.BundleEntry {
   const listId = crypto.randomUUID()
   const { code, display } = LIST_CODES[domain]
@@ -68,6 +77,12 @@ function makeDomainList(
             ],
           },
         }),
+    ...(hasConfidentialExclusions
+      ? {
+          extension: [{ url: WARNING_CODE_EXT, valueCode: CONFIDENTIAL_ITEMS_WARNING.code }],
+          note: [{ text: CONFIDENTIAL_ITEMS_WARNING.note }],
+        }
+      : {}),
   }
 
   return { fullUrl: `urn:uuid:${listId}`, resource: list }
@@ -76,20 +91,22 @@ function makeDomainList(
 export function generateDomainLists(
   patientRef: string,
   entries: DomainEntries,
+  confidentialDomains: Record<string, boolean> = {},
 ): fhir3.BundleEntry[] {
   const today = new Date().toISOString()
+  const excl = (domain: string) => confidentialDomains[domain] ?? false
 
   return [
-    makeDomainList('medications', patientRef, entries.medicationStatementRefs, today),
-    makeDomainList('allergies', patientRef, entries.activeAllergyRefs, today),
-    makeDomainList('problems', patientRef, entries.problemRefs, today),
-    makeDomainList('consultations', patientRef, entries.encounterRefs, today),
-    makeDomainList('immunisations', patientRef, entries.immunisationRefs, today),
-    makeDomainList('investigations', patientRef, entries.diagnosticReportRefs, today),
-    makeDomainList('referrals', patientRef, entries.referralRefs, today),
-    makeDomainList('diaryEntries', patientRef, entries.diaryEntryRefs, today),
-    makeDomainList('codedData', patientRef, entries.codedDataRefs, today),
-    makeDomainList('documents', patientRef, entries.documentRefs, today),
+    makeDomainList('medications', patientRef, entries.medicationStatementRefs, today, excl('medications')),
+    makeDomainList('allergies', patientRef, entries.activeAllergyRefs, today, excl('allergies')),
+    makeDomainList('problems', patientRef, entries.problemRefs, today, excl('problems')),
+    makeDomainList('consultations', patientRef, entries.encounterRefs, today, excl('consultations')),
+    makeDomainList('immunisations', patientRef, entries.immunisationRefs, today, excl('immunisations')),
+    makeDomainList('investigations', patientRef, entries.diagnosticReportRefs, today, excl('investigations')),
+    makeDomainList('referrals', patientRef, entries.referralRefs, today, excl('referrals')),
+    makeDomainList('diaryEntries', patientRef, entries.diaryEntryRefs, today, excl('diaryEntries')),
+    makeDomainList('codedData', patientRef, entries.codedDataRefs, today, excl('codedData')),
+    makeDomainList('documents', patientRef, entries.documentRefs, today, excl('documents')),
   ]
 }
 
@@ -179,18 +196,19 @@ export function generateSecondaryLists(
   // --- Consultation-grouped lists ---
   // For each consultation, find all items that list it as linkedConsultationTempId
   for (const cons of draft.consultations) {
+    if (cons.confidential) continue
     const encRef = map.ref(cons._tempId, 'Encounter')
 
     const grouped: Record<string, string[]> = {
-      medications:    draft.medications.filter(m => m.linkedConsultationTempId === cons._tempId).map(m => map.ref(m._tempId, 'MedicationStatement')),
-      allergies:      draft.allergies.filter(a => a.linkedConsultationTempId === cons._tempId).map(a => map.ref(a._tempId, 'AllergyIntolerance')),
-      problems:       draft.problems.filter(p => p.linkedConsultationTempId === cons._tempId).map(p => map.ref(p._tempId, 'Condition')),
-      immunisations:  draft.immunisations.filter(i => i.linkedConsultationTempId === cons._tempId).map(i => map.ref(i._tempId, 'Immunization')),
-      investigations: draft.investigations.filter(i => i.linkedConsultationTempId === cons._tempId).map(i => map.ref(i._tempId, 'DiagnosticReport')),
-      referrals:      draft.referrals.filter(r => r.linkedConsultationTempId === cons._tempId).map(r => map.ref(r._tempId, 'ReferralRequest')),
-      diaryEntries:   draft.diaryEntries.filter(d => d.linkedConsultationTempId === cons._tempId).map(d => map.ref(d._tempId, 'ProcedureRequest')),
-      codedData:      draft.codedData.filter(c => c.linkedConsultationTempId === cons._tempId).map(c => map.ref(c._tempId, 'Observation')),
-      documents:      draft.documents.filter(d => d.linkedConsultationTempId === cons._tempId).map(d => map.ref(d._tempId, 'DocumentReference')),
+      medications:    draft.medications.filter(m => m.linkedConsultationTempId === cons._tempId && !m.confidential).map(m => map.ref(m._tempId, 'MedicationStatement')),
+      allergies:      draft.allergies.filter(a => a.linkedConsultationTempId === cons._tempId && !a.confidential).map(a => map.ref(a._tempId, 'AllergyIntolerance')),
+      problems:       draft.problems.filter(p => p.linkedConsultationTempId === cons._tempId && !p.confidential).map(p => map.ref(p._tempId, 'Condition')),
+      immunisations:  draft.immunisations.filter(i => i.linkedConsultationTempId === cons._tempId && !i.confidential).map(i => map.ref(i._tempId, 'Immunization')),
+      investigations: draft.investigations.filter(i => i.linkedConsultationTempId === cons._tempId && !i.confidential).map(i => map.ref(i._tempId, 'DiagnosticReport')),
+      referrals:      draft.referrals.filter(r => r.linkedConsultationTempId === cons._tempId && !r.confidential).map(r => map.ref(r._tempId, 'ReferralRequest')),
+      diaryEntries:   draft.diaryEntries.filter(d => d.linkedConsultationTempId === cons._tempId && !d.confidential).map(d => map.ref(d._tempId, 'ProcedureRequest')),
+      codedData:      draft.codedData.filter(c => c.linkedConsultationTempId === cons._tempId && !c.confidential).map(c => map.ref(c._tempId, 'Observation')),
+      documents:      draft.documents.filter(d => d.linkedConsultationTempId === cons._tempId && !d.confidential).map(d => map.ref(d._tempId, 'DocumentReference')),
     }
 
     for (const [domain, refs] of Object.entries(grouped)) {
@@ -202,19 +220,20 @@ export function generateSecondaryLists(
 
   // --- Problem-grouped lists ---
   for (const prob of draft.problems) {
+    if (prob.confidential) continue
     const probRef = map.ref(prob._tempId, 'Condition')
 
     const grouped: Record<string, string[]> = {
-      medications:    draft.medications.filter(m => m.linkedProblemTempIds?.includes(prob._tempId)).map(m => map.ref(m._tempId, 'MedicationStatement')),
-      allergies:      draft.allergies.filter(a => a.linkedProblemTempIds?.includes(prob._tempId)).map(a => map.ref(a._tempId, 'AllergyIntolerance')),
-      immunisations:  draft.immunisations.filter(i => i.linkedProblemTempIds?.includes(prob._tempId)).map(i => map.ref(i._tempId, 'Immunization')),
-      investigations: draft.investigations.filter(i => i.linkedProblemTempIds?.includes(prob._tempId)).map(i => map.ref(i._tempId, 'DiagnosticReport')),
-      referrals:      draft.referrals.filter(r => r.linkedProblemTempIds?.includes(prob._tempId)).map(r => map.ref(r._tempId, 'ReferralRequest')),
-      diaryEntries:   draft.diaryEntries.filter(d => d.linkedProblemTempIds?.includes(prob._tempId)).map(d => map.ref(d._tempId, 'ProcedureRequest')),
-      codedData:      draft.codedData.filter(c => c.linkedProblemTempIds?.includes(prob._tempId)).map(c => map.ref(c._tempId, 'Observation')),
-      documents:      draft.documents.filter(d => d.linkedProblemTempIds?.includes(prob._tempId)).map(d => map.ref(d._tempId, 'DocumentReference')),
-      consultations:  draft.consultations.filter(c => c.linkedProblemTempIds?.includes(prob._tempId)).map(c => map.ref(c._tempId, 'Encounter')),
-      linkedProblems: draft.problems.filter(p => p._tempId !== prob._tempId && p.linkedProblemTempIds?.includes(prob._tempId)).map(p => map.ref(p._tempId, 'Condition')),
+      medications:    draft.medications.filter(m => m.linkedProblemTempIds?.includes(prob._tempId) && !m.confidential).map(m => map.ref(m._tempId, 'MedicationStatement')),
+      allergies:      draft.allergies.filter(a => a.linkedProblemTempIds?.includes(prob._tempId) && !a.confidential).map(a => map.ref(a._tempId, 'AllergyIntolerance')),
+      immunisations:  draft.immunisations.filter(i => i.linkedProblemTempIds?.includes(prob._tempId) && !i.confidential).map(i => map.ref(i._tempId, 'Immunization')),
+      investigations: draft.investigations.filter(i => i.linkedProblemTempIds?.includes(prob._tempId) && !i.confidential).map(i => map.ref(i._tempId, 'DiagnosticReport')),
+      referrals:      draft.referrals.filter(r => r.linkedProblemTempIds?.includes(prob._tempId) && !r.confidential).map(r => map.ref(r._tempId, 'ReferralRequest')),
+      diaryEntries:   draft.diaryEntries.filter(d => d.linkedProblemTempIds?.includes(prob._tempId) && !d.confidential).map(d => map.ref(d._tempId, 'ProcedureRequest')),
+      codedData:      draft.codedData.filter(c => c.linkedProblemTempIds?.includes(prob._tempId) && !c.confidential).map(c => map.ref(c._tempId, 'Observation')),
+      documents:      draft.documents.filter(d => d.linkedProblemTempIds?.includes(prob._tempId) && !d.confidential).map(d => map.ref(d._tempId, 'DocumentReference')),
+      consultations:  draft.consultations.filter(c => c.linkedProblemTempIds?.includes(prob._tempId) && !c.confidential).map(c => map.ref(c._tempId, 'Encounter')),
+      linkedProblems: draft.problems.filter(p => p._tempId !== prob._tempId && p.linkedProblemTempIds?.includes(prob._tempId) && !p.confidential).map(p => map.ref(p._tempId, 'Condition')),
     }
 
     for (const [domain, refs] of Object.entries(grouped)) {

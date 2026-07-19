@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { FormField } from './FormField'
-import { useAnchoredDropdown } from './useAnchoredDropdown'
+import { useAnchoredDropdown } from '../../../hooks/useAnchoredDropdown'
 import { InfoHint } from '../../../onboarding/InfoHint'
 
 // ---------------------------------------------------------------------------
@@ -20,11 +20,38 @@ interface SnomedConfig {
   token: string
 }
 
+// Mirrors server/src/fhir/mappers.ts SnomedDetail — generic CodeSystem/$lookup
+// detail for any SNOMED concept (there's no fixed attribute set the way
+// there is for dm+d, since a disorder's attributes differ from a procedure's).
+interface SnomedDesignation {
+  language?: string
+  use?: string
+  value: string
+}
+
+interface SnomedAttribute {
+  attributeName: string
+  valueDisplay?: string
+  valueCode?: string
+  valueNumber?: number
+}
+
+interface SnomedDetail {
+  code: string
+  display: string
+  inactive?: boolean
+  parentCodes: string[]
+  childCodes: string[]
+  designations: SnomedDesignation[]
+  attributes: SnomedAttribute[]
+}
+
 export interface SnomedPickerProps {
   /** Current free-text value — also the search query and the description shown if no code is linked */
   value: string
-  /** Called on every text edit or when a search result is selected */
-  onChange: (result: { value: string; code?: string }) => void
+  /** Called on every text edit or when a search result is selected. `semanticTag`
+   * (e.g. "observable entity") is only present when a search result was picked. */
+  onChange: (result: { value: string; code?: string; semanticTag?: string }) => void
   /** Current SNOMED code linked to `value`, if any */
   code?: string
   label?: string
@@ -281,6 +308,11 @@ export function SnomedPicker({ value, onChange, code, label = 'SNOMED CT', seman
   const [error, setError] = useState<string | null>(null)
   const [activeIdx, setActiveIdx] = useState(0)
 
+  // Dev-only: raw request/response for inspecting SNOMED calls without Postman/DevTools
+  const [debugInfo, setDebugInfo] = useState<{ url: string; status: number; raw: unknown } | null>(null)
+  const [debugOpen, setDebugOpen] = useState(false)
+  const [lookupDetail, setLookupDetail] = useState<SnomedDetail | null>(null)
+
   const inputRef = useRef<HTMLInputElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -308,6 +340,10 @@ export function SnomedPicker({ value, onChange, code, label = 'SNOMED CT', seman
       const headers: HeadersInit = {}
       if (cfg.token) headers['Authorization'] = `Bearer ${cfg.token}`
       const res = await fetch(url, { headers })
+      if (import.meta.env.DEV) {
+        const cloned = res.clone()
+        cloned.json().then(raw => { setDebugInfo({ url, status: res.status, raw }); setLookupDetail(null) }).catch(() => {})
+      }
       if (res.status === 401) {
         setError('Token expired — reconnect via the settings icon')
         setResults([])
@@ -365,12 +401,32 @@ export function SnomedPicker({ value, onChange, code, label = 'SNOMED CT', seman
   }
 
   const handleSelect = (r: SnomedResult) => {
-    onChange({ value: r.display_term, code: r.code })
+    onChange({ value: r.display_term, code: r.code, semanticTag: r.semantic_tag })
     setIsOpen(false)
   }
 
   const handleClearCode = () => {
     onChange({ value, code: undefined })
+  }
+
+  // Dev-only: fetch full CodeSystem/$lookup detail for the linked code and
+  // surface it in the debug panel below.
+  const handleLookupDetails = async () => {
+    if (!config.serverUrl || !code) return
+    setDebugOpen(true)
+    try {
+      const params = new URLSearchParams({ code })
+      const url = `${config.serverUrl}/api/snomed/lookup?${params}`
+      const headers: HeadersInit = {}
+      if (config.token) headers['Authorization'] = `Bearer ${config.token}`
+      const res = await fetch(url, { headers })
+      const body = await res.json() as { raw: unknown; detail?: SnomedDetail }
+      setDebugInfo({ url, status: res.status, raw: body })
+      setLookupDetail(body.detail ?? null)
+    } catch (e) {
+      setDebugInfo({ url: `${config.serverUrl}/api/snomed/lookup?code=${code}`, status: 0, raw: { error: (e as Error).message } })
+      setLookupDetail(null)
+    }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -430,6 +486,9 @@ export function SnomedPicker({ value, onChange, code, label = 'SNOMED CT', seman
                       title={`SNOMED CT ${code} — click × to unlink and keep as free text`}
                     >
                       {code}
+                      {import.meta.env.DEV && (
+                        <button type="button" onClick={handleLookupDetails} className="hover:opacity-70" title="Fetch full $lookup detail (dev only)">🔍</button>
+                      )}
                       <button type="button" onClick={handleClearCode} className="hover:opacity-70" title="Unlink code">×</button>
                     </span>
                   )}
@@ -464,6 +523,69 @@ export function SnomedPicker({ value, onChange, code, label = 'SNOMED CT', seman
 
             {/* Error message */}
             {error && <p className="mt-1 text-xs text-nhs-red">{error}</p>}
+
+            {import.meta.env.DEV && debugInfo && (
+              <div className="mt-1 border border-dashed border-nhs-grey-4 dark:border-nhs-grey-2 rounded text-xs">
+                <button
+                  type="button"
+                  onClick={() => setDebugOpen(o => !o)}
+                  className="w-full flex items-center justify-between px-2 py-1 text-nhs-grey-3 hover:text-nhs-blue font-mono"
+                >
+                  <span>SNOMED debug (dev only) — HTTP {debugInfo.status}</span>
+                  <span>{debugOpen ? '▲' : '▼'}</span>
+                </button>
+                {debugOpen && (
+                  <div className="border-t border-dashed border-nhs-grey-4 dark:border-nhs-grey-2 p-2 space-y-2">
+                    <p className="font-mono text-nhs-grey-3 break-all">{debugInfo.url}</p>
+                    {lookupDetail && (
+                      <table className="w-full text-[11px]">
+                        <tbody>
+                          {lookupDetail.designations.length > 0 && (
+                            <tr>
+                              <td className="pr-2 text-nhs-grey-3 align-top whitespace-nowrap">Synonyms</td>
+                              <td className="text-nhs-grey-1 dark:text-gray-200">
+                                {lookupDetail.designations.map((d, i) => (
+                                  <div key={i}>{d.value}{d.use && <span className="text-nhs-grey-3"> ({d.use})</span>}</div>
+                                ))}
+                              </td>
+                            </tr>
+                          )}
+                          {lookupDetail.attributes.length > 0 && (
+                            <tr>
+                              <td className="pr-2 text-nhs-grey-3 align-top whitespace-nowrap">Attributes</td>
+                              <td className="text-nhs-grey-1 dark:text-gray-200">
+                                {lookupDetail.attributes.map((a, i) => (
+                                  <div key={i}>
+                                    {a.attributeName}: {a.valueDisplay ?? a.valueNumber ?? a.valueCode}
+                                  </div>
+                                ))}
+                              </td>
+                            </tr>
+                          )}
+                          <tr>
+                            <td className="pr-2 text-nhs-grey-3 align-top whitespace-nowrap">Parents</td>
+                            <td className="text-nhs-grey-1 dark:text-gray-200 font-mono">{lookupDetail.parentCodes.join(', ') || '—'}</td>
+                          </tr>
+                          <tr>
+                            <td className="pr-2 text-nhs-grey-3 align-top whitespace-nowrap">Children</td>
+                            <td className="text-nhs-grey-1 dark:text-gray-200 font-mono">{lookupDetail.childCodes.join(', ') || '—'}</td>
+                          </tr>
+                          {lookupDetail.inactive !== undefined && (
+                            <tr>
+                              <td className="pr-2 text-nhs-grey-3 align-top whitespace-nowrap">Inactive</td>
+                              <td className="text-nhs-grey-1 dark:text-gray-200">{String(lookupDetail.inactive)}</td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    )}
+                    <pre className="max-h-64 overflow-auto bg-nhs-grey-5 dark:bg-gray-800 rounded p-2 font-mono text-[11px] text-nhs-grey-1 dark:text-gray-200">
+                      {JSON.stringify(debugInfo.raw, null, 2)}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Dropdown — rendered via portal so it isn't clipped by an
                 ancestor with overflow:hidden (e.g. a collapsible card) */}

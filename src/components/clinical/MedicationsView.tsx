@@ -5,6 +5,7 @@ import { ReferenceChip } from './ResourceCard'
 import { type DomainId } from './domains'
 import { InfoHint } from '../../onboarding/InfoHint'
 import { SearchFilterBox } from './SearchFilterBox'
+import { NotForPfsBadge, DegradedTermText } from './DomainTable'
 
 function medicationSearchText(med: GpConnectMedication): string {
   return [
@@ -60,7 +61,7 @@ function Detail({ label, value, mono = false }: { label: string; value?: string;
   )
 }
 
-function MedicationRow({ med, record, selected, selectedIssueId, onSelect, onSelectIssue, onJumpToSource, onJumpToRecord }: {
+function MedicationRow({ med, record, selected, selectedIssueId, onSelect, onSelectIssue, onJumpToSource, onJumpToRecord, showNotForPfsColumn }: {
   med: GpConnectMedication
   record: GpConnectMedicationsRecord
   selected?: boolean
@@ -69,6 +70,7 @@ function MedicationRow({ med, record, selected, selectedIssueId, onSelect, onSel
   onSelectIssue?: (medId: string, issueId: string) => void
   onJumpToSource?: (id: string) => void
   onJumpToRecord?: (domain: DomainId, id: string) => void
+  showNotForPfsColumn?: boolean
 }) {
   const expanded = !!selected
   const [showDetail, setShowDetail] = useState(false)
@@ -104,16 +106,22 @@ function MedicationRow({ med, record, selected, selectedIssueId, onSelect, onSel
         onClick={() => onSelect?.(med.id)}
       >
         <td className="py-2.5 px-3">
-          <div className="font-medium text-nhs-grey-1 text-sm">{med.drugName}</div>
+          <div className="font-medium text-nhs-grey-1 text-sm"><DegradedTermText text={med.drugName} /></div>
         </td>
         <td className="py-2.5 px-3 text-sm text-nhs-grey-2">
           {med.dosageInstruction ?? [med.dose, med.frequency].filter(Boolean).join(' · ') ?? '—'}
         </td>
+        <td className="py-2.5 px-3 text-sm text-nhs-grey-2">{med.prescribedQuantity ?? '—'}</td>
         <td className="py-2.5 px-3 text-sm text-nhs-grey-2">{med.startDate ?? 'Unknown'}</td>
         <td className="py-2.5 px-3 text-sm text-nhs-grey-2">{med.lastIssuedDate ?? 'Unknown'}</td>
         <td className="py-2.5 px-3">
           <StatusBadge status={med.status} />
         </td>
+        {showNotForPfsColumn && (
+          <td className="py-2.5 px-3">
+            {med.notForPfs && <NotForPfsBadge />}
+          </td>
+        )}
         <td className="py-2.5 px-3 text-nhs-grey-3 text-sm">
           {expanded ? '▲' : '▼'}
         </td>
@@ -122,7 +130,7 @@ function MedicationRow({ med, record, selected, selectedIssueId, onSelect, onSel
       {/* Expanded panel */}
       {expanded && (
         <tr className="bg-blue-50 border-b border-nhs-grey-5">
-          <td colSpan={7} className="px-4 py-3">
+          <td colSpan={showNotForPfsColumn ? 8 : 7} className="px-4 py-3">
 
             {/* ── Quick summary strip + Show detail button ── */}
             <div className="flex items-start justify-between gap-4 mb-3 pb-3 border-b border-nhs-grey-4">
@@ -389,6 +397,7 @@ function MedicationsTable({ medications, record, selectedId, selectedIssueId, on
   onJumpToRecord?: (domain: DomainId, id: string) => void
 }) {
   if (medications.length === 0) return null
+  const showNotForPfsColumn = medications.some(m => m.notForPfs)
   return (
     <div className="border border-nhs-grey-5 rounded-lg overflow-hidden">
       <table className="w-full text-left">
@@ -396,11 +405,13 @@ function MedicationsTable({ medications, record, selectedId, selectedIssueId, on
           <tr className="bg-nhs-grey-5 text-xs font-semibold text-nhs-grey-2 uppercase tracking-wide">
             <th className="py-2 px-3">Drug</th>
             <th className="py-2 px-3">Dose / Frequency</th>
+            <th className="py-2 px-3">Quantity</th>
             <th className="py-2 px-3">Start date</th>
             <th className="py-2 px-3">Last issued</th>
             <th className="py-2 px-3">
               <span className="inline-flex items-center gap-1">Status <InfoHint topic="clinical.medications.status-colours" /></span>
             </th>
+            {showNotForPfsColumn && <th className="py-2 px-3"></th>}
             <th className="py-2 px-3 w-6"></th>
           </tr>
         </thead>
@@ -415,6 +426,7 @@ function MedicationsTable({ medications, record, selectedId, selectedIssueId, on
               onSelect={onSelect}
               onSelectIssue={onSelectIssue}
               onJumpToSource={onJumpToSource}
+              showNotForPfsColumn={showNotForPfsColumn}
               onJumpToRecord={onJumpToRecord}
             />
           ))}
@@ -446,7 +458,10 @@ function getPrescriptionTab(med: GpConnectMedication): MedTab {
 }
 
 export function MedicationsView({ record, selectedId, selectedIssueId, onSelect, onSelectIssue, onJumpToSource, onJumpToRecord }: Props) {
-  const isPast = (m: GpConnectMedication) => ['completed', 'stopped', 'entered-in-error'].includes(m.status)
+  // Current vs past is precomputed in extractMedications() (src/fhir/medications.ts),
+  // accounting for GP supplier quirks — see classifyIsCurrent there. The
+  // displayed status badge always shows the raw FHIR status unchanged.
+  const isPast = (m: GpConnectMedication) => !m.isCurrent
 
   const [searchQuery, setSearchQuery] = useState('')
   const trimmedQuery = searchQuery.trim().toLowerCase()

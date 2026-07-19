@@ -9,6 +9,7 @@ import { SnomedPicker } from './shared/SnomedPicker'
 import { BuilderModal } from '../components/BuilderModal'
 import { DeleteConfirmDialog } from '../components/DeleteConfirmDialog'
 import { LinkSection } from './shared/LinkSection'
+import { ConfidentialityCheckboxes } from './shared/ConfidentialityCheckboxes'
 import { TrashIcon } from '../components/Icons'
 
 // ---------------------------------------------------------------------------
@@ -174,6 +175,13 @@ function InvestigationCard({
           <p className="text-xs text-nhs-grey-3">No results added yet.</p>
         )}
       </div>
+
+      <ConfidentialityCheckboxes
+        confidential={inv.confidential}
+        notForPfs={inv.notForPfs}
+        onChange={upd}
+      />
+
       <LinkSection
         draft={draft}
         linkedProblemTempIds={inv.linkedProblemTempIds ?? []}

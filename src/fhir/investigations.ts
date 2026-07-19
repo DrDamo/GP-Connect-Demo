@@ -1,5 +1,5 @@
 import type { GpConnectInvestigation, GpConnectInvestigationResult, GpConnectTestGroup, GpConnectObservationComponent, GpConnectSpecimen, GpConnectProcedureRequest } from './types'
-import { getEntries, formatDate, resolvePractitionerRef, resolvePractitionerName, resolveReference, extractSnomedCode, extractSnomedDisplay, extractId, fhirDateKey } from './utils'
+import { getEntries, formatDate, resolvePractitionerRef, resolvePractitionerName, resolveReference, extractSnomedCode, extractOriginalTermText, extractId, fhirDateKey, hasNopatSecurity } from './utils'
 
 const PERFORMER_ACTOR_TYPE: Record<string, 'Practitioner' | 'Organisation' | 'HealthcareService'> = {
   Practitioner: 'Practitioner',
@@ -85,7 +85,7 @@ function resolveSpecimen(bundle: fhir3.Bundle, ref: string | undefined): GpConne
   if (!spec) return undefined
   return {
     id: spec.id ?? '',
-    type: spec.type?.text ?? spec.type?.coding?.[0]?.display,
+    type: extractOriginalTermText(spec.type),
     typeCode: spec.type?.coding?.find(c => c.system === 'http://snomed.info/sct')?.code ?? spec.type?.coding?.[0]?.code,
     collectedDateTime: formatDate(spec.collection?.collectedDateTime),
     receivedTime: formatDate(spec.receivedTime),
@@ -182,13 +182,12 @@ function groupHeaderName(obs: ObsLike): string {
 }
 
 function resolveObsName(obs: ObsLike, fallback: string): string {
-  const coding = obs.code?.coding
   const codeText = obs.code?.text
-  if (!codeText && coding?.some(c => c.code === TRANSFER_DEGRADED_CODE)) {
+  if (!codeText && obs.code?.coding?.some(c => c.code === TRANSFER_DEGRADED_CODE)) {
     const original = originalTextFromComment(obs)
     if (original) return original
   }
-  return codeText ?? extractSnomedDisplay(coding) ?? coding?.[0]?.display ?? fallback
+  return extractOriginalTermText(obs.code) ?? fallback
 }
 
 function isTransferDegradedObs(obs: ObsLike): boolean {
@@ -207,10 +206,10 @@ function extractObsResult(obs: ObsLike): Pick<GpConnectInvestigationResult,
   const cast = obs as unknown as { valueString?: string }
   let value: string | undefined = vq?.value !== undefined
     ? String(vq.value)
-    : cast.valueString ?? obs.valueCodeableConcept?.text ?? obs.valueCodeableConcept?.coding?.[0]?.display
+    : cast.valueString ?? extractOriginalTermText(obs.valueCodeableConcept)
   let unit = vq?.unit
   let referenceRange = formatRange(obs.referenceRange?.[0])
-  let interpretation = obs.interpretation?.coding?.[0]?.display ?? obs.interpretation?.text
+  let interpretation = extractOriginalTermText(obs.interpretation)
 
   const rawComment = obs.comment || undefined
   if (!value && rawComment) {
@@ -224,11 +223,11 @@ function extractObsResult(obs: ObsLike): Pick<GpConnectInvestigationResult,
 
   const components: GpConnectObservationComponent[] | undefined = obs.component?.length
     ? obs.component.map(c => ({
-        name: c.code?.text ?? c.code?.coding?.[0]?.display ?? 'Component',
+        name: extractOriginalTermText(c.code) ?? 'Component',
         value: c.valueQuantity?.value !== undefined ? String(c.valueQuantity.value) : c.valueString,
         unit: c.valueQuantity?.unit,
         referenceRange: formatRange(c.referenceRange?.[0]),
-        interpretation: c.interpretation?.coding?.[0]?.display ?? c.interpretation?.text,
+        interpretation: extractOriginalTermText(c.interpretation),
       }))
     : undefined
 
@@ -338,7 +337,7 @@ export function extractInvestigations(bundle: fhir3.Bundle): GpConnectInvestigat
           }
           procedureRequest = {
             id: pr.id ?? '',
-            name: pr.code?.text ?? extractSnomedDisplay(prCoding) ?? prCoding?.[0]?.display,
+            name: extractOriginalTermText(pr.code),
             snomedCode: extractSnomedCode(prCoding),
             status: pr.status,
             intent: pr.intent,
@@ -610,8 +609,7 @@ export function extractInvestigations(bundle: fhir3.Bundle): GpConnectInvestigat
         if (m) reportName = m[1].trim()
       }
       if (!reportName) {
-        const coding = report.code?.coding
-        const drName = report.code?.text ?? extractSnomedDisplay(coding) ?? coding?.[0]?.display
+        const drName = extractOriginalTermText(report.code)
         // 721981007 "Diagnostic studies report" is the generic category code used for ALL
         // TPP/EMIS lab DiagnosticReports — skip it and derive the name from the test group.
         if (drName && drName.toLowerCase() !== 'diagnostic studies report') {
@@ -626,8 +624,7 @@ export function extractInvestigations(bundle: fhir3.Bundle): GpConnectInvestigat
       }
       reportName = reportName ?? 'Investigation'
 
-      const category = (report.category as fhir3.CodeableConcept | undefined)?.coding?.[0]?.display
-        ?? (report.category as fhir3.CodeableConcept | undefined)?.text
+      const category = extractOriginalTermText(report.category as fhir3.CodeableConcept | undefined)
 
       // Only surface result shortcuts in the table for single-result tests (no named panel groups)
       const isPanel = testGroups.some(g => g.name)
@@ -654,6 +651,7 @@ export function extractInvestigations(bundle: fhir3.Bundle): GpConnectInvestigat
         unit: first?.unit,
         referenceRange: first?.referenceRange,
         interpretation: first?.interpretation ?? panelInterpretation,
+        notForPfs: hasNopatSecurity(report),
       }
     })
 }

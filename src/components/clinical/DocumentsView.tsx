@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { DomainTable, StatusBadge, type DomainColumn } from './DomainTable'
+import { DomainTable, StatusBadge, DegradedTermText, type DomainColumn } from './DomainTable'
 import type { GpConnectBundle, GpConnectDocument } from '../../fhir/types'
 import { ReferencedResources } from './ReferencedResources'
 import { ReferenceChip } from './ResourceCard'
@@ -29,7 +29,7 @@ function mimeLabel(mimeType?: string): string {
 
 const COLUMNS: DomainColumn<GpConnectDocument>[] = [
   { label: 'Date',        className: 'w-28', render: d => d.date ?? 'Unknown' },
-  { label: 'Type',        className: 'w-52', render: d => d.type },
+  { label: 'Type',        className: 'w-52', render: d => <DegradedTermText text={d.type} /> },
   { label: 'Description', render: d => d.description ?? '—' },
   { label: 'Author',      className: 'w-40', render: d => d.author ?? '—' },
   { label: 'Format',      className: 'w-20', render: d => mimeLabel(d.mimeType) },

@@ -1,5 +1,5 @@
 import type { GpConnectCodedDataItem, GpConnectObservationComponent } from './types'
-import { getEntries, formatDate, extractSnomedCode, resolvePractitionerRef, resolveReference, extractId, fhirDateKey } from './utils'
+import { getEntries, formatDate, extractSnomedCode, extractOriginalTermText, resolvePractitionerRef, resolveReference, extractId, fhirDateKey, hasNopatSecurity } from './utils'
 
 type ObsLike = fhir3.Observation & {
   comment?: string
@@ -15,13 +15,12 @@ type ObsLike = fhir3.Observation & {
 const TRANSFER_DEGRADED_CODE = '196411000000103'
 
 function extractObsDescription(obs: ObsLike): string {
-  const coding = obs.code?.coding
   const codeText = obs.code?.text
-  if (!codeText && coding?.some(c => c.code === TRANSFER_DEGRADED_CODE) && obs.comment) {
+  if (!codeText && obs.code?.coding?.some(c => c.code === TRANSFER_DEGRADED_CODE) && obs.comment) {
     const m = obs.comment.match(/^Original text:\s*([^\n\r]+)/im)
     if (m) return m[1].trim()
   }
-  return codeText ?? coding?.[0]?.display ?? 'Unknown'
+  return extractOriginalTermText(obs.code) ?? 'Unknown'
 }
 
 const COMMENT_NOTE_CODE = '37331000000100'
@@ -86,17 +85,16 @@ export function extractCodedData(bundle: fhir3.Bundle): GpConnectCodedDataItem[]
       const value = vq?.value !== undefined
         ? String(vq.value)
         : (obs as unknown as { valueString?: string }).valueString
-          ?? obs.valueCodeableConcept?.text
-          ?? obs.valueCodeableConcept?.coding?.[0]?.display
+          ?? extractOriginalTermText(obs.valueCodeableConcept)
 
-      const interpretation = obs.interpretation?.coding?.[0]?.display ?? obs.interpretation?.text
+      const interpretation = extractOriginalTermText(obs.interpretation)
 
       const components: GpConnectObservationComponent[] | undefined = obs.component?.length
         ? obs.component.map(c => ({
-            name: c.code?.text ?? c.code?.coding?.[0]?.display ?? 'Component',
+            name: extractOriginalTermText(c.code) ?? 'Component',
             value: c.valueQuantity?.value !== undefined ? String(c.valueQuantity.value) : c.valueString,
             unit: c.valueQuantity?.unit,
-            interpretation: c.interpretation?.coding?.[0]?.display ?? c.interpretation?.text,
+            interpretation: extractOriginalTermText(c.interpretation),
           }))
         : undefined
 
@@ -124,8 +122,7 @@ export function extractCodedData(bundle: fhir3.Bundle): GpConnectCodedDataItem[]
 
       const effectiveDateTime = cast.effectiveDateTime
       const isIssuedDate = !effectiveDateTime && !!obs.issued
-      const category = (obs.category as fhir3.CodeableConcept[] | undefined)?.[0]?.coding?.[0]?.display
-        ?? (obs.category as fhir3.CodeableConcept[] | undefined)?.[0]?.text
+      const category = extractOriginalTermText((obs.category as fhir3.CodeableConcept[] | undefined)?.[0])
 
       const isTransferDegraded = coding?.some(c => c.code === TRANSFER_DEGRADED_CODE)
         ? (!!obs.code?.text || !!(obs.comment?.match(/^Original text:\s*([^\n\r]+)/im)))
@@ -149,6 +146,7 @@ export function extractCodedData(bundle: fhir3.Bundle): GpConnectCodedDataItem[]
         organisationId: organisationId || undefined,
         encounterId: encounterId || undefined,
         components,
+        notForPfs: hasNopatSecurity(obs),
       }
     })
 }

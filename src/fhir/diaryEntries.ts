@@ -1,5 +1,5 @@
 import type { GpConnectDiaryEntry, GpConnectDiaryNote } from './types'
-import { getEntries, formatDate, resolvePractitionerRef, extractSnomedCode, extractId, fhirDateKey } from './utils'
+import { getEntries, formatDate, resolvePractitionerRef, extractSnomedCode, extractOriginalTermText, extractId, fhirDateKey, hasNopatSecurity } from './utils'
 
 export function extractDiaryEntries(bundle: fhir3.Bundle): GpConnectDiaryEntry[] {
   return getEntries<fhir3.ProcedureRequest>(bundle, 'ProcedureRequest')
@@ -36,7 +36,7 @@ export function extractDiaryEntries(bundle: fhir3.Bundle): GpConnectDiaryEntry[]
     return {
       id: resource.id ?? crypto.randomUUID(),
       date: formatDate(resource.authoredOn ?? cast.occurrenceDateTime ?? occurrencePeriod?.start),
-      description: resource.code?.text ?? coding?.[0]?.display ?? 'Unknown',
+      description: extractOriginalTermText(resource.code) ?? 'Unknown',
       snomedCode: extractSnomedCode(coding),
       clinician,
       clinicianId,
@@ -47,6 +47,7 @@ export function extractDiaryEntries(bundle: fhir3.Bundle): GpConnectDiaryEntry[]
       occurrenceStart,
       occurrenceEnd,
       notes,
+      notForPfs: hasNopatSecurity(resource),
     }
   })
 }

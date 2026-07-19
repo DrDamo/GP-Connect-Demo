@@ -79,6 +79,13 @@ export interface GpConnectMedication {
   medicationStatementId: string
   medicationRequestIds: string[]
   issues: GpConnectMedicationIssue[]
+  /** Whether this belongs in "current drugs" vs "past drugs" — derived from
+   * status plus supplier-specific date rules (see classifyIsCurrent in
+   * medications.ts), NOT the same thing as `status` itself. The raw FHIR
+   * status is always displayed as-is; this only controls section placement. */
+  isCurrent: boolean
+  /** Whether this resource carries a NOPAT security label (withheld from patient-facing services). */
+  notForPfs?: boolean
 }
 
 export interface GpConnectPatient {
@@ -143,6 +150,7 @@ export interface GpConnectAllergy {
   encounterId?: string
   endDate?: string
   endReason?: string
+  notForPfs?: boolean
 }
 
 export interface GpConnectLinkedItem {
@@ -167,6 +175,7 @@ export interface GpConnectProblem {
   encounterId?: string
   notes: string[]
   linkedItems: GpConnectLinkedItem[]
+  notForPfs?: boolean
 }
 
 export interface GpConnectConsultationItem {
@@ -202,6 +211,7 @@ export interface GpConnectConsultation {
   encounterClass?: string
   encounterStatus?: string
   topics: GpConnectConsultationTopic[]
+  notForPfs?: boolean
 }
 
 export interface GpConnectImmunisation {
@@ -242,6 +252,7 @@ export interface GpConnectImmunisation {
   notes: string[]
   /** For entryType 'observation' — the id of the matching Coded Data item (same underlying Observation). */
   codedDataId?: string
+  notForPfs?: boolean
 }
 
 export interface GpConnectSpecimen {
@@ -330,6 +341,7 @@ export interface GpConnectInvestigation {
   procedureRequest?: GpConnectProcedureRequest
   testGroups: GpConnectTestGroup[]
   results: GpConnectInvestigationResult[]
+  notForPfs?: boolean
 }
 
 export interface GpConnectReferralRecipient {
@@ -360,6 +372,7 @@ export interface GpConnectReferral {
   notes: string[]
   status: string
   supportingDocs: GpConnectReferralDocument[]
+  notForPfs?: boolean
 }
 
 export interface GpConnectDiaryNote {
@@ -383,6 +396,7 @@ export interface GpConnectDiaryEntry {
   occurrenceStart?: string
   occurrenceEnd?: string
   notes: GpConnectDiaryNote[]
+  notForPfs?: boolean
 }
 
 export interface GpConnectCodedDataItem {
@@ -403,6 +417,7 @@ export interface GpConnectCodedDataItem {
   organisationId?: string
   encounterId?: string
   components?: GpConnectObservationComponent[]
+  notForPfs?: boolean
 }
 
 export interface GpConnectDocument {
@@ -420,6 +435,7 @@ export interface GpConnectDocument {
   custodianId?: string
   status: string
   attachmentSize?: number
+  notForPfs?: boolean
 }
 
 export interface GpConnectPractitioner {
@@ -493,6 +509,7 @@ export interface GpConnectList {
   listCode?: string
   /** Value from Extension-CareConnect-GPC-ListWarningCode-1, e.g. 'data-in-transit' */
   warningCode?: string
+  notForPfs?: boolean
 }
 
 export interface GpConnectBundle {
@@ -523,15 +540,29 @@ export type GpConnectMedicationsRecord = GpConnectBundle
 
 export type ValidationSeverity = 'error' | 'warning' | 'info'
 
+/** Present on a ValidationIssue only when it represents an actual SNOMED CT
+ * code conversion (see src/fhir/snomedDegrade.ts) — lets the UI show each
+ * one individually instead of folding it into the generic warnings list. */
+export interface SnomedDegradeDetail {
+  originalCode: string
+  originalDisplay?: string
+  degradedCode: string
+  degradedDisplay: string
+}
+
 export interface ValidationIssue {
   severity: ValidationSeverity
   message: string
   path?: string
   resourceId?: string
+  snomedDegrade?: SnomedDegradeDetail
 }
 
 export interface ValidationResult {
   valid: boolean
   issues: ValidationIssue[]
   resourceCounts: Record<string, number>
+  /** Titles of checks that ran and found no problem anywhere they applied — not
+   * one entry per resource, just the check itself (e.g. "Encounter.status is required"). */
+  passed: string[]
 }

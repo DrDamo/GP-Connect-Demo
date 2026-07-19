@@ -10,13 +10,14 @@ import type {
 } from '../types'
 import type { DraftAction } from '../hooks/useDraftRecord'
 import { newTempId } from '../hooks/useDraftRecord'
-import { Field } from './shared/FormField'
+import { Field, FormField } from './shared/FormField'
 import { SelectField } from './shared/SelectField'
 import { PractitionerSelect } from './shared/PractitionerSelect'
 import { SnomedPicker } from './shared/SnomedPicker'
 import { BuilderModal } from '../components/BuilderModal'
 import { DeleteConfirmDialog } from '../components/DeleteConfirmDialog'
 import { LinkSection } from './shared/LinkSection'
+import { ConfidentialityCheckboxes } from './shared/ConfidentialityCheckboxes'
 import { TrashIcon } from '../components/Icons'
 import { InfoHint } from '../../onboarding/InfoHint'
 
@@ -35,10 +36,104 @@ const ENCOUNTER_CLASS_OPTS = [
   { value: 'IMP', label: 'Inpatient (IMP)' },
 ]
 
+// SNOMED CT consultation/encounter type concepts — the set GP Connect vendors
+// actually use for Encounter.type, per NHS Digital's Category (EHR) guidance.
+const CONSULTATION_TYPE_OPTS: { code: string; display: string }[] = [
+  { code: '1258986006', display: 'Face-to-face encounter' },
+  { code: '1269515004', display: 'Face to face consultation with patient' },
+  { code: '1237136005', display: 'Consultation with patient' },
+  { code: '185387006', display: 'New patient consultation' },
+  { code: '448337001', display: 'Telemedicine consultation with patient' },
+  { code: '185317003', display: 'Telephone encounter' },
+  { code: '1068881000000101', display: 'eConsultation via online application' },
+  { code: '325871000000103', display: 'Remote consultation encounter type' },
+  { code: '401271004', display: 'Email sent to patient' },
+  { code: '270424005', display: 'Letter encounter from patient' },
+  { code: '185321005', display: 'Letter encounter to patient' },
+  { code: '439708006', display: 'Home visit' },
+  { code: '225929007', display: 'Joint home visit' },
+  { code: '185463005', display: 'Visit out of hours' },
+  { code: '37351000000107', display: 'Administration note' },
+  { code: '38651000000103', display: 'Other note' },
+  { code: '823691000000103', display: 'Clinical Letter' },
+  { code: '24751000000101', display: 'Nursing home visit note' },
+  { code: '25671000000102', display: 'Surgery Consultation Note' },
+  { code: '25741000000100', display: 'Third Party Consultation' },
+  { code: '24731000000108', display: 'Clinic Note' },
+]
+
+const FREE_TEXT_TYPE_OPTION = '__free_text_type__'
+
+// Type — dropdown of the fixed SNOMED consultation-type list above, with a
+// "Free text…" escape hatch for anything not covered (matches this file's
+// existing Custom-category pattern for the same reason: real vendor bundles
+// occasionally use terms outside any fixed list).
+function ConsultationTypeField({
+  typeDisplay,
+  typeCode,
+  onChange,
+}: {
+  typeDisplay?: string
+  typeCode?: string
+  onChange: (updates: { typeDisplay?: string; typeCode?: string }) => void
+}) {
+  const matched = CONSULTATION_TYPE_OPTS.some(o => o.code === typeCode)
+  const [freeText, setFreeText] = useState(!matched && Boolean(typeDisplay))
+
+  return (
+    <FormField label="Type" required className="col-span-2">
+      {freeText ? (
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={typeDisplay ?? ''}
+            onChange={e => onChange({ typeDisplay: e.target.value, typeCode: undefined })}
+            required
+            className="w-full rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-2 py-1.5 text-sm text-nhs-grey-1 dark:bg-gray-800 focus:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue"
+          />
+          <button type="button" onClick={() => setFreeText(false)} className="shrink-0 text-xs text-nhs-blue hover:underline">
+            Use list
+          </button>
+        </div>
+      ) : (
+        <select
+          value={typeCode ?? ''}
+          onChange={e => {
+            const val = e.target.value
+            if (val === FREE_TEXT_TYPE_OPTION) {
+              setFreeText(true)
+              onChange({ typeDisplay, typeCode: undefined })
+              return
+            }
+            const opt = CONSULTATION_TYPE_OPTS.find(o => o.code === val)
+            onChange({ typeDisplay: opt?.display, typeCode: opt?.code })
+          }}
+          required
+          className="w-full rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-2 py-1.5 text-sm text-nhs-grey-1 dark:bg-gray-800 focus:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue"
+        >
+          <option value="" disabled>— Select —</option>
+          {CONSULTATION_TYPE_OPTS.map(o => (
+            <option key={o.code} value={o.code}>{o.display}</option>
+          ))}
+          <option value={FREE_TEXT_TYPE_OPTION}>Free text…</option>
+        </select>
+      )}
+    </FormField>
+  )
+}
+
 const ITEM_TYPE_OPTS = [
   { value: 'note', label: 'Note' },
-  { value: 'coded', label: 'Coded observation' },
+  { value: 'coded', label: 'Coded Entry' },
 ]
+
+const INTERPRETATION_OPTS = [
+  { value: 'normal', label: 'Normal' },
+  { value: 'abnormal', label: 'Abnormal' },
+  { value: 'potentially-abnormal', label: 'Potentially Abnormal' },
+]
+
+const OBSERVABLE_ENTITY_TAG = 'observable entity'
 
 const FIXED_CATEGORY_TITLES = ['History', 'Examination', 'Assessment', 'Plan']
 
@@ -102,6 +197,9 @@ function ConsultationItemRow({
             options={ITEM_TYPE_OPTS}
           />
         </div>
+        <div className="w-40 shrink-0">
+          <Field label="Date" type="date" value={item.date ?? ''} onChange={v => upd({ date: v })} />
+        </div>
         <div className="flex-1" />
         <button
           type="button"
@@ -127,7 +225,7 @@ function ConsultationItemRow({
             value={item.narrativeText ?? ''}
             onChange={e => upd({ narrativeText: e.target.value })}
             rows={2}
-            className="w-full rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-2 py-1.5 text-sm text-nhs-grey-1 dark:bg-gray-800 focus:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue resize-none"
+            className="w-full rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-2 py-1.5 text-sm text-nhs-grey-1 dark:bg-gray-800 focus:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue resize-y"
           />
         </div>
       )}
@@ -137,10 +235,24 @@ function ConsultationItemRow({
             label="Description"
             value={item.description ?? ''}
             code={item.snomedCode}
-            onChange={({ value, code }) => upd({ description: value, snomedCode: code })}
+            onChange={({ value, code, semanticTag }) => upd({ description: value, snomedCode: code, semanticTag })}
           />
           <Field label="Associated text" value={item.associatedText ?? ''} onChange={v => upd({ associatedText: v })} />
-          <Field label="Value" value={item.value ?? ''} onChange={v => upd({ value: v })} className="max-w-xs" />
+          {item.semanticTag === OBSERVABLE_ENTITY_TAG && (
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              <Field label="Value" value={item.value ?? ''} onChange={v => upd({ value: v })} />
+              <Field label="Units" value={item.unit ?? ''} onChange={v => upd({ unit: v })} />
+              <SelectField
+                label="Interpretation"
+                value={item.interpretation ?? ''}
+                onChange={v => upd({ interpretation: (v || undefined) as DraftConsultationItem['interpretation'] })}
+                options={INTERPRETATION_OPTS}
+                placeholder="— None —"
+              />
+              <Field label="Minimum" value={item.minRange ?? ''} onChange={v => upd({ minRange: v })} />
+              <Field label="Maximum" value={item.maxRange ?? ''} onChange={v => upd({ maxRange: v })} />
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -203,7 +315,17 @@ function TopicProblemBox({
           value={problem.problem ?? ''}
           code={problem.snomedCode}
           semanticTag="disorder,finding"
-          onChange={({ value, code }) => upd({ problem: value, snomedCode: code })}
+          onChange={({ value, code }) => {
+            upd({ problem: value, snomedCode: code })
+            // Give the topic a sensible default title matching the problem —
+            // still just a normal editable field afterwards.
+            if (code) {
+              dispatch({
+                type: 'UPDATE_CONSULTATION_TOPIC',
+                payload: { consTempId, topicTempId: topic._tempId, updates: { title: value } },
+              })
+            }
+          }}
           required
         />
         <Field label="Associated text" value={problem.associatedText ?? ''} onChange={v => upd({ associatedText: v })} />
@@ -323,6 +445,39 @@ function CategoryBlock({
   )
 }
 
+// "+ Add category" dropdown — shown both above and below the category list so
+// it's still within reach once a topic has several categories.
+function AddCategorySelect({
+  topic,
+  consTempId,
+  dispatch,
+}: {
+  topic: DraftConsultationTopic
+  consTempId: string
+  dispatch: React.Dispatch<DraftAction>
+}) {
+  return (
+    <select
+      value=""
+      onChange={e => {
+        const val = e.target.value
+        if (!val) return
+        const title = val === CUSTOM_CATEGORY_OPTION ? '' : val
+        dispatch({ type: 'ADD_CONSULTATION_CATEGORY', payload: { consTempId, topicTempId: topic._tempId, title } })
+      }}
+      className="text-xs text-nhs-blue border border-nhs-grey-4 dark:border-nhs-grey-2 rounded px-1.5 py-0.5 bg-white dark:bg-gray-800 hover:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue"
+    >
+      <option value="">+ Add category…</option>
+      {ALL_CATEGORY_TITLES
+        .filter(t => !FIXED_CATEGORY_TITLES.includes(t) && !topic.categories.some(c => c.title === t))
+        .map(t => (
+          <option key={t} value={t}>{t}</option>
+        ))}
+      <option value={CUSTOM_CATEGORY_OPTION}>Custom…</option>
+    </select>
+  )
+}
+
 // ---------------------------------------------------------------------------
 // ConsultationTopic — content panel for the active tab
 // ---------------------------------------------------------------------------
@@ -372,24 +527,7 @@ function TopicBlock({
                 + {title}
               </button>
             ))}
-            <select
-              value=""
-              onChange={e => {
-                const val = e.target.value
-                if (!val) return
-                const title = val === CUSTOM_CATEGORY_OPTION ? '' : val
-                dispatch({ type: 'ADD_CONSULTATION_CATEGORY', payload: { consTempId, topicTempId: topic._tempId, title } })
-              }}
-              className="text-xs text-nhs-blue border border-nhs-grey-4 dark:border-nhs-grey-2 rounded px-1.5 py-0.5 bg-white dark:bg-gray-800 hover:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue"
-            >
-              <option value="">+ Add category…</option>
-              {ALL_CATEGORY_TITLES
-                .filter(t => !FIXED_CATEGORY_TITLES.includes(t) && !topic.categories.some(c => c.title === t))
-                .map(t => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              <option value={CUSTOM_CATEGORY_OPTION}>Custom…</option>
-            </select>
+            <AddCategorySelect topic={topic} consTempId={consTempId} dispatch={dispatch} />
           </div>
         </div>
         {topic.categories.map(cat => (
@@ -401,6 +539,11 @@ function TopicBlock({
             dispatch={dispatch}
           />
         ))}
+        {topic.categories.length > 0 && (
+          <div className="flex justify-end mt-1">
+            <AddCategorySelect topic={topic} consTempId={consTempId} dispatch={dispatch} />
+          </div>
+        )}
       </div>
 
       {/* Direct topic items (no category) */}
@@ -479,12 +622,10 @@ function ConsultationCard({
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <Field label="Date" type="date" value={consultation.date ?? ''} onChange={v => upd({ date: v })} required />
         <Field label="End date" type="date" value={consultation.endDate ?? ''} onChange={v => upd({ endDate: v })} />
-        <Field
-          label="Type"
-          value={consultation.typeDisplay ?? ''}
-          onChange={v => upd({ typeDisplay: v })}
-          className="col-span-2"
-          required
+        <ConsultationTypeField
+          typeDisplay={consultation.typeDisplay}
+          typeCode={consultation.typeCode}
+          onChange={upd}
         />
       </div>
 
@@ -565,6 +706,13 @@ function ConsultationCard({
           />
         )}
       </div>
+
+      <ConfidentialityCheckboxes
+        confidential={consultation.confidential}
+        notForPfs={consultation.notForPfs}
+        onChange={upd}
+      />
+
       <LinkSection
         draft={draft}
         linkedProblemTempIds={consultation.linkedProblemTempIds ?? []}

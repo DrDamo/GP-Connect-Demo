@@ -55,7 +55,7 @@ const DOMAINS: DomainDef[] = [
 
 export function BuilderDomainNav({ active, draft, onChange }: BuilderDomainNavProps) {
   return (
-    <div className="w-48 shrink-0 flex flex-col border-r border-nhs-grey-4 dark:border-nhs-grey-2 bg-nhs-grey-5 dark:bg-gray-900 overflow-y-auto">
+    <div className="w-48 h-full shrink-0 flex flex-col border-r border-nhs-grey-4 dark:border-nhs-grey-2 bg-nhs-grey-5 dark:bg-gray-900 overflow-y-auto">
       <div className="px-3 py-2.5 border-b border-nhs-grey-4 dark:border-nhs-grey-2">
         <span className="text-xs font-semibold text-nhs-grey-2 uppercase tracking-wide">
           Record sections

@@ -18,6 +18,7 @@ import { ListsView } from './clinical/ListsView'
 import { DomainNav } from './clinical/DomainNav'
 import { PatientBanner } from './clinical/PatientBanner'
 import { type DomainId, DOMAIN_MAP } from './clinical/domains'
+import { useDomainWarnings, DomainWarningBanner } from './clinical/DomainWarningBanner'
 import { InfoHint } from '../onboarding/InfoHint'
 
 interface Props {
@@ -27,6 +28,10 @@ interface Props {
   jumpToId?: string | null
   onJumpHandled?: () => void
   onOpenTraining?: (domain: DomainId) => void
+  /** Whether this bundle has a pre-degradation source to compare against. */
+  hasOriginalSource?: boolean
+  showOriginalSource?: boolean
+  onToggleOriginalSource?: () => void
 }
 
 interface Section {
@@ -39,7 +44,7 @@ function extractId(ref: string): string {
   return ref.split('/').pop() ?? ref
 }
 
-export function InspectorView({ record, source, format, jumpToId, onJumpHandled, onOpenTraining }: Props) {
+export function InspectorView({ record, source, format, jumpToId, onJumpHandled, onOpenTraining, hasOriginalSource, showOriginalSource, onToggleOriginalSource }: Props) {
   const [activeDomain, setActiveDomain] = useState<DomainId>('problems')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null)
@@ -90,6 +95,7 @@ export function InspectorView({ record, source, format, jumpToId, onJumpHandled,
   }, [selectionPopup])
 
   const lineIndex = useMemo(() => buildResourceLineIndex(source), [source])
+  const domainWarnings = useDomainWarnings(record)
   const selectedMed = record.medications.find(m => m.id === selectedId) ?? null
 
   // Reset selection when switching domains (or apply jump target when navigating via a record link).
@@ -212,10 +218,14 @@ export function InspectorView({ record, source, format, jumpToId, onJumpHandled,
     if (sections.length > 0) scrollToLine(sections[0].start)
   }, [selectedMed, selectedIssueId, selectedId]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Keyed on searchQuery only (not searchMatchLines/source) — jumping to the
+  // first match should happen when the user types a new search, not merely
+  // because the underlying source text changed (e.g. toggling original vs
+  // degraded source), which should leave the viewport exactly where it was.
   useEffect(() => {
     setSearchMatchIdx(0)
     if (searchMatchLines.length > 0) scrollToLine(searchMatchLines[0])
-  }, [searchMatchLines]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [searchQuery]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // --- Section nav handlers ---
 
@@ -363,6 +373,9 @@ export function InspectorView({ record, source, format, jumpToId, onJumpHandled,
                 </button>
               </div>
             )}
+            {domainWarnings[activeDomain] && (
+              <DomainWarningBanner warning={domainWarnings[activeDomain]!} />
+            )}
             {activeDomain === 'medications' && (
               <MedicationsView
                 record={record}
@@ -436,6 +449,26 @@ export function InspectorView({ record, source, format, jumpToId, onJumpHandled,
             <p className="text-xs text-nhs-grey-3 mt-0.5 truncate">{sourceSubtitle}</p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            {hasOriginalSource && (
+              <div className="flex items-center rounded border border-nhs-grey-4 overflow-hidden" title="Some SNOMED CT codes were degraded on import — compare the file as uploaded against the converted version">
+                <button
+                  onClick={() => showOriginalSource && onToggleOriginalSource?.()}
+                  className={`px-2 py-1 text-xs font-medium transition-colors whitespace-nowrap ${
+                    !showOriginalSource ? 'bg-nhs-blue text-white' : 'bg-white text-nhs-grey-2 hover:bg-nhs-grey-5'
+                  }`}
+                >
+                  Degraded
+                </button>
+                <button
+                  onClick={() => !showOriginalSource && onToggleOriginalSource?.()}
+                  className={`px-2 py-1 text-xs font-medium transition-colors whitespace-nowrap border-l border-nhs-grey-4 ${
+                    showOriginalSource ? 'bg-nhs-blue text-white' : 'bg-white text-nhs-grey-2 hover:bg-nhs-grey-5'
+                  }`}
+                >
+                  Original
+                </button>
+              </div>
+            )}
             <button
               onClick={() => setShowIndentGuides(v => !v)}
               title="Toggle indent guides"

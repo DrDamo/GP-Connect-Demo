@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { FormField } from './FormField'
-import { useAnchoredDropdown } from './useAnchoredDropdown'
+import { useAnchoredDropdown } from '../../../hooks/useAnchoredDropdown'
 import { InfoHint } from '../../../onboarding/InfoHint'
 
 // ---------------------------------------------------------------------------
@@ -20,6 +20,42 @@ interface DmdResult {
 interface TerminologyConfig {
   serverUrl: string
   token: string
+}
+
+interface ConceptRef {
+  code: string
+  display: string
+}
+
+// Mirrors server/src/fhir/mappers.ts DmdDetail — strength/dose-form/route
+// parsed server-side from CodeSystem/$lookup's `normalForm` expression.
+interface DmdDetail {
+  code: string
+  display: string
+  type: DmdType
+  inactive?: boolean
+  isCombinationProduct: boolean
+  activeIngredient?: ConceptRef
+  preciseActiveIngredient?: ConceptRef
+  basisOfStrengthSubstance?: ConceptRef
+  strength?: {
+    numeratorValue?: number
+    numeratorUnit?: ConceptRef
+    denominatorValue?: number
+    denominatorUnit?: ConceptRef
+  }
+  dispensedDoseForm?: ConceptRef
+  basicDoseForm?: ConceptRef
+  route?: ConceptRef
+  ontologyFormAndRoute?: ConceptRef
+  supplier?: ConceptRef
+  controlledDrugCategory?: ConceptRef
+  prescribingStatus?: ConceptRef
+  nonAvailability?: ConceptRef
+  parentCodes: string[]
+  childCodes: string[]
+  parentVmp?: ConceptRef
+  fromParentVmp?: string[]
 }
 
 // ---------------------------------------------------------------------------
@@ -77,6 +113,11 @@ export function DmdPicker({ value, onChange, code, dmdType = 'VMP', label = 'dm+
   const [error, setError] = useState<string | null>(null)
   const [activeIdx, setActiveIdx] = useState(0)
 
+  // Dev-only: raw request/response for inspecting dm+d calls without Postman/DevTools
+  const [debugInfo, setDebugInfo] = useState<{ url: string; status: number; raw: unknown } | null>(null)
+  const [debugOpen, setDebugOpen] = useState(false)
+  const [lookupDetail, setLookupDetail] = useState<DmdDetail | null>(null)
+
   const inputRef = useRef<HTMLInputElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -102,11 +143,15 @@ export function DmdPicker({ value, onChange, code, dmdType = 'VMP', label = 'dm+
     setIsLoading(true)
     setError(null)
     try {
-      const params = new URLSearchParams({ q, type: type.toLowerCase(), limit: '10' })
+      const params = new URLSearchParams({ q, type: type.toLowerCase(), limit: '25' })
       const url = `${cfg.serverUrl}/api/dmd/search?${params}`
       const headers: HeadersInit = {}
       if (cfg.token) headers['Authorization'] = `Bearer ${cfg.token}`
       const res = await fetch(url, { headers })
+      if (import.meta.env.DEV) {
+        const cloned = res.clone()
+        cloned.json().then(raw => { setDebugInfo({ url, status: res.status, raw }); setLookupDetail(null) }).catch(() => {})
+      }
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json() as { codes: DmdResult[] }
       setResults(data.codes ?? [])
@@ -153,6 +198,26 @@ export function DmdPicker({ value, onChange, code, dmdType = 'VMP', label = 'dm+
 
   const handleClearCode = () => {
     onChange({ value, code: undefined, dmdType: activeType })
+  }
+
+  // Dev-only: fetch full CodeSystem/$lookup detail for the linked code and
+  // surface it in the debug panel below (dm+d codes are SNOMED CT concepts).
+  const handleLookupDetails = async () => {
+    if (!config.serverUrl || !code) return
+    setDebugOpen(true)
+    try {
+      const params = new URLSearchParams({ code, type: dmdType.toLowerCase() })
+      const url = `${config.serverUrl}/api/dmd/lookup?${params}`
+      const headers: HeadersInit = {}
+      if (config.token) headers['Authorization'] = `Bearer ${config.token}`
+      const res = await fetch(url, { headers })
+      const body = await res.json() as { raw: unknown; detail?: DmdDetail }
+      setDebugInfo({ url, status: res.status, raw: body })
+      setLookupDetail(body.detail ?? null)
+    } catch (e) {
+      setDebugInfo({ url: `${config.serverUrl}/api/dmd/lookup?code=${code}`, status: 0, raw: { error: (e as Error).message } })
+      setLookupDetail(null)
+    }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -226,6 +291,9 @@ export function DmdPicker({ value, onChange, code, dmdType = 'VMP', label = 'dm+
                   title={`dm+d ${dmdType} ${code} — click × to unlink and keep as free text`}
                 >
                   {code}
+                  {import.meta.env.DEV && (
+                    <button type="button" onClick={handleLookupDetails} className="hover:opacity-70" title="Fetch full $lookup detail (dev only)">🔍</button>
+                  )}
                   <button type="button" onClick={handleClearCode} className="hover:opacity-70" title="Unlink code">×</button>
                 </span>
               )}
@@ -233,6 +301,103 @@ export function DmdPicker({ value, onChange, code, dmdType = 'VMP', label = 'dm+
           </div>
 
           {error && <p className="mt-1 text-xs text-nhs-red">{error}</p>}
+
+          {import.meta.env.DEV && debugInfo && (
+            <div className="mt-1 border border-dashed border-nhs-grey-4 dark:border-nhs-grey-2 rounded text-xs">
+              <button
+                type="button"
+                onClick={() => setDebugOpen(o => !o)}
+                className="w-full flex items-center justify-between px-2 py-1 text-nhs-grey-3 hover:text-nhs-blue font-mono"
+              >
+                <span>dm+d debug (dev only) — HTTP {debugInfo.status}</span>
+                <span>{debugOpen ? '▲' : '▼'}</span>
+              </button>
+              {debugOpen && (
+                <div className="border-t border-dashed border-nhs-grey-4 dark:border-nhs-grey-2 p-2 space-y-2">
+                  <p className="font-mono text-nhs-grey-3 break-all">{debugInfo.url}</p>
+                  {lookupDetail && (
+                    <table className="w-full text-[11px]">
+                      <tbody>
+                        {lookupDetail.parentVmp && (
+                          <tr>
+                            <td className="pr-2 text-nhs-grey-3 align-top whitespace-nowrap">Note</td>
+                            <td className="text-nhs-grey-1 dark:text-gray-200">
+                              Fields marked <span className="italic">(from VMP)</span> below came from parent VMP-equivalent {lookupDetail.parentVmp.display} ({lookupDetail.parentVmp.code}), not this AMP directly
+                            </td>
+                          </tr>
+                        )}
+                        {lookupDetail.isCombinationProduct && (
+                          <tr>
+                            <td className="pr-2 text-nhs-grey-3 align-top whitespace-nowrap">Note</td>
+                            <td className="text-nhs-grey-1 dark:text-gray-200">Combination product — strength is per-ingredient in SNOMED CT, so it's omitted here</td>
+                          </tr>
+                        )}
+                        {lookupDetail.strength?.numeratorValue !== undefined && (
+                          <tr>
+                            <td className="pr-2 text-nhs-grey-3 align-top whitespace-nowrap">Strength</td>
+                            <td className="text-nhs-grey-1 dark:text-gray-200">
+                              {lookupDetail.strength.numeratorValue}
+                              {lookupDetail.strength.numeratorUnit?.display && ` ${lookupDetail.strength.numeratorUnit.display}`}
+                              {lookupDetail.strength.denominatorValue !== undefined && ` / ${lookupDetail.strength.denominatorValue}`}
+                              {lookupDetail.strength.denominatorUnit?.display && ` ${lookupDetail.strength.denominatorUnit.display}`}
+                              {lookupDetail.fromParentVmp?.includes('strength') && <span className="italic text-nhs-grey-3"> (from VMP)</span>}
+                            </td>
+                          </tr>
+                        )}
+                        {lookupDetail.basisOfStrengthSubstance && (
+                          <tr>
+                            <td className="pr-2 text-nhs-grey-3 align-top whitespace-nowrap">Basis of strength</td>
+                            <td className="text-nhs-grey-1 dark:text-gray-200">
+                              {lookupDetail.basisOfStrengthSubstance.display}
+                              {lookupDetail.fromParentVmp?.includes('basisOfStrengthSubstance') && <span className="italic text-nhs-grey-3"> (from VMP)</span>}
+                            </td>
+                          </tr>
+                        )}
+                        {lookupDetail.dispensedDoseForm && (
+                          <tr>
+                            <td className="pr-2 text-nhs-grey-3 align-top whitespace-nowrap">Dose form</td>
+                            <td className="text-nhs-grey-1 dark:text-gray-200">
+                              {lookupDetail.basicDoseForm?.display ?? lookupDetail.dispensedDoseForm.display}
+                            </td>
+                          </tr>
+                        )}
+                        {lookupDetail.route && (
+                          <tr>
+                            <td className="pr-2 text-nhs-grey-3 align-top whitespace-nowrap">Route</td>
+                            <td className="text-nhs-grey-1 dark:text-gray-200">
+                              {lookupDetail.route.display}
+                              {lookupDetail.fromParentVmp?.includes('route') && <span className="italic text-nhs-grey-3"> (from VMP)</span>}
+                            </td>
+                          </tr>
+                        )}
+                        {lookupDetail.supplier && (
+                          <tr>
+                            <td className="pr-2 text-nhs-grey-3 align-top whitespace-nowrap">Supplier</td>
+                            <td className="text-nhs-grey-1 dark:text-gray-200">{lookupDetail.supplier.display}</td>
+                          </tr>
+                        )}
+                        {lookupDetail.controlledDrugCategory && (
+                          <tr>
+                            <td className="pr-2 text-nhs-grey-3 align-top whitespace-nowrap">Controlled drug</td>
+                            <td className="text-nhs-grey-1 dark:text-gray-200">{lookupDetail.controlledDrugCategory.display}</td>
+                          </tr>
+                        )}
+                        {lookupDetail.inactive !== undefined && (
+                          <tr>
+                            <td className="pr-2 text-nhs-grey-3 align-top whitespace-nowrap">Inactive</td>
+                            <td className="text-nhs-grey-1 dark:text-gray-200">{String(lookupDetail.inactive)}</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  )}
+                  <pre className="max-h-64 overflow-auto bg-nhs-grey-5 dark:bg-gray-800 rounded p-2 font-mono text-[11px] text-nhs-grey-1 dark:text-gray-200">
+                    {JSON.stringify(debugInfo.raw, null, 2)}
+                  </pre>
+                </div>
+              )}
+            </div>
+          )}
 
           {dropdownOpen && dropdownPos && createPortal(
             <div
