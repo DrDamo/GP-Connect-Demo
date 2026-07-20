@@ -3,6 +3,7 @@
 **Sources:**  
 - https://simplifier.net/guide/gp-connect-access-record-structured/Home/Build/Linkages?version=current  
 - https://simplifier.net/guide/gp-connect-access-record-structured/Home/Build/Search?version=current  
+- https://simplifier.net/guide/gp-connect-access-record-structured/Home/Build/Multi-area-searches?version=current  
 - https://simplifier.net/guide/gp-connect-access-record-structured/Home/Build/Configuration-for-supported-clinical-areas?version=current  
 - https://simplifier.net/guide/gp-connect-access-record-structured/Home/Build/Using-lists-to-return-data?version=current
 
@@ -165,6 +166,34 @@ Most use cases require only one API call. However, where a retrieved item links 
 3. Then finds the specific item within the returned data
 
 > This version of GP Connect does not support retrieval of a specific item by its identifier — consumers must use supported search filters.
+
+---
+
+## Multi Area Searches
+
+### Why Parameter Combinations Are Restricted
+
+When a consumer requests more than one clinical area in a single `$gpc.getstructuredrecord` call, GP Connect restricts which search filters can be combined across areas. This is a clinical safety control, not just a technical one: combining an unrelated date-limited filter with an unfiltered/all-items area can silently produce a misleadingly incomplete picture. The IG's canonical example: requesting medications from the last 6 months together with all active problems can return older medications that are only present because they are *linked* to one of those problems — creating the false impression that the consumer has the patient's complete recent medication history, when in fact older, unlinked medications outside the 6-month window are missing.
+
+**Rule:** problem filters and medication date filters cannot be combined with a consultations request in the same way they could be used alone — see the Search Criteria "Following a Linkage" pattern above for how consumers must instead retrieve a fuller dataset with a second call.
+
+### Consuming System Mitigation
+
+Because linked items (e.g. medications pulled in only because they're referenced from a returned Consultation or Problem) can appear alongside directly-queried items, consuming systems:
+- SHOULD exercise caution when processing/displaying medication data returned via a linkage rather than a direct medication search
+- SHOULD consider displaying such secondary/linked lists separately from the primary requested list
+- SHOULD warn users prominently that a secondary list may not represent the complete set of items for that clinical area
+
+### Predefined Multi-Area Searches
+
+To reduce the complexity of reasoning about safe parameter combinations, NHS England defines two standard predefined multi-area searches:
+
+| Search | Clinical areas and filters |
+|---|---|
+| **Search 1** | Most recent 3 consultations + 1 year of medications + all active allergies + all active problems |
+| **Search 2** | Everything in Search 1, plus immunisations and uncategorised data (intended for paediatric use cases) |
+
+These predefined searches are designed to sidestep the general parameter-restriction rules described above by combining only filter combinations that have been clinically assessed as safe.
 
 ---
 
@@ -343,5 +372,6 @@ Consumer systems MUST be able to handle unavailable clinical areas and warn user
 
 - https://simplifier.net/guide/gp-connect-access-record-structured/Home/Build/Linkages?version=current
 - https://simplifier.net/guide/gp-connect-access-record-structured/Home/Build/Search?version=current
+- https://simplifier.net/guide/gp-connect-access-record-structured/Home/Build/Multi-area-searches?version=current
 - https://simplifier.net/guide/gp-connect-access-record-structured/Home/Build/Configuration-for-supported-clinical-areas?version=current
 - https://simplifier.net/guide/gp-connect-access-record-structured/Home/Build/Using-lists-to-return-data?version=current

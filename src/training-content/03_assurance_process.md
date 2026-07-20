@@ -145,6 +145,18 @@ Key hazard areas include:
 
 ---
 
+## Known Technical Issues Relevant to Assurance
+
+In addition to the generic hazard log, NHS England publishes a separate "Known issues" page for Access Record: Structured that consumer suppliers should review as part of their own risk/hazard analysis:
+
+- **Consultation-oriented queries are incomplete** — not all clinical record items are documented as part of a consultation, so a consumer system querying by consultation alone must not expect to obtain every item in the patient record.
+- **Data quality varies by practice** — data quality depends on individual GP practice recording behaviour and will vary significantly; improving GP data quality is outside GP Connect's scope.
+- **Data ownership restrictions** — GP Connect can only share data owned by the GP practice itself, not data from other care settings merely displayed within the practice system, as the practice is not the data controller for those entries.
+
+Source: [Known issues — Access Record: Structured](https://digital.nhs.uk/services/gp-connect/develop-gp-connect-services/development/access-record-structured/known-issues---access-record-structured)
+
+---
+
 ## Connection Agreement
 
 Before going live, the connecting party must sign a **Connection Agreement** outlining:

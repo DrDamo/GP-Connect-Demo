@@ -187,6 +187,18 @@ Key extensions used in GP Connect (full list at `https://fhir.nhs.uk/STU3/Struct
 
 ---
 
+## Operation Definitions
+
+The guide's FHIR Assets section lists three `OperationDefinition` resources (confirmed via the guide's FHIR-Assets/OperationDefinitions page):
+
+| OperationDefinition | Canonical operation name | Purpose |
+|---|---|---|
+| `GPConnect-RegisterPatient-Operation-1` | `gpc.registerpatient` | Registers a patient at a GP practice (Update Record capability) |
+| `GPConnect-GetStructuredRecord-Operation-1` | `gpc.getstructuredrecord` | Retrieves the structured patient record (Access Record: Structured capability) |
+| `GPConnect-MigrateStructuredRecord-Operation` | `gpc.migratestructuredrecord` | Retrieves the structured patient record for GP2GP practice-to-practice record migration |
+
+---
+
 ## General FHIR Resource Population Requirements
 
 ### Must Support
@@ -243,4 +255,5 @@ Populate `value` (phone number/email), `system`, and `use` (for patient/contact 
 - https://simplifier.net/guide/gpconnect-data-model/Home/FHIR-Assets/Extensions.page.md?version=current
 - https://simplifier.net/guide/gpconnect-data-model/Home/FHIR-Assets/CodeSystems.page.md?version=current
 - https://simplifier.net/guide/gpconnect-data-model/Home/FHIR-Assets/ValueSets.page.md?version=current
+- https://simplifier.net/guide/gpconnect-data-model/Home/FHIR-Assets/OperationDefinitions.page.md?version=current
 - https://simplifier.net/guide/gpconnect-data-model/Home/Build/FHIR-resources?version=current

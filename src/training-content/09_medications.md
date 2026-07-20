@@ -113,7 +113,7 @@ MedicationList (List)
 | `dispenseRequest.quantity` | Required | Quantity dispensed |
 | `dispenseRequest.expectedSupplyDuration` | Required | Duration in days |
 | `statusReason` | Required when stopped | Textual stop reason |
-| `priorPrescription` | Required for re-authorisation | Reference to previous plan |
+| `priorPrescription` | Required when replacing a previous authorisation following a dosage or medication/formulation amendment | Reference to previous plan *(Source: Home/Design/Medication-and-medical-device-guidance — "Amendments to the Dosage Instructions in a plan")* |
 
 ---
 
@@ -167,7 +167,7 @@ When stopped:
 - Do NOT add statusReason when an authorisation has simply expired
 
 ### Re-authorisation
-When re-authorised, a **new** MedicationStatement + MedicationRequest (intent=plan) MUST be created. The new plan SHOULD reference the old one via `priorPrescription`.
+When re-authorised, a **new** MedicationStatement + MedicationRequest (intent=plan) MUST be created, and subsequent prescription issues (intent=order) MUST reference the **new** authorisation. *(Source: Home/Design/Medication-and-medical-device-guidance — "Re-authorisation": "a new authorisation MUST be generated... Subsequent issues of the medication/medical device MUST reference the new authorisation.")*
 
 ### Dosage Amendment
 When dosage changes, the existing authorisation MUST be stopped and a new one created. The new plan references the old via `priorPrescription`.
@@ -179,6 +179,9 @@ When dosage changes, the existing authorisation MUST be stopped and a new one cr
 }
 ```
 See `fhir_examples/medication_dosage_change_example.json`
+
+### Medication or Formulation Amendment
+All prescription issues under a single medication/medical device plan MUST have the same medication/medical device. Where the medication/medical device of a plan is amended (including a proprietary/generic switch), the existing authorisation/plan MUST be stopped or discontinued and a new authorisation created — the same pattern used for dosage amendments. *(Source: Home/Design/Medication-and-medical-device-guidance — "Amendments to the Medication/Medical Device in a plan")*
 
 ### Mixtures / Extemporaneous Preparations
 Use degrade code `196421000000109` with constituents described in `CodeableConcept.text`.

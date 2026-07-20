@@ -87,9 +87,11 @@ Where `includeStatus = true`:
 | `location` | Optional | Where administered |
 | `lotNumber` | Optional | Batch number |
 | `expirationDate` | Optional | Vaccine expiry |
-| `explanation.reasonGiven` | Optional | Why given |
+| `explanation.reason` | Optional | Why given *(element is named `explanation.reason`, not `reasonGiven`, per the base FHIR STU3 Immunization resource)* |
 | `explanation.reasonNotGiven` | Required if notGiven=true | Why not given |
 | `note` | Required | Any additional info not fitting other elements |
+| `extension[parentPresent]` | Optional | Whether parent/guardian was present *(seen in GP Connect examples)* |
+| `extension[dateRecorded]` | Optional | Date the record was entered onto the GP system *(seen in GP Connect examples)* |
 
 ---
 
@@ -116,6 +118,8 @@ GP systems do not have a standard way to flag ineffective vaccinations. All immu
 | List SNOMED Code | Title |
 |-----------------|-------|
 | `1102181000000102` | Immunisations |
+
+The `List` MUST reference all returned `Immunization` and `Observation` (status) resources. If there is no data to return, the `List` MUST populate `emptyReason.code` with `no-content-recorded` and `List.note` with 'Information not available'. *(Source: Home/Design/Immunisations-guidance)*
 
 ---
 

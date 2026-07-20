@@ -33,15 +33,14 @@
 
 **Endpoint:** `POST /Patient/$gpc.getstructuredrecord`
 
-**API version:** 1.5.1 (current in-production version)
+**API version:** 1.5.0 — this is the "current working version" per the [NHS Digital API catalogue](https://digital.nhs.uk/developer/api-catalogue/gp-connect-access-record-structured-fhir) (verified 19 Jul 2026; the page states verbatim: *"The current working version is 1.5.0"*), consistent with the v1.5.0 baseline this whole training pack targets (see `00_INDEX.md`). NHS England's separate direction of travel is v1.6.2 of the Implementation Guide (draft) — see the 🔄 v1.6.2 callouts throughout this pack for confirmed differences.
+>
+> **Note on this repo's own versioning:** don't treat this GitHub repo's version signals as authoritative for "what API version is current" — its git release tags follow an unrelated pre-1.0 alpha scheme (latest `v1.0.39-alpha`, Sept 2023) that predates and doesn't map to the 1.5.x/1.6.x product versioning at all, and the OpenAPI spec's own `info.version` field isn't even a static value in the source (`specification/gp-connect-access-record-structured-fhir.yaml` on `master` literally contains `version: 'Computed and injected at build time by scripts/set_version.py'`). This repo also appears to lag behind the live product in general (see the corrections to repos #3 and #4 below). For version questions, use the NHS Digital API catalogue and the Implementation Guide, not this repo.
 
-**Status by clinical area:**
+**Status by clinical area** (per API catalogue, verified 19 Jul 2026):
 - Medications and allergies: **in production (out of beta)** — no breaking changes
-- Other clinical areas (immunisations, consultations, problems, investigations, referrals, diary entries, uncategorised data): **in production, beta** — breaking changes possible with notice
-
-**Next version:** 1.6.0 (in production, beta) — backward compatible with 1.5.1; adds GP2GP migration support (does not affect consumer build)
-
-**Previous version:** 1.5.0 — does not include access to deceased patients' documents
+- Immunisations, investigations, uncategorised data: **in production, beta** — breaking changes possible with notice
+- Consultations, problems, outbound referrals, diary entries: the catalogue page separately states *"Data is currently unavailable for the following clinical areas: consultations, problems, outbound referrals, diary entries"* — this is a stronger caveat than "beta" and appears alongside (not clearly reconciled with) the general "in production, beta for other aspects of the clinical record" statement on the same page. **Still logged as a conflict below** (this one isn't a GitHub-vs-product discrepancy, it's the API catalogue contradicting itself, so it needs a human check regardless of how much weight the repo itself is given).
 
 **Service level:** Silver — operational 24/7/365, supported 08:00–18:00 Mon–Fri (excl. bank holidays)
 
@@ -124,6 +123,8 @@
 ```
 
 **Response:** `GPConnect-StructuredRecord-Bundle-1` (HTTP 200)
+
+> 🔄 **Removed in v1.6.2 — `filterSignificance`:** valid on the current v1.5.0 baseline shown here (per the ARS Implementation Guide's API-version-compatibility page), but dropped entirely for problems from guide version 1.6.2 onward. See the same flag in `11_problems.md`. Source: [API version compatibility](https://simplifier.net/guide/gp-connect-access-record-structured/Home/Build/API-version-compatibility?version=current)
 
 ### Security — Provider System Requirements
 
@@ -247,83 +248,57 @@ The repo uses GitHub Actions with the [IOPS-FHIR-Test-Scripts](https://github.co
 
 **URL:** https://github.com/NHSDigital/IOPS-FHIR-Test-Scripts  
 **Branch:** `main`  
-**Purpose:** TypeScript/Jest-based FHIR validation and quality control tooling used by NHS Digital and NHS England teams to validate FHIR assets (profiles, examples, IGs) against the FHIR spec and terminology.
+**Purpose:** FHIR validation and quality control tooling used by NHS Digital and NHS England teams to validate FHIR assets (profiles, examples, IGs) against the FHIR spec and terminology.
+
+> **Correction (verified 19 Jul 2026 via the live repo tree):** this repo is no longer TypeScript/Jest-based as previously described here. The repository root now contains no `/src/` folder, no root `package.json`, and no `.ts` files at all — `gh api .../git/trees/main?recursive=true` shows only 11 `.py` files plus config/README. The README text still opens with "This is a typescript module..." and shows `npm test` examples, but that description is now stale relative to the actual tree; treat the description below as reflecting the current file layout, not the README's prose.
 
 ### What It Does
 
-A modular test framework for:
-1. **FHIR asset validation** — validates FHIR resources (JSON/XML) against profiles using the IOPS-FHIR-Validation-Service (Java, wraps the HL7 validator)
-2. **IG content quality** — checks Simplifier IGs for spelling errors, HTTP errors, and invalid links
-3. **FHIR asset quality control** — checks naming conventions, metadata completeness, and design approach conformance
+A modular set of CI tools for:
+1. **FHIR asset validation** — validates FHIR resources against profiles by pulling a prebuilt validator Docker image (see Validation Pipeline below)
+2. **IG content quality** — Python scripts (`IGPageContentValidator/errorChecker.py`, `linkScraper.py`) check Simplifier IGs for spelling errors and broken links
+3. **FHIR asset quality control** — `QualityControlChecker/QualityControlChecker.py` checks naming conventions and design-approach conformance
 
-### Components
+### Components (current tree)
 
 | Component | Folder | Description |
 |---|---|---|
-| Core validator | `/src/` | TypeScript validation engine (`validate.test.ts`, `common.js.ts`) |
-| FHIR Validation Action | `FHIRValidationAction/` | GitHub Action for validating FHIR assets in CI |
-| IG Page Content Validator | `IGPageContentValidator/` | Checks Simplifier IG pages for spelling/link errors |
-| Quality Control Checker | `QualityControlChecker/` | Checks FHIR asset quality per UK Core/NHSE design approach |
+| FHIR Validation Action | `FHIRValidationAction/` | Python scripts (`scripts/*.py`) that configure and drive the validator in CI, plus a `test/` folder of UK Core R4 example resources (`Extension-UKCore-*`, `UKCore-*`) and IG packages (`packages/*.tgz`) — no GP Connect STU3 examples present |
+| IG Page Content Validator | `IGPageContentValidator/` | Python (`errorChecker.py`, `linkScraper.py`, `relToAbsLinks.py`) — checks Simplifier IG pages for spelling/link errors |
+| Quality Control Checker | `QualityControlChecker/` | Python (`QualityControlChecker.py`, `repoVariables.py`) — checks FHIR asset quality per UK Core/NHSE design approach |
 
-### Running Validation
+The `npm test -- --examples=...` / `--source=...` / `options.json` workflow described in earlier versions of this file could not be confirmed against the current repo — no `options.json`, no root `package.json`, and no `/src/` test runner exist in the tree today. Treat those specific commands as unverified/likely stale rather than repeating them here.
 
-**Basic validation (validate all examples in a folder):**
-```bash
-git clone git@github.com:NHSDigital/IOPS-FHIR-Test-Scripts.git
-npm test -- --examples=../MyFHIRExamples
-```
+### CI Workflows (current, from `.github/workflows/`)
 
-**Against an Implementation Guide repo (standard folder structure):**
-```bash
-npm test -- --source='../NHSDigital-FHIR-ImplementationGuide/'
-```
+| Workflow | What it does |
+|---|---|
+| `masterfhirvalidation.yml` | Reusable workflow (`workflow_call`) — pulls a prebuilt validator image and validates FHIR assets against it |
+| `Package-Test-Runner.yml` | Checks NHS assets for conformance to specific UK Core packages |
+| `QualityControlChecker.yml` | Spelling + FHIR asset conformance checks against external FHIR repos |
+| `testingbranch.yml` | Tests latest validator against the test suite |
+| `websiteChecker.yml` | Simplifier IG spelling/link checking (consolidates what earlier documentation called separate `errorChecker`/`linkChecker`/`spellChecker` workflows — those no longer exist as distinct workflow files) |
 
-The `--source` mode expects these subfolders: `CapabilityStatement`, `CodeSystem`, `ConceptMap`, `Examples`, `MessageDefinition`, `NamingSystem`, `ObservationDefinition`, `OperationDefinition`, `Questionnaire`, `SearchParameter`, `StructureDefinition`, `ValueSet`
-
-**Configure validation behaviour via `options.json`:**
-```json
-{
-  "strict-validation": false,
-  "ignore-folders": [],
-  "ignore-files": [],
-  "error-if-metaProfile-present": true
-}
-```
-
-| Option | Default | Description |
-|---|---|---|
-| `strict-validation` | `false` | Promote all warnings to errors |
-| `ignore-folders` | `[]` | Folders to skip (folders starting with `.` always skipped) |
-| `ignore-files` | `[]` | Specific files to skip |
-| `error-if-metaProfile-present` | `true` | Error if `meta.profile` found in examples (per IG best practice) |
-
-### CI Workflows
-
-| Workflow | Trigger | What it does |
-|---|---|---|
-| `masterfhirvalidation` | Push from FHIR repo | Validates FHIR assets + checks example codes against Ontoserver |
-| `Package-Test-Runner` | Manual | Checks NHS assets for conformance to specific UK Core packages |
-| `testingbranch` | Internal | Tests latest validator against test suite |
-| `errorChecker` | Push to IOPS repo | Checks for HTML errors in Simplifier IGs |
-| `linkChecker` | Push to IOPS repo | Checks for URL errors in Simplifier IGs |
-| `spellChecker` | Push to IOPS repo | Checks for spelling errors in Simplifier IGs |
-| `QualityControlChecker` | Push to external FHIR repos | Spelling + FHIR asset conformance checks |
-
-### Validation Pipeline (how it works)
+### Validation Pipeline (how it works, current `masterfhirvalidation.yml`)
 
 ```
-GitHub push to FHIR repo
-  → Check out IOPS-FHIR-Test-Scripts
-  → Check out IOPS-FHIR-Validation-Service (Java HAPI validator)
-  → npm start (configure validator with Ontoserver credentials)
-  → mvn clean install (build validator JAR)
-  → nohup java -jar fhir-validator.jar (start validator service)
-  → npm test (run Jest tests against validator API)
+GitHub push to FHIR repo (via reusable workflow_call)
+  → Check out the calling repo
+  → Set up Java 21 (temurin)
+  → Sparse-checkout NHSDigital/IOPS-FHIR-Test-Scripts (FHIRValidationAction/ only)
+  → Check out NHSDigital/FHIR-Validation as `validation-service-fhir-r4`
+  → Log in to GHCR
+  → docker pull ghcr.io/nhsdigital/validation-service-fhir-r4:latest   (prebuilt image, not built locally)
+  → python3 configure-packages-application-yaml.py (adds IG packages to hapi.application.yaml)
+  → docker compose -f docker-compose.ci.yml up -d   (start the validator)
+  → run FHIR asset tests against the running validator's REST API
 ```
+
+This is a materially different pipeline from the "clone → `mvn clean install` → `nohup java -jar`" flow described in earlier versions of this file: the validator now ships as a prebuilt GHCR image (`ghcr.io/nhsdigital/validation-service-fhir-r4`) built from the `NHSDigital/FHIR-Validation` repo itself (see its `.github/workflows/publish-hapi-image.yaml`), rather than a separately-maintained `IOPS-FHIR-Validation-Service` repo being built from source in CI.
 
 ### Validation Service
 
-The underlying validator is [IOPS-FHIR-Validation-Service](https://github.com/NHSDigital/IOPS-FHIR-Validation-Service) — a Java Spring Boot app wrapping the HL7 FHIR Validator with NHS-specific IG packages loaded.
+`NHSDigital/IOPS-FHIR-Validation-Service` still exists as a repository (confirmed not archived), but the live `masterfhirvalidation.yml` pipeline checks out and runs `NHSDigital/FHIR-Validation` (image name `validation-service-fhir-r4`) instead — see section 4 below. Whether `IOPS-FHIR-Validation-Service` is still an active/parallel validator or has been effectively superseded by `FHIR-Validation` could not be confirmed from the repo metadata alone; flagged as a conflict.
 
 When validating against UK Core profiles, a `CapabilityStatement` must be present in the source to declare which profiles to validate against. See the [UK Core CapabilityStatement](https://github.com/NHSDigital/FHIR-R4-UKCORE-STAGING-MAIN/blob/develop/CapabilityStatement/CapabilityStatement-UKCore.xml).
 
@@ -333,9 +308,11 @@ When validating against UK Core profiles, a `CapabilityStatement` must be presen
 
 **URL:** https://github.com/NHSDigital/FHIR-Validation  
 **Branch:** `main`  
-**Purpose:** A deployable HAPI FHIR JPA Server with two key customisations: (1) a terminology proxy that forwards SNOMED CT and other NHS terminology requests to the NHS Ontology Server, and (2) an OpenAPI patch to expose `application/fhir+xml` in Swagger UI.
+**Purpose:** A deployable HAPI FHIR JPA Server with two key customisations: (1) a terminology proxy that forwards SNOMED CT and other NHS terminology requests to the NHS Ontology Server, and (2) an OpenAPI patch to expose `application/fhir+xml` in Swagger UI. Also published as a prebuilt image, `ghcr.io/nhsdigital/validation-service-fhir-r4`, via `.github/workflows/publish-hapi-image.yaml` — this is the image the `IOPS-FHIR-Test-Scripts` CI pipeline now pulls (see section 3 above).
 
-> **Practical use:** This is the tool you run locally or in CI to validate GP Connect ARS FHIR resources against the NHS implementation guides. It provides a local FHIR validation endpoint.
+> **Correction (verified 19 Jul 2026 against `hapi.application.yaml` on `main`):** the server is configured with `fhir_version: R4` and its example `implementationguides` entries (commented out) reference R4/UK Core packages (e.g. `fhir.r4.nhsengland.pathology`); the GHCR image name itself is `validation-service-fhir-r4`. This is **not** an out-of-the-box STU3 validator for GP Connect ARS/CareConnect-GPC profiles — using it to validate this project's FHIR STU3 resources would require reconfiguring `fhir_version` to `DSTU3` and adding the GP Connect STU3 IG packages, which is not how the repo ships. The line below has been corrected accordingly; treat any earlier claim that this "validates GP Connect ARS FHIR resources" out of the box as inaccurate.
+
+> **Practical use:** As shipped, this validates FHIR **R4** resources (e.g. against UK Core/NHS England R4 profiles) with SNOMED CT terminology proxied to NHS Ontoserver. It provides a local FHIR validation endpoint, but is not preconfigured for this project's FHIR **STU3** GP Connect ARS profiles without additional IG package configuration.
 
 ### Architecture
 
@@ -473,6 +450,8 @@ docker compose up -d
 # → http://localhost:8080/fhir/swagger-ui/
 ```
 
+> By default this starts an **R4** validator (`fhir_version: R4` in `hapi.application.yaml`) — see the correction under section 4 above. To validate this project's FHIR STU3 GP Connect ARS resources, `fhir_version` and `implementationguides` would need to be reconfigured for STU3/CareConnect-GPC packages first; unverified whether/how that is supported.
+
 ### 3. Run FHIR asset validation
 
 ```bash
@@ -482,6 +461,8 @@ npm install
 # Start validation service first (step 2), then:
 npm test -- --examples=../your-fhir-examples
 ```
+
+> **Unverified against current repo (checked 19 Jul 2026):** the live `IOPS-FHIR-Test-Scripts` repo tree has no root `package.json`, no `/src/`, and no `npm test` entry point — see the correction under section 3 above. This three-line quick-start may no longer work as written; the repo's actual current CI usage is via the `masterfhirvalidation.yml` reusable workflow (Docker-image based), not a local `npm install && npm test` flow.
 
 ### 4. Reference NHS England FHIR R4 profiles
 
@@ -498,5 +479,7 @@ git clone https://github.com/NHSDigital/NHSEngland-FHIR-ImplementationGuide.git
 - https://github.com/NHSDigital/NHSEngland-FHIR-ImplementationGuide
 - https://github.com/NHSDigital/IOPS-FHIR-Test-Scripts
 - https://github.com/NHSDigital/FHIR-Validation
+- https://digital.nhs.uk/developer/api-catalogue/gp-connect-access-record-structured-fhir (version/status verified 19 Jul 2026)
 - https://digital.nhs.uk/developer/api-catalogue/gp-connect-access-record-structured-fhir/clinical-assurance-process-details
 - https://digital.nhs.uk/services/terminology-server
+- https://simplifier.net/guide/gp-connect-access-record-structured/Home/Build/API-version-compatibility?version=current (ARS Implementation Guide version 1.6.2, referenced for the version conflict noted above)

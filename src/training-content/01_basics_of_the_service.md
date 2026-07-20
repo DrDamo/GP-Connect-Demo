@@ -119,8 +119,11 @@ GP Connect Access Record: Structured uses **FHIR Standard for Trial Use 3 (STU3)
 ### Data Sharing Restrictions
 - **Only for direct patient care** (or medical examiner statutory purposes)
 - No secondary use (planning, research) permitted
-- Patient opt-out respected
+- Patient opt-out respected — a local **patient dissent to share flag** held within the GP practice system must be honoured when accessing the record, and **cannot be overridden** by consent given at the point of care
 - RCGP sensitive dataset excluded (fertility, pregnancy terminations, gender reassignment, STDs)
+- Data marked private, sealed, locked, or practice-confidential must not be shared outside the practice, as an additional protection beyond the RCGP exclusion set
+
+> Source: [GP Connect Data Model Guide — Information Governance Principles](https://simplifier.net/guide/gpconnect-data-model/Home/Design/Information-governance-principles)
 
 ---
 
@@ -160,5 +163,5 @@ GP Connect is a **silver service**:
 | General | gpconnect@nhs.net |
 | Live service incidents | National Service Desk: ssd.nationalservicedesk@nhs.net / 0300 303 5035 |
 | Strategic direction | shan.rahulan@nhs.net |
-| Developer Community | https://developer.nhs.uk/community |
+| Developer Community | https://developer.community.nhs.uk/ |
 

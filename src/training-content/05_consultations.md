@@ -169,10 +169,26 @@ When consultations are requested, up to 10 secondary lists may be returned:
 
 ---
 
+## Security Labelling
+
+> 🔄 **Coming in v1.6.2 — security labelling:** not present on the current v1.5.0 baseline.
+
+`Encounter` and `List` resources **MAY** have `Meta.security` populated with a security label indicating information is not to be disclosed to the patient, in response to a retrieve-a-patient's-structured-record request (for applicable resources). This label **MUST** be populated on the equivalent migrate-a-patient's-record response, where applicable.
+
+---
+
 ## FHIR Examples
 
 See `fhir_examples/`:
 - `consultation_example_request.json`
 - `consultation_list_structure_snippet.json`
 - Examples: https://simplifier.net/guide/gp-connect-access-record-structured/Home/Examples/Consultation-examples?version=current
+
+---
+
+## Source URLs
+
+- Design guidance: https://simplifier.net/guide/gp-connect-access-record-structured/Home/Design/Consultations-guidance?version=current
+- Examples: https://simplifier.net/guide/gp-connect-access-record-structured/Home/Examples/Consultation-examples?version=current
+- Release notes (🔄 v1.6.2 items — list population clarification, security labelling): https://simplifier.net/guide/gp-connect-access-record-structured/Home/Introduction/Release-notes?version=1.6.2
 

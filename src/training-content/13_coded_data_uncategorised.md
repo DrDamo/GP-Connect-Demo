@@ -24,11 +24,13 @@ Examples:
 
 | Included | Excluded |
 |---------|----------|
-| Data not fitting any other defined clinical area | Free text entered without clinical code (returned in Consultation Observation only) |
+| Data not fitting any other defined clinical area | Free text entered without clinical code (returned **only** in the Consultation `Observation`, coded SNOMED 37331000000100 "Comment note" — see Comment Notes section below) |
 | Inbound referrals | Items captured as any other category (allergies, medications, etc.) |
 | Blood pressure readings | Test requests |
-| Comment notes (SNOMED 37331000000100) | |
-| Immunisation consent/dissent (if included via `includeStatus`) | |
+
+The definitive source scope is just two bullets: "data items in the patient record that do not fit into one of the existing or planned clinical areas defined by GP Connect" and "inbound referrals" (GP Connect referral resource covers outbound referrals only). Free-text comment notes are explicitly **not** uncategorised data. *(Source: Home/Design/Uncategorised-data-guidance, "Uncategorised data definition")*
+
+> **Unverified — not confirmed in the fetched Uncategorised-data-guidance page:** "Immunisation consent/dissent (if included via `includeStatus`)" was previously listed here as included but no mention of `includeStatus`, consent, or dissent appears on that page. See conflicts log.
 
 ---
 
@@ -67,11 +69,15 @@ Search is based on `Observation.effectiveTime` date.
 
 ## Qualifiers
 
-All qualifiers (laterality, severity, episodicity, system-specific) are translated to human-readable text and placed in `Observation.comment`:
+Each provider system supports a different set of qualifiers, but three are common across all provider systems: **laterality** (e.g., fracture of the left femur), **severity** (e.g., severe asthmatic attack), **episodicity** (e.g., patient's first episode of an asthmatic attack).
+
+The provider system translates all qualifiers into human-readable text and **concatenates them with the text entered by the recorder, placing the qualifiers first**, into `Observation.comment`:
 
 ```
 "Laterality: Left | Severity: Severe | Episodicity: First episode"
 ```
+
+*(Source: Home/Design/Uncategorised-data-guidance, "Qualifiers")*
 
 ---
 
@@ -142,23 +148,27 @@ Where only one component is recorded, the other MUST use a `dataAbsentReason` co
 
 Units MUST always be `mm[Hg]`.
 
+**Readings that don't match a defined triple:** if a blood pressure reading isn't covered by any panel/systolic/diastolic combination above and isn't recorded as a triple in the source system, it MUST be exported as two individual `Observation`s (no panel code), linked to each other via `related.type = has-member`. *(Source: Home/Design/Uncategorised-data-guidance, "Blood pressure readings with no defined triples")*
+
 See `fhir_examples/uncategorised_blood_pressure_snippet.json`
 
 ---
 
 ## Comment Notes (Free Text)
 
+> **Not uncategorised data.** Per the "Uncategorised data definition" (see table above), free text entered in a consultation without an associated clinical code is explicitly **excluded** from uncategorised data. It is returned only as part of the **Consultation** `Observation`.
+
 Where free text is entered in a consultation without a clinical code:
-- SNOMED code: `37331000000100` (Comment note)
-- Text placed in `code.text` and/or `comment`
+- SNOMED code: `37331000000100` ("Comment note")
+- Returned in an `Observation` that is part of the consultation structure, not in the Uncategorised data List
 
 ---
 
 ## Inbound Referrals
 
 Inbound referrals returned as Observation resources:
-- Referrer details in `performer`
-- Additional detail in `component` elements (label + value)
+- Referrer details in `performer` **where known** — the `performer` element MAY be absent, e.g. if the referrer was not recorded
+- Additional detail in `component` elements: `Component.code.text` populated with the data label, `Component.value` populated with the corresponding data
 - Self-referrals: `"Self referral"` in `comment`
 - Linked documents in `DocumentReference` with reference back to the Observation
 

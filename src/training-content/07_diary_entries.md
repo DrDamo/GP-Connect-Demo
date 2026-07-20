@@ -124,6 +124,8 @@ Diary entries created within a consultation will appear in:
 |-----------------|-------|
 | `714311000000108` | Patient recall administration |
 
+The `List` MUST reference all returned `ProcedureRequest` resources. If there is no data to return, the `List` MUST populate `emptyReason.code` with `no-content-recorded`. *(Source: Home/Design/Diary-entry-guidance)*
+
 ---
 
 ## FHIR Examples

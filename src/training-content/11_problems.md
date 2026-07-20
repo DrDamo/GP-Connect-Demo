@@ -29,7 +29,8 @@ Examples:
 {
   "name": "includeProblems",
   "part": [
-    { "name": "filterStatus", "valueCode": "active" }
+    { "name": "filterStatus", "valueCode": "active" },
+    { "name": "filterSignificance", "valueCode": "major" }
   ]
 }
 ```
@@ -37,6 +38,11 @@ Examples:
 | Parameter | Values | Description |
 |-----------|--------|-------------|
 | `filterStatus` | `active`, `inactive` | Filter by clinical status |
+| `filterSignificance` | `major`, `minor` | Filter by problem significance (matches `extension[problemSignificance]`) |
+
+*`filterSignificance` confirmed in the `includeProblems` parameter schema: [gp-connect-access-record-structured-fhir.yaml](https://github.com/NHSDigital/gp-connect-access-record-structured-fhir/blob/master/specification/gp-connect-access-record-structured-fhir.yaml) (NHSDigital/gp-connect-access-record-structured-fhir, `master`); `major`/`minor` values confirmed via the `problemSignificance` extension used in [Problem examples](https://simplifier.net/guide/gp-connect-access-record-structured/Home/Examples/Problem-examples?version=current).*
+
+> 🔄 **Removed in v1.6.2 — `filterSignificance`:** valid and supported on the current v1.5.0 baseline, but the ARS Implementation Guide's API-version-compatibility page states that guide version **1.6.2+ drops the `filterSignificance` (`significance`) parameter for problems** entirely. Build against it for today's v1.5.0 consumers, but don't plan around its long-term availability. Source: [API version compatibility](https://simplifier.net/guide/gp-connect-access-record-structured/Home/Build/API-version-compatibility?version=current)
 
 ---
 

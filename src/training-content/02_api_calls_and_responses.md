@@ -95,6 +95,8 @@ See `fhir_examples/multi_area_request_example.json` for a request covering all c
 }
 ```
 
+> 🔄 **Coming in v1.6.2 — resolved allergy degradation:** from v1.6.2, resolved allergies are returned within a specific ended-allergies list, and the `AllergyIntolerance` resources in that list must be returned as **transfer-degraded drug allergies** (using a degraded-code such as SNOMED `196461000000101`) rather than the original coded allergy. This preserves the fact that the resolved attribution may have been lost in a prior transfer and stops decision-support systems from acting on it as if it were an active, coded allergy. Not required on the current v1.5.0 baseline. Source: [Release notes v1.6.2](https://simplifier.net/guide/gp-connect-access-record-structured/Home/Introduction/Release-notes)
+
 ### Medications
 ```json
 {
@@ -211,6 +213,8 @@ A successful response is a **FHIR Bundle** (`type: collection`) conforming to `G
 | `Practitioner` (usual GP, if they have one) | Referenced from `Patient.generalPractitioner` |
 | `PractitionerRole` | Usual GP's role |
 
+> **Known issue:** where a practitioner holds multiple roles (e.g. works at more than one site), the provider system cannot reliably determine which role applies to a given piece of clinical data (e.g. a medication). The required workaround is that a provider system must only supply **one** `PractitionerRole` per practitioner in the response — if more than one role would otherwise apply, it must supply **none**. Source: [Known issues — Access Record: Structured](https://digital.nhs.uk/services/gp-connect/develop-gp-connect-services/development/access-record-structured/known-issues---access-record-structured)
+
 #### Clinical Resources (per clinical area requested)
 
 Each clinical area returns:
@@ -218,6 +222,7 @@ Each clinical area returns:
 2. The **clinical resources** themselves (e.g., AllergyIntolerance, Medication, etc.)
 3. For Consultations and Problems: additional **secondary Lists** linking related items
 4. **Warning codes** where items were excluded
+5. 🔄 **Coming in v1.6.2:** resources will be able to carry a `Meta.security` label marking them as not to be disclosed to the patient (e.g. via NHS App/Patient Facing APIs), for applicable resources — this label is optional on a retrieve but **mandatory** on the equivalent migrate response. Not present on the current v1.5.0 baseline. Source: [Release notes v1.6.2](https://simplifier.net/guide/gp-connect-access-record-structured/Home/Introduction/Release-notes)
 
 ### Bundle Order
 
@@ -276,6 +281,8 @@ To retrieve the provider's FHIR capability statement:
 ```
 GET https://{provider-endpoint}/metadata
 ```
+
+Consumers should request this from the Access Record: Structured FHIR server endpoint to verify implementation details and supported version, and are advised to **cache** the capability statement information to avoid making repeated calls. A successful response returns `200 OK` with a standard FHIR `CapabilityStatement` in `application/fhir+json` or `application/fhir+xml`.
 
 ---
 

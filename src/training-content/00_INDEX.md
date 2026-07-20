@@ -3,6 +3,12 @@
 > **Purpose:** A curated collection of resources for implementing GP Connect Access Record: Structured (ARS).  
 > **Compiled:** May 2026 | **Standard:** FHIR STU3 | **Specification Version:** 1.5.0-beta / 1.6.2
 
+## Version Scope of This Pack
+
+**v1.5.0 is the current working version in production** (per the [NHS Digital API catalogue](https://digital.nhs.uk/developer/api-catalogue/gp-connect-access-record-structured-fhir)) and is the version the majority of live GP Connect consumers integrate against today. This pack therefore documents **v1.5.0 behaviour as the baseline** throughout.
+
+NHS England's own direction of travel is towards **v1.6.2** of the Implementation Guide (currently in draft). Where this audit identified a specific, confirmed difference in v1.6.2 — a new parameter, a removed parameter, new security labelling, etc. — it is called out inline with a **🔄 Coming in v1.6.2** marker, so a v1.5.0-consumer build isn't required to implement it yet, but a team planning ahead knows it's coming. If you're building against 1.5.0, anything not marked with that flag is safe to treat as current behaviour.
+
 ---
 
 ## About This Resource Pack
@@ -89,7 +95,7 @@ The documentation is organised into topic-specific files aligned with the clinic
 | GP Connect Specifications for Developers | https://digital.nhs.uk/services/gp-connect/develop-gp-connect-services/specifications-for-developers | 7 Nov 2025 |
 | Development Guidance | https://digital.nhs.uk/services/gp-connect/develop-gp-connect-services/development | 14 Nov 2025 |
 | GP Connect Data Model (Simplifier.net) | https://simplifier.net/guide/gpconnect-data-model/Home?version=current | Current |
-| Archived GP Connect 1.5.0 Developer Docs | https://webarchive.nationalarchives.gov.uk/ukgwa/20240629120128/https://developer.nhs.uk/apis/gpconnect-1-5-0/ | Archived 29 Jun 2024 |
+| Archived GP Connect 1.5.0 Developer Docs — `developer.nhs.uk` was retired; this is a web-archive snapshot. Current developer resources live at https://digital.nhs.uk/developer (community discussion at https://developer.community.nhs.uk/) | https://webarchive.nationalarchives.gov.uk/ukgwa/20240629120128/https://developer.nhs.uk/apis/gpconnect-1-5-0/ | Archived 29 Jun 2024 |
 | GP Connect API 1.5.0-beta specification | https://simplifier.net/guide/gp-connect-access-record-structured?version=current | Current |
 
 ---

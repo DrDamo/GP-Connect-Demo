@@ -38,7 +38,7 @@ One primary List per clinical area requested:
 
 ## Secondary Lists (for Consultations and Problems)
 
-21 secondary lists may be returned when Consultations or Problems are requested:
+21 secondary lists are **defined** in total (10 for Consultations, 11 for Problems — see `GPConnect-SecondaryListValues-1` code system). When either Consultations or Problems is queried, **up to 11** secondary lists may be returned as part of that single query — not all 21 at once. *(Source: Home/Build/Using-lists-to-return-data, "Secondary lists in the query response" / "Using secondary lists to respond to queries for consultations and problems")*
 
 ### Consultation Secondary Lists
 
@@ -75,11 +75,16 @@ One primary List per clinical area requested:
 
 ## Secondary List Rules
 
-- Only returned when Consultations or Problems are requested
-- Only present when data exists (empty secondary lists are NOT returned — except consultation structure lists)
-- Related problems secondary list MAY be returned as part of any query (for problems linked to items in the primary list)
+- Only returned when Consultations or Problems are requested directly
+- Only present where data exists in the record being returned — e.g. if none of the problems returned relate to an outbound referral, no "Outbound referrals related to problems" list is included
+- Secondary lists for items related to problems link items via the `relatedClinicalContent` and `actualProblem` extensions
+- If data has been excluded from a secondary list for a warning-code reason, the relevant warning code(s) SHALL be included
+- For **consultation** secondary lists specifically, a warning code SHALL be present even if no other data is contained in the list
+- Secondary lists will **never** be returned empty with no warning code present — an empty list with no warning code is simply omitted
+- Related problems secondary list MAY be returned as part of any query, and MUST contain problems linked to any item in the primary list that is returned
 - Only one related problems list even if multiple clinical areas queried
-- MUST include warning codes where items are excluded
+
+*(Source: Home/Build/Using-lists-to-return-data, "Using secondary lists to respond to queries for consultations and problems" / "The secondary list for related problems")*
 
 ---
 
@@ -128,9 +133,10 @@ Warning codes are carried in `List.extension[warningCode]` and used when items t
   "note": [{ "text": "Items excluded due to confidentiality and/or patient preferences." }]
 }
 ```
+If an element of a diagnostic report is made confidential, the warning code SHALL be populated in the relevant **Investigations** list.
 
 ### Data in Transit
-Applies when a patient has moved GP practice and records from the previous practice have not yet been received/incorporated. When this applies, ALL lists MUST carry this warning code.
+Applies when a patient has moved GP practice and records from the previous practice have not yet been received/incorporated. When this applies, ALL lists MUST carry this warning code. The `dd-Mmm-yyyy` placeholder in the associated text is set to the date the patient registered at their new GP practice.
 
 ### Data Awaiting Filing
 Applies when the GP system has received electronic data but it hasn't yet been reviewed and filed. GP Connect only returns filed data.

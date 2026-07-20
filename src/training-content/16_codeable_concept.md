@@ -46,7 +46,7 @@ NHS Digital extends the base CodeableConcept with `Extension-coding-sctdescid` t
 | coding (SNOMED CT) | display | Current preferred term per NHS Realm Language Reference Sets |
 | coding (SNOMED CT) | descriptionId | SNOMED description ID recorded. Only if available. |
 | coding (SNOMED CT) | descriptionDisplay | Text of description ID — only if different from `display` |
-| coding (SNOMED CT) | userSelected | TRUE if user selected this code; OMIT if false |
+| coding (SNOMED CT) | userSelected | TRUE if user selected this code; MUST NOT be populated if false — for consuming systems, absence of this element indicates FALSE |
 | coding (other) | system | URI identifying the code system |
 | coding (other) | code | The clinical code |
 | coding (other) | display | Longest variant text for current preferred term |
@@ -122,9 +122,59 @@ When the description ID maps to a synonym rather than the preferred term, popula
 
 ---
 
+## Description ID: UK Edition vs Non-UK Edition Extensions
+
+The `descriptionId`/`descriptionDisplay` extension is also used to carry local/national extension terms alongside the international SNOMED CT concept and preferred term.
+
+**UK Edition (e.g. an EMIS local namespace description):** the concept code and international preferred term come from SNOMED International, while `descriptionId` and `descriptionDisplay` carry the UK/local-namespace description:
+
+```json
+{
+  "code": {
+    "coding": [{
+      "extension": [{
+        "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-coding-sctdescid",
+        "extension": [
+          {"url": "descriptionId", "valueId": "787121000006116"},
+          {"url": "descriptionDisplay", "valueString": "Ideal weight"}
+        ]
+      }],
+      "code": "170804003",
+      "display": "Ideal body weight",
+      "system": "http://snomed.info/sct"
+    }]
+  }
+}
+```
+
+**Non-UK Edition content (e.g. a Canadian extension):** the same pattern applies for concepts drawn from a non-UK national extension — `descriptionId` and `descriptionDisplay` carry the extension's local description alongside the concept `code` and its `display`:
+
+```json
+{
+  "code": {
+    "coding": [{
+      "extension": [{
+        "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-coding-sctdescid",
+        "extension": [
+          {"url": "descriptionId", "valueId": "253790221000087110"},
+          {"url": "descriptionDisplay", "valueString": "Use of illicit drugs unknown"}
+        ]
+      }],
+      "code": "186782131000087106",
+      "display": "Use of illicit type drug unknown",
+      "system": "http://snomed.info/sct"
+    }]
+  }
+}
+```
+
+*(Source: Home/Build/Codeable-Concept, description ID extension scenarios)*
+
+---
+
 ## Sending a Translation Set (Legacy Code + SNOMED Mapping)
 
-Where a code was originally entered as READ2 or CTV3 and mapped to SNOMED:
+Where a code was originally entered as READ2 or CTV3 and mapped to SNOMED, include multiple `coding` elements — one per system. `userSelected` marks the coding the user actually selected; the mapped/derived coding(s) omit `userSelected` (i.e. they are system-derived, not user-selected):
 
 ```json
 {
@@ -157,8 +207,9 @@ Where a code was originally entered as READ2 or CTV3 and mapped to SNOMED:
 - All Read Codes represented as full 5 characters
 - 4-byte codes preceded by a full-stop: `.6521`
 - Trailing full-stops are significant and must be included: `H43..` (not `H43`)
+- Upper/lower case is significant — Read Codes are case-sensitive
 - Read Code Version 2 term codes: 7-character string = Read Code (5) + Term Code (2), e.g. `7001200`
-- NHS Clinical Terms V3 TermID: NOT used in GP Connect
+- NHS Clinical Terms V3 TermID: NOT used in GP Connect ("There are no plans to use the TermID in NHS Clinical Terms Version 3 and thus inclusion of TermId is not permitted")
 
 ---
 
@@ -200,7 +251,7 @@ The appropriate context-specific degrade code must be used (e.g. an allergy degr
 **Storage:** Receiving systems MUST always store the original term text.  
 **Display:** Receiving systems MUST always display the original term text to users.  
 **Propagation:** Receiving systems MUST always include the original term text when forwarding data.  
-**SNOMED storage:** Where userSelected is TRUE, SNOMED CT codes MUST be stored and propagated onwards.
+**SNOMED storage:** Any receiving system that supports SNOMED CT codes MUST store any SNOMED CT codes associated with the item — including codes from a SNOMED CT release or extension not available on the receiving system. Codes where `userSelected = TRUE` MUST additionally be propagated onwards in any future export/transfer of the data.
 
 ---
 

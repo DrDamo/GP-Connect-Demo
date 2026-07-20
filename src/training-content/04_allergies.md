@@ -107,6 +107,8 @@ Where NKA is explicitly recorded in the source system:
 ```
 
 ### Empty List — No Content Recorded
+An empty **active** allergies `List` only asserts the absence of *active* allergies — it does **not** assert that the patient has no allergies at all. Both the active list and the resolved (`Ended allergies`) list must be empty for a consumer to conclude no allergy information exists for the patient.
+
 Where no allergies exist and NKA has not been positively asserted:
 
 ```json
@@ -150,6 +152,10 @@ Where no allergies exist and NKA has not been positively asserted:
 
 > If the allergy/intolerance interacts with prescribing decision support → **`medication`**  
 > Otherwise → **`environment`**
+
+Where the allergy/intolerance type **cannot be distinguished** between `medication` and `environment` (e.g. the causative agent's classification is ambiguous), `AllergyIntolerance.category` **MUST** default to `medication`.
+
+> 🔄 **Coming in v1.6.2 — category default clarified:** this default-to-`medication` rule for ambiguous cases is confirmed explicitly in the v1.6.2 release notes ("Clarify allergy/intolerance category use"). It isn't stated this precisely in earlier guide text, so treat it as good practice now but a hard requirement from v1.6.2 onward.
 
 ### Notes Field — Single Field for All Qualifiers
 
@@ -207,6 +213,14 @@ System-specific qualifiers not supported by the AllergyIntolerance profile MUST 
 
 ---
 
+## Security Labelling
+
+> 🔄 **Coming in v1.6.2 — security labelling:** not present on the current v1.5.0 baseline.
+
+`AllergyIntolerance` resources **MAY** have `Meta.security` populated with a security label indicating information is not to be disclosed to the patient, in response to a retrieve-a-patient's-structured-record request (for applicable resources). This label **MUST** be populated on the equivalent migrate-a-patient's-record response, where applicable.
+
+---
+
 ## Yellow Card Relationship
 
 Data directly associated with the MHRA Yellow Card scheme **MUST NOT** be included in the AllergyIntolerance resource.
@@ -231,4 +245,5 @@ See `fhir_examples/` folder:
 - Design guidance: https://simplifier.net/guide/gp-connect-access-record-structured/Home/Design/Allergies-Guidance?version=current
 - Examples: https://simplifier.net/guide/gp-connect-access-record-structured/Home/Examples/Allergy-examples?version=current
 - Profile: https://simplifier.net/guide/gp-connect-access-record-structured/Home/FHIR-Assets/Profiles?version=current
+- Release notes (🔄 v1.6.2 items — category rule clarification, security labelling): https://simplifier.net/guide/gp-connect-access-record-structured/Home/Introduction/Release-notes?version=1.6.2
 

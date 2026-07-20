@@ -85,7 +85,8 @@ Three distinct observation profiles (all using `CareConnect-GPC-Observation-1`):
 
 ### Test Group Header
 - `code` = SNOMED code for the test panel (e.g., `26604007` Full blood count)
-- `hasMember` references to child Test Result observations
+- `related` element (type = `has-member`) with `target` referencing child Test Result observations
+  - STU3 does **not** have a top-level `Observation.hasMember` element — that is an R4 concept. The STU3 `CareConnect-GPC-Observation-1` profile links a Test Group Header to its Test Results via the `related` backbone element, with `related.type` = `has-member` and `related.target` = `Reference(Observation)` (confirmed in the GP Connect ARS Investigation examples: `"related": [{ "type": "has-member", "target": { "reference": "Observation/..." } }]`)
 
 ### Test Result
 - `code` = SNOMED code for specific analyte
