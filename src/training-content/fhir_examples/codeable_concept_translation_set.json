@@ -1,0 +1,27 @@
+{
+  "coding": [
+    {
+      "code": "44I4.00",
+      "display": "Serum potassium",
+      "system": "http://read.info/readv2",
+      "userSelected": true
+    },
+    {
+      "extension": [
+        {
+          "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-coding-sctdescid",
+          "extension": [
+            {
+              "url": "descriptionId",
+              "valueId": "2573011000000117"
+            }
+          ]
+        }
+      ],
+      "system": "http://snomed.info/sct",
+      "code": "1000651000000109",
+      "display": "Serum potassium level"
+    }
+  ],
+  "text": "Serum potassium"
+}

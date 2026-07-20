@@ -1,0 +1,51 @@
+{
+  "resourceType": "List",
+  "id": "medications-with-confidential-items-warning",
+  "meta": {
+    "profile": [
+      "https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-List-1"
+    ]
+  },
+  "extension": [
+    {
+      "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-ListWarningCode-1",
+      "valueCode": "confidential-items"
+    }
+  ],
+  "status": "current",
+  "mode": "snapshot",
+  "title": "Medications and medical devices",
+  "code": {
+    "coding": [
+      {
+        "system": "http://snomed.info/sct",
+        "code": "933361000000108",
+        "display": "Medications and medical devices"
+      }
+    ]
+  },
+  "subject": {
+    "reference": "Patient/e2f6100000000000"
+  },
+  "date": "2024-06-04T08:43:15+01:00",
+  "orderedBy": {
+    "coding": [
+      {
+        "system": "http://hl7.org/fhir/list-order",
+        "code": "event-date"
+      }
+    ]
+  },
+  "note": [
+    {
+      "text": "Items excluded due to confidentiality and/or patient preferences."
+    }
+  ],
+  "entry": [
+    {
+      "item": {
+        "reference": "MedicationStatement/9000000000000000_01df000000000000"
+      }
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "coding": [
+    {
+      "system": "http://snomed.info/sct",
+      "code": "196461000000101",
+      "display": "Transfer-degraded drug allergy"
+    }
+  ],
+  "text": "Resolved 'Allergy to co-amoxiclav' original code 293594009."
+}

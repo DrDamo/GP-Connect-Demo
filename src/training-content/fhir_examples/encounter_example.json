@@ -1,0 +1,66 @@
+{
+  "resourceType": "Encounter",
+  "id": "4000000000000000_encounter_example",
+  "meta": {
+    "profile": [
+      "https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-Encounter-1"
+    ]
+  },
+  "identifier": [
+    {
+      "system": "https://tpp-uk.com/Id/ccs-id",
+      "value": "4000000000000000_encounter_example"
+    }
+  ],
+  "status": "finished",
+  "type": [
+    {
+      "text": "Clinical - Face to face"
+    }
+  ],
+  "subject": {
+    "reference": "Patient/e2f6100000000000"
+  },
+  "participant": [
+    {
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "https://fhir.nhs.uk/STU3/CodeSystem/GPConnect-ParticipantType-1",
+              "code": "REC",
+              "display": "recorder"
+            }
+          ]
+        }
+      ],
+      "individual": {
+        "reference": "Practitioner/dc82200000000000"
+      }
+    }
+  ],
+  "period": {
+    "start": "2024-06-04T08:43:15+01:00",
+    "end": "2024-06-04T09:00:00+01:00"
+  },
+  "location": [
+    {
+      "location": {
+        "reference": "Location/0100000000000000_0b00000000000000"
+      }
+    },
+    {
+      "location": {
+        "display": "Surgery"
+      }
+    }
+  ],
+  "serviceProvider": {
+    "reference": "Organization/0100000000000000_0b00000000000000"
+  },
+  "class": {
+    "system": "http://hl7.org/fhir/v3/ActCode",
+    "code": "AMB",
+    "display": "ambulatory"
+  }
+}

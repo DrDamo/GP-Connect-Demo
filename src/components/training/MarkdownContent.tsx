@@ -4,6 +4,8 @@ import remarkGfm from 'remark-gfm'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { slugify } from './utils'
+import { getFhirExample } from './fhirExamples'
+import { FhirExampleChip } from './FhirExampleChip'
 
 function childrenToText(children: ReactNode): string {
   if (typeof children === 'string') return children
@@ -15,7 +17,13 @@ function childrenToText(children: ReactNode): string {
   return ''
 }
 
-export function MarkdownContent({ content }: { content: string }) {
+interface Props {
+  content: string
+  /** When provided, `fhir_examples/*.json` references get a "Load into Inspector" action. */
+  onLoadExample?: (filename: string, data: unknown) => void
+}
+
+export function MarkdownContent({ content, onLoadExample }: Props) {
   return (
     <div className="text-sm">
       <Markdown
@@ -88,6 +96,11 @@ export function MarkdownContent({ content }: { content: string }) {
                   {String(children).replace(/\n$/, '')}
                 </SyntaxHighlighter>
               )
+            }
+            const inlineText = childrenToText(children)
+            const exampleData = /^[\w.-]+\.json$/i.test(inlineText) ? getFhirExample(inlineText) : undefined
+            if (exampleData !== undefined) {
+              return <FhirExampleChip filename={inlineText} data={exampleData} onLoad={onLoadExample} />
             }
             const isBlock = String(children).includes('\n')
             if (isBlock) {

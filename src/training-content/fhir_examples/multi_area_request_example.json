@@ -1,0 +1,121 @@
+{
+  "resourceType": "Parameters",
+  "parameter": [
+    {
+      "name": "patientNHSNumber",
+      "valueIdentifier": {
+        "system": "https://fhir.nhs.uk/Id/nhs-number",
+        "value": "9000000009"
+      }
+    },
+    {
+      "name": "includeAllergies",
+      "part": [
+        {
+          "name": "includeResolvedAllergies",
+          "valueBoolean": true
+        }
+      ]
+    },
+    {
+      "name": "includeMedication",
+      "part": [
+        {
+          "name": "includePrescriptionIssues",
+          "valueBoolean": true
+        },
+        {
+          "name": "medicationSearchFromDate",
+          "valueDate": "2020-01-01"
+        }
+      ]
+    },
+    {
+      "name": "includeConsultations",
+      "part": [
+        {
+          "name": "consultationSearchPeriod",
+          "valuePeriod": {
+            "start": "2020-01-01",
+            "end": "2020-12-31"
+          }
+        },
+        {
+          "name": "includeNumberOfMostRecent",
+          "valuePositiveInt": 5
+        }
+      ]
+    },
+    {
+      "name": "includeProblems",
+      "part": [
+        {
+          "name": "filterStatus",
+          "valueCode": "active"
+        },
+        {
+          "name": "filterSignificance",
+          "valueCode": "major"
+        }
+      ]
+    },
+    {
+      "name": "includeImmunisations",
+      "part": [
+        {
+          "name": "includeNotGiven",
+          "valueBoolean": true
+        },
+        {
+          "name": "includeStatus",
+          "valueBoolean": true
+        }
+      ]
+    },
+    {
+      "name": "includeUncategorisedData",
+      "part": [
+        {
+          "name": "uncategorisedDataSearchPeriod",
+          "valuePeriod": {
+            "start": "2020-01-01",
+            "end": "2020-12-31"
+          }
+        }
+      ]
+    },
+    {
+      "name": "includeInvestigations",
+      "part": [
+        {
+          "name": "investigationSearchPeriod",
+          "valuePeriod": {
+            "start": "2020-01-01",
+            "end": "2020-12-31"
+          }
+        }
+      ]
+    },
+    {
+      "name": "includeReferrals",
+      "part": [
+        {
+          "name": "referralSearchPeriod",
+          "valuePeriod": {
+            "start": "2020-01-01",
+            "end": "2020-12-31"
+          }
+        }
+      ]
+    },
+    {
+      "name": "includeDiaryEntries",
+      "part": [
+        {
+          "name": "diaryEntriesSearchDate",
+          "valueDate": "2026-12-31"
+        }
+      ]
+    }
+  ]
+}

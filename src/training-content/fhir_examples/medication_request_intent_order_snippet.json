@@ -1,0 +1,75 @@
+{
+  "resourceType": "MedicationRequest",
+  "id": "1000000000000000_06ca480000000000_order",
+  "meta": {
+    "profile": [
+      "https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-MedicationRequest-1"
+    ]
+  },
+  "identifier": [
+    {
+      "system": "https://tpp-uk.com/Id/ccs-id",
+      "value": "1000000000000000_06ca480000000000_order"
+    }
+  ],
+  "status": "completed",
+  "intent": "order",
+  "medicationReference": {
+    "reference": "Medication/1009689_0"
+  },
+  "context": {
+    "reference": "Encounter/4000000000000000_c8845a0000000000"
+  },
+  "subject": {
+    "reference": "Patient/e2f6100000000000"
+  },
+  "authoredOn": "2024-06-01T12:11:53+00:00",
+  "recorder": {
+    "reference": "PractitionerRole/7907200000000000"
+  },
+  "basedOn": [
+    {
+      "reference": "MedicationRequest/9000000000000000_01df000000000000_plan"
+    }
+  ],
+  "dosageInstruction": [
+    {
+      "text": "One tablet to be taken once daily"
+    }
+  ],
+  "dispenseRequest": {
+    "expectedSupplyDuration": {
+      "value": 28,
+      "unit": "day",
+      "system": "http://unitsofmeasure.org",
+      "code": "d"
+    },
+    "quantity": {
+      "extension": [
+        {
+          "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-MedicationQuantityText-1",
+          "valueString": "tablet"
+        }
+      ],
+      "value": 28
+    },
+    "validityPeriod": {
+      "start": "2024-06-01",
+      "end": "2024-06-29"
+    }
+  },
+  "extension": [
+    {
+      "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-PrescriptionType-1",
+      "valueCodeableConcept": {
+        "coding": [
+          {
+            "system": "https://fhir.nhs.uk/STU3/CodeSystem/CareConnect-PrescriptionType-1",
+            "code": "repeat",
+            "display": "Repeat"
+          }
+        ]
+      }
+    }
+  ]
+}

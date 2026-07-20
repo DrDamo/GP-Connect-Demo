@@ -1,0 +1,421 @@
+{
+  "resourceType": "Bundle",
+  "id": "medication-dosage-change-example",
+  "meta": {
+    "profile": [
+      "https://fhir.nhs.uk/STU3/StructureDefinition/GPConnect-StructuredRecord-Bundle-1"
+    ]
+  },
+  "type": "collection",
+  "entry": [
+    {
+      "resource": {
+        "resourceType": "Patient",
+        "id": "e2f6100000000000",
+        "meta": {
+          "profile": [
+            "https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-Patient-1"
+          ]
+        },
+        "identifier": [
+          {
+            "extension": [
+              {
+                "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-NHSNumberVerificationStatus-1",
+                "valueCodeableConcept": {
+                  "coding": [
+                    {
+                      "system": "https://fhir.nhs.uk/STU3/CodeSystem/CareConnect-NHSNumberVerificationStatus-1",
+                      "code": "01",
+                      "display": "Number present and verified"
+                    }
+                  ]
+                }
+              }
+            ],
+            "system": "https://fhir.nhs.uk/Id/nhs-number",
+            "value": "9000000009"
+          }
+        ],
+        "name": [
+          {
+            "prefix": [
+              "Mrs"
+            ],
+            "given": [
+              "Sophia",
+              "Olive"
+            ],
+            "family": "Adams",
+            "use": "official"
+          }
+        ],
+        "address": [
+          {
+            "use": "home",
+            "type": "both",
+            "line": [
+              "2 Rectory Croft",
+              "High Street",
+              "Wroot"
+            ],
+            "city": "Doncaster",
+            "postalCode": "DN9 2BF"
+          }
+        ],
+        "birthDate": "1986-10-13",
+        "gender": "female",
+        "active": true,
+        "managingOrganization": {
+          "reference": "Organization/0100000000000000_0b00000000000000"
+        },
+        "generalPractitioner": [
+          {
+            "reference": "Practitioner/5b80000000000000"
+          }
+        ]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Organization",
+        "id": "0100000000000000_0b00000000000000",
+        "meta": {
+          "profile": [
+            "https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-Organization-1"
+          ]
+        },
+        "identifier": [
+          {
+            "system": "https://fhir.nhs.uk/Id/ods-organization-code",
+            "value": "A86005"
+          }
+        ],
+        "name": "West Farm Surgery",
+        "address": [
+          {
+            "line": [
+              "31 West Farm Avenue"
+            ],
+            "city": "Newcastle Upon Tyne",
+            "district": "Tyne and Wear",
+            "postalCode": "NE12 8LS"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "use": "work",
+            "value": "01132050080"
+          }
+        ],
+        "active": true,
+        "type": [
+          {
+            "coding": [
+              {
+                "system": "https://fhir.nhs.uk/STU3/CodeSystem/GPConnect-OrganisationType-1",
+                "code": "gp-practice",
+                "display": "gp-practice"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Practitioner",
+        "id": "5b80000000000000",
+        "meta": {
+          "profile": [
+            "https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-Practitioner-1"
+          ]
+        },
+        "name": [
+          {
+            "prefix": [
+              "Mr"
+            ],
+            "given": [
+              "Peter"
+            ],
+            "family": "Salisbury",
+            "use": "official"
+          }
+        ],
+        "gender": "unknown"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Practitioner",
+        "id": "dc82200000000000",
+        "meta": {
+          "profile": [
+            "https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-Practitioner-1"
+          ]
+        },
+        "name": [
+          {
+            "given": [
+              "Elle"
+            ],
+            "family": "Prilling",
+            "use": "official"
+          }
+        ],
+        "gender": "unknown"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "PractitionerRole",
+        "id": "7907200000000000",
+        "meta": {
+          "profile": [
+            "https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-PractitionerRole-1"
+          ]
+        },
+        "practitioner": {
+          "reference": "Practitioner/dc82200000000000"
+        },
+        "organization": {
+          "reference": "Organization/0100000000000000_0b00000000000000"
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Medication",
+        "id": "med-ramipril-5mg",
+        "meta": {
+          "profile": [
+            "https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-Medication-1"
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "318475005",
+              "display": "Ramipril 5mg capsules"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "E9881EF6-EF3A-4556-9202-A437C5E31128-HD-1",
+        "meta": {
+          "profile": [
+            "https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-MedicationRequest-1"
+          ]
+        },
+        "status": "stopped",
+        "intent": "plan",
+        "medicationReference": {
+          "reference": "Medication/med-ramipril-5mg"
+        },
+        "subject": {
+          "reference": "Patient/e2f6100000000000"
+        },
+        "authoredOn": "2024-01-10T09:00:00+00:00",
+        "recorder": {
+          "reference": "PractitionerRole/7907200000000000"
+        },
+        "dosageInstruction": [
+          {
+            "text": "One capsule to be taken once daily"
+          }
+        ],
+        "statusReason": {
+          "text": "Dosage amended"
+        },
+        "dispenseRequest": {
+          "quantity": {
+            "extension": [
+              {
+                "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-MedicationQuantityText-1",
+                "valueString": "capsule"
+              }
+            ],
+            "value": 28
+          },
+          "validityPeriod": {
+            "start": "2024-01-10",
+            "end": "2024-03-15"
+          }
+        },
+        "extension": [
+          {
+            "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-MedicationRepeatInformation-1",
+            "extension": [
+              {
+                "url": "numberOfRepeatPrescriptionsAllowed",
+                "valuePositiveInt": 6
+              },
+              {
+                "url": "numberOfRepeatPrescriptionsIssued",
+                "valueUnsignedInt": 1
+              }
+            ]
+          },
+          {
+            "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-PrescriptionType-1",
+            "valueCodeableConcept": {
+              "coding": [
+                {
+                  "system": "https://fhir.nhs.uk/STU3/CodeSystem/CareConnect-PrescriptionType-1",
+                  "code": "repeat",
+                  "display": "Repeat"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "F1A92BD7-0C4B-4667-B315-B548D6F42239-HD-1",
+        "meta": {
+          "profile": [
+            "https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-MedicationRequest-1"
+          ]
+        },
+        "status": "active",
+        "intent": "plan",
+        "priorPrescription": {
+          "reference": "MedicationRequest/E9881EF6-EF3A-4556-9202-A437C5E31128-HD-1"
+        },
+        "medicationReference": {
+          "reference": "Medication/med-ramipril-5mg"
+        },
+        "subject": {
+          "reference": "Patient/e2f6100000000000"
+        },
+        "authoredOn": "2024-03-15T10:30:00+00:00",
+        "recorder": {
+          "reference": "PractitionerRole/7907200000000000"
+        },
+        "dosageInstruction": [
+          {
+            "text": "One capsule to be taken twice daily"
+          }
+        ],
+        "dispenseRequest": {
+          "quantity": {
+            "extension": [
+              {
+                "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-MedicationQuantityText-1",
+                "valueString": "capsule"
+              }
+            ],
+            "value": 56
+          },
+          "validityPeriod": {
+            "start": "2024-03-15"
+          }
+        },
+        "extension": [
+          {
+            "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-MedicationRepeatInformation-1",
+            "extension": [
+              {
+                "url": "numberOfRepeatPrescriptionsAllowed",
+                "valuePositiveInt": 6
+              },
+              {
+                "url": "numberOfRepeatPrescriptionsIssued",
+                "valueUnsignedInt": 1
+              },
+              {
+                "url": "authorisationExpiryDate",
+                "valueDateTime": "2024-09-15"
+              }
+            ]
+          },
+          {
+            "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-PrescriptionType-1",
+            "valueCodeableConcept": {
+              "coding": [
+                {
+                  "system": "https://fhir.nhs.uk/STU3/CodeSystem/CareConnect-PrescriptionType-1",
+                  "code": "repeat",
+                  "display": "Repeat"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "med-statement-ramipril-current",
+        "meta": {
+          "profile": [
+            "https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-MedicationStatement-1"
+          ]
+        },
+        "basedOn": [
+          {
+            "reference": "MedicationRequest/F1A92BD7-0C4B-4667-B315-B548D6F42239-HD-1"
+          }
+        ],
+        "status": "active",
+        "medicationReference": {
+          "reference": "Medication/med-ramipril-5mg"
+        },
+        "effectivePeriod": {
+          "start": "2024-03-15"
+        },
+        "subject": {
+          "reference": "Patient/e2f6100000000000"
+        },
+        "taken": "unk",
+        "dateAsserted": "2024-03-15T10:30:00+00:00",
+        "dosage": [
+          {
+            "text": "One capsule to be taken twice daily"
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-MedicationStatementLastIssueDate-1",
+            "valueDateTime": "2024-03-15"
+          },
+          {
+            "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-PrescribingAgency-1",
+            "valueCodeableConcept": {
+              "coding": [
+                {
+                  "system": "https://fhir.nhs.uk/STU3/CodeSystem/CareConnect-PrescribingAgency-1",
+                  "code": "prescribed-at-gp-practice",
+                  "display": "Prescribed at GP practice"
+                }
+              ]
+            }
+          },
+          {
+            "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-PrescriptionType-1",
+            "valueCodeableConcept": {
+              "coding": [
+                {
+                  "system": "https://fhir.nhs.uk/STU3/CodeSystem/CareConnect-PrescriptionType-1",
+                  "code": "repeat",
+                  "display": "Repeat"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

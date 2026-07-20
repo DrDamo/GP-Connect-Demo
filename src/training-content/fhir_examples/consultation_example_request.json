@@ -1,0 +1,28 @@
+{
+  "resourceType": "Parameters",
+  "parameter": [
+    {
+      "name": "patientNHSNumber",
+      "valueIdentifier": {
+        "system": "https://fhir.nhs.uk/Id/nhs-number",
+        "value": "9000000009"
+      }
+    },
+    {
+      "name": "includeConsultations",
+      "part": [
+        {
+          "name": "consultationSearchPeriod",
+          "valuePeriod": {
+            "start": "2020-01-01",
+            "end": "2020-12-31"
+          }
+        },
+        {
+          "name": "includeNumberOfMostRecent",
+          "valuePositiveInt": 3
+        }
+      ]
+    }
+  ]
+}

@@ -253,6 +253,19 @@ function AppContent() {
     setShowPaste(false)
   }, [pasteText, handleLoad])
 
+  // Load a `fhir_examples/*.json` file referenced from a training guide the same
+  // way pasted JSON is loaded — tolerating individual resources, arrays, and
+  // partial bundles, not just fully spec-compliant Bundles.
+  const handleLoadExample = useCallback((filename: string, data: unknown) => {
+    setParseError(null)
+    const normalized = normalizePastedJson(JSON.stringify(data))
+    if (!normalized.ok) {
+      setParseError(normalized.error)
+      return
+    }
+    handleLoad(JSON.stringify(normalized.data, null, 2), filename, `Training example — ${filename}`)
+  }, [handleLoad])
+
   const handleClear = useCallback(() => {
     setLoaded(null)
     setParseError(null)
@@ -448,7 +461,7 @@ function AppContent() {
             </button>
           </div>
           <div className="flex-1 min-h-0 bg-white rounded-lg border border-nhs-grey-4 overflow-hidden">
-            <TrainingView initialPage={trainingPage} onNavigate={setTrainingPage} />
+            <TrainingView initialPage={trainingPage} onNavigate={setTrainingPage} onLoadExample={handleLoadExample} />
           </div>
         </main>
       ) : !loaded ? (

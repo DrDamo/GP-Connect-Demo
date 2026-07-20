@@ -87,6 +87,8 @@ All resolved allergies MUST be returned as **Transfer-degraded drug allergy**:
 | Read V2 | `9bJ4.` | `http://read.info/readv2` |
 | Read CTV3 | `9bJ4.` | `http://read.info/ctv3` |
 
+> 🔄 **Coming in v1.6.2 — resolved allergy degradation:** on the current v1.5.0 baseline, resolved allergies retain their original coding in the `Ended allergies` list. The transfer-degradation rule above (returning `196461000000101` instead of the original code) is a v1.6.2 release-note change — see `02_api_calls_and_responses.md` for the same flag. The worked examples below follow this rule since it's the documented target behaviour, but don't expect it from a v1.5.0 provider today.
+
 Text format: `Resolved '<original term text>' original code <original code>.`
 
 ### No Known Allergies (NKA)

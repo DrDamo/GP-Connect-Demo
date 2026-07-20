@@ -1,0 +1,20 @@
+{
+  "resourceType": "OperationOutcome",
+  "id": "disabled-clinical-area-warning",
+  "issue": [
+    {
+      "severity": "warning",
+      "code": "not-supported",
+      "diagnostics": "The clinical area 'includeReferrals' was requested but outbound referrals data has been disabled at the responding practice's discretion. No ReferralRequest resources or Outbound referral List have been returned for this request. This is a configuration choice at the provider system, not an error in the request.",
+      "details": {
+        "coding": [
+          {
+            "system": "https://fhir.nhs.uk/STU3/CodeSystem/Spine-ErrorOrWarningCode-1",
+            "code": "INVALID_PARAMETER",
+            "display": "Clinical area disabled by provider"
+          }
+        ]
+      }
+    }
+  ]
+}

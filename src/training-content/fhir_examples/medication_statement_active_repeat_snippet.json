@@ -1,0 +1,75 @@
+{
+  "resourceType": "MedicationStatement",
+  "id": "9000000000000000_01df000000000000",
+  "meta": {
+    "profile": [
+      "https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-MedicationStatement-1"
+    ]
+  },
+  "identifier": [
+    {
+      "system": "https://tpp-uk.com/Id/ccs-id",
+      "value": "9000000000000000_01df000000000000"
+    }
+  ],
+  "basedOn": [
+    {
+      "reference": "MedicationRequest/9000000000000000_01df000000000000_plan"
+    }
+  ],
+  "context": {
+    "reference": "Encounter/4000000000000000_c8845a0000000000"
+  },
+  "status": "active",
+  "medicationReference": {
+    "reference": "Medication/1009689_0"
+  },
+  "effectivePeriod": {
+    "start": "2023-12-01"
+  },
+  "subject": {
+    "reference": "Patient/e2f6100000000000"
+  },
+  "taken": "unk",
+  "dateAsserted": "2024-06-01T12:11:53+00:00",
+  "note": [
+    {
+      "text": "Monitor renal function annually while on repeat."
+    }
+  ],
+  "dosage": [
+    {
+      "text": "One tablet to be taken once daily"
+    }
+  ],
+  "extension": [
+    {
+      "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-MedicationStatementLastIssueDate-1",
+      "valueDateTime": "2024-06-01"
+    },
+    {
+      "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-PrescribingAgency-1",
+      "valueCodeableConcept": {
+        "coding": [
+          {
+            "system": "https://fhir.nhs.uk/STU3/CodeSystem/CareConnect-PrescribingAgency-1",
+            "code": "prescribed-at-gp-practice",
+            "display": "Prescribed at GP practice"
+          }
+        ]
+      }
+    },
+    {
+      "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-PrescriptionType-1",
+      "valueCodeableConcept": {
+        "coding": [
+          {
+            "system": "https://fhir.nhs.uk/STU3/CodeSystem/CareConnect-PrescriptionType-1",
+            "code": "repeat",
+            "display": "Repeat"
+          }
+        ]
+      }
+    }
+  ]
+}

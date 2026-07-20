@@ -1,0 +1,37 @@
+{
+  "resourceType": "AllergyIntolerance",
+  "id": "nka-5000000000000000",
+  "meta": {
+    "profile": [
+      "https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-AllergyIntolerance-1"
+    ]
+  },
+  "identifier": [
+    {
+      "system": "https://tpp-uk.com/Id/ccs-id",
+      "value": "nka-5000000000000000"
+    }
+  ],
+  "clinicalStatus": "active",
+  "verificationStatus": "confirmed",
+  "type": "allergy",
+  "category": [
+    "medication"
+  ],
+  "code": {
+    "coding": [
+      {
+        "system": "http://snomed.info/sct",
+        "code": "716186003",
+        "display": "No known allergy"
+      }
+    ]
+  },
+  "patient": {
+    "reference": "Patient/e2f6100000000000"
+  },
+  "assertedDate": "2024-01-15T09:12:00+00:00",
+  "recorder": {
+    "reference": "PractitionerRole/7907200000000000"
+  }
+}

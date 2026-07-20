@@ -1,0 +1,46 @@
+{
+  "resourceType": "AllergyIntolerance",
+  "id": "5000000000000000_nopat_demo",
+  "meta": {
+    "profile": [
+      "https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-AllergyIntolerance-1"
+    ],
+    "security": [
+      {
+        "system": "http://hl7.org/fhir/v3/ActCode",
+        "code": "NOPAT",
+        "display": "no disclosure to patient, family or caregivers without attending provider's authorization"
+      }
+    ]
+  },
+  "identifier": [
+    {
+      "system": "https://tpp-uk.com/Id/ccs-id",
+      "value": "5000000000000000_nopat_demo"
+    }
+  ],
+  "verificationStatus": "confirmed",
+  "assertedDate": "2024-06-04T08:43:15+01:00",
+  "type": "allergy",
+  "code": {
+    "coding": [
+      {
+        "system": "http://snomed.info/sct",
+        "code": "294505008",
+        "display": "Allergy to substance"
+      }
+    ],
+    "text": "Suspected drug reaction under review - not yet discussed with patient"
+  },
+  "clinicalStatus": "active",
+  "patient": {
+    "reference": "Patient/e2f6100000000000"
+  },
+  "recorder": {
+    "reference": "PractitionerRole/7907200000000000"
+  },
+  "category": [
+    "medication"
+  ],
+  "onsetDateTime": "2024-06-04"
+}

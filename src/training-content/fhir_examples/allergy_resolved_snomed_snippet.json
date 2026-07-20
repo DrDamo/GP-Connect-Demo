@@ -1,0 +1,54 @@
+{
+  "resourceType": "AllergyIntolerance",
+  "id": "resolved-snomed-b000000000000000",
+  "meta": {
+    "profile": [
+      "https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-AllergyIntolerance-1"
+    ]
+  },
+  "identifier": [
+    {
+      "system": "https://tpp-uk.com/Id/ccs-id",
+      "value": "resolved-snomed-b000000000000000"
+    }
+  ],
+  "extension": [
+    {
+      "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-AllergyIntoleranceEnd-1",
+      "extension": [
+        {
+          "url": "endDate",
+          "valueDateTime": "2023-08-01T00:00:00+01:00"
+        },
+        {
+          "url": "reasonEnded",
+          "valueString": "No information available"
+        }
+      ]
+    }
+  ],
+  "verificationStatus": "unconfirmed",
+  "assertedDate": "2015-03-14T09:30:00+00:00",
+  "type": "allergy",
+  "code": {
+    "coding": [
+      {
+        "system": "http://snomed.info/sct",
+        "code": "196461000000101",
+        "display": "Transfer-degraded drug allergy"
+      }
+    ],
+    "text": "Resolved 'Allergy to penicillin' original code 91936005."
+  },
+  "clinicalStatus": "resolved",
+  "patient": {
+    "reference": "Patient/e2f6100000000000"
+  },
+  "recorder": {
+    "reference": "PractitionerRole/7907200000000000"
+  },
+  "category": [
+    "medication"
+  ],
+  "onsetDateTime": "2015-03-12"
+}

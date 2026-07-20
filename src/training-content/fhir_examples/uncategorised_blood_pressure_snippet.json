@@ -1,0 +1,76 @@
+{
+  "resourceType": "Observation",
+  "id": "BP-demo-0000000000000000",
+  "meta": {
+    "profile": [
+      "https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-Observation-1"
+    ]
+  },
+  "identifier": [
+    {
+      "system": "https://tpp-uk.com/Id/ccs-id",
+      "value": "BP-demo-0000000000000000"
+    }
+  ],
+  "status": "final",
+  "code": {
+    "coding": [
+      {
+        "system": "http://snomed.info/sct",
+        "code": "75367002",
+        "display": "Blood pressure"
+      }
+    ]
+  },
+  "subject": {
+    "reference": "Patient/e2f6100000000000"
+  },
+  "context": {
+    "reference": "Encounter/4000000000000000_c8845a0000000000"
+  },
+  "effectiveDateTime": "2024-06-04T08:43:15+01:00",
+  "issued": "2024-06-04T08:50:00+01:00",
+  "performer": [
+    {
+      "reference": "Practitioner/dc82200000000000"
+    },
+    {
+      "reference": "Organization/0100000000000000_0b00000000000000"
+    }
+  ],
+  "comment": "Systolic Comment: O/E - blood pressure reading",
+  "component": [
+    {
+      "code": {
+        "coding": [
+          {
+            "system": "http://snomed.info/sct",
+            "code": "72313002",
+            "display": "Systolic arterial pressure"
+          }
+        ],
+        "text": "O/E - Systolic BP reading"
+      },
+      "valueQuantity": {
+        "value": 128,
+        "unit": "mm[Hg]"
+      }
+    },
+    {
+      "code": {
+        "coding": [
+          {
+            "system": "http://snomed.info/sct",
+            "code": "1091811000000102",
+            "display": "Diastolic arterial pressure"
+          }
+        ],
+        "text": "O/E - Diastolic BP reading"
+      },
+      "valueQuantity": {
+        "value": 82,
+        "unit": "mm[Hg]"
+      }
+    }
+  ]
+}

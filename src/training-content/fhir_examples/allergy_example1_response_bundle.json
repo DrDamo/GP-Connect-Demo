@@ -1,0 +1,537 @@
+{
+  "resourceType": "Bundle",
+  "id": "allergy-example1-response-bundle",
+  "meta": {
+    "profile": [
+      "https://fhir.nhs.uk/STU3/StructureDefinition/GPConnect-StructuredRecord-Bundle-1"
+    ]
+  },
+  "type": "collection",
+  "entry": [
+    {
+      "resource": {
+        "resourceType": "Patient",
+        "id": "e2f6100000000000",
+        "meta": {
+          "profile": [
+            "https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-Patient-1"
+          ]
+        },
+        "identifier": [
+          {
+            "extension": [
+              {
+                "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-NHSNumberVerificationStatus-1",
+                "valueCodeableConcept": {
+                  "coding": [
+                    {
+                      "system": "https://fhir.nhs.uk/STU3/CodeSystem/CareConnect-NHSNumberVerificationStatus-1",
+                      "code": "01",
+                      "display": "Number present and verified"
+                    }
+                  ]
+                }
+              }
+            ],
+            "system": "https://fhir.nhs.uk/Id/nhs-number",
+            "value": "9000000009"
+          }
+        ],
+        "name": [
+          {
+            "prefix": [
+              "Mrs"
+            ],
+            "given": [
+              "Sophia",
+              "Olive"
+            ],
+            "family": "Adams",
+            "use": "official"
+          }
+        ],
+        "address": [
+          {
+            "use": "home",
+            "type": "both",
+            "line": [
+              "2 Rectory Croft",
+              "High Street",
+              "Wroot"
+            ],
+            "city": "Doncaster",
+            "postalCode": "DN9 2BF"
+          }
+        ],
+        "birthDate": "1986-10-13",
+        "gender": "female",
+        "active": true,
+        "managingOrganization": {
+          "reference": "Organization/0100000000000000_0b00000000000000"
+        },
+        "generalPractitioner": [
+          {
+            "reference": "Practitioner/5b80000000000000"
+          }
+        ]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Organization",
+        "id": "0100000000000000_0b00000000000000",
+        "meta": {
+          "profile": [
+            "https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-Organization-1"
+          ]
+        },
+        "identifier": [
+          {
+            "system": "https://fhir.nhs.uk/Id/ods-organization-code",
+            "value": "A86005"
+          }
+        ],
+        "name": "West Farm Surgery",
+        "address": [
+          {
+            "line": [
+              "31 West Farm Avenue"
+            ],
+            "city": "Newcastle Upon Tyne",
+            "district": "Tyne and Wear",
+            "postalCode": "NE12 8LS"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "use": "work",
+            "value": "01132050080"
+          }
+        ],
+        "active": true,
+        "type": [
+          {
+            "coding": [
+              {
+                "system": "https://fhir.nhs.uk/STU3/CodeSystem/GPConnect-OrganisationType-1",
+                "code": "gp-practice",
+                "display": "gp-practice"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Practitioner",
+        "id": "5b80000000000000",
+        "meta": {
+          "profile": [
+            "https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-Practitioner-1"
+          ]
+        },
+        "name": [
+          {
+            "prefix": [
+              "Mr"
+            ],
+            "given": [
+              "Peter"
+            ],
+            "family": "Salisbury",
+            "use": "official"
+          }
+        ],
+        "gender": "unknown"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "PractitionerRole",
+        "id": "8b52000000000000",
+        "meta": {
+          "profile": [
+            "https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-PractitionerRole-1"
+          ]
+        },
+        "practitioner": {
+          "reference": "Practitioner/5b80000000000000"
+        },
+        "organization": {
+          "reference": "Organization/0100000000000000_0b00000000000000"
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Practitioner",
+        "id": "dc82200000000000",
+        "meta": {
+          "profile": [
+            "https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-Practitioner-1"
+          ]
+        },
+        "name": [
+          {
+            "given": [
+              "Elle"
+            ],
+            "family": "Prilling",
+            "use": "official"
+          }
+        ],
+        "gender": "unknown"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "PractitionerRole",
+        "id": "7907200000000000",
+        "meta": {
+          "profile": [
+            "https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-PractitionerRole-1"
+          ]
+        },
+        "practitioner": {
+          "reference": "Practitioner/dc82200000000000"
+        },
+        "organization": {
+          "reference": "Organization/0100000000000000_0b00000000000000"
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Encounter",
+        "id": "4000000000000000_c8845a0000000000",
+        "meta": {
+          "profile": [
+            "https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-Encounter-1"
+          ]
+        },
+        "identifier": [
+          {
+            "system": "https://tpp-uk.com/Id/ccs-id",
+            "value": "4000000000000000_c8845a0000000000"
+          }
+        ],
+        "status": "finished",
+        "type": [
+          {
+            "text": "Clinical - Face to face"
+          }
+        ],
+        "subject": {
+          "reference": "Patient/e2f6100000000000"
+        },
+        "participant": [
+          {
+            "type": [
+              {
+                "coding": [
+                  {
+                    "system": "https://fhir.nhs.uk/STU3/CodeSystem/GPConnect-ParticipantType-1",
+                    "code": "REC",
+                    "display": "recorder"
+                  }
+                ]
+              }
+            ],
+            "individual": {
+              "reference": "Practitioner/dc82200000000000"
+            }
+          }
+        ],
+        "period": {
+          "start": "2023-12-01T12:11:53+00:00"
+        },
+        "location": [
+          {
+            "location": {
+              "display": "Surgery"
+            }
+          }
+        ],
+        "serviceProvider": {
+          "reference": "Organization/0100000000000000_0b00000000000000"
+        },
+        "class": {
+          "system": "http://hl7.org/fhir/v3/ActCode",
+          "code": "AMB",
+          "display": "ambulatory"
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "List",
+        "id": "allergies-and-adverse-reactions",
+        "meta": {
+          "profile": [
+            "https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-List-1"
+          ]
+        },
+        "status": "current",
+        "mode": "snapshot",
+        "title": "Allergies and adverse reactions",
+        "code": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "886921000000105",
+              "display": "Allergies and adverse reactions"
+            }
+          ]
+        },
+        "subject": {
+          "reference": "Patient/e2f6100000000000"
+        },
+        "date": "2024-06-04T08:43:15+01:00",
+        "orderedBy": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/list-order",
+              "code": "event-date"
+            }
+          ]
+        },
+        "entry": [
+          {
+            "item": {
+              "reference": "AllergyIntolerance/5000000000000000_052e941000000000"
+            }
+          },
+          {
+            "item": {
+              "reference": "AllergyIntolerance/b000000000000000_850c000000000000"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "List",
+        "id": "ended-allergies",
+        "meta": {
+          "profile": [
+            "https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-List-1"
+          ]
+        },
+        "status": "current",
+        "mode": "snapshot",
+        "title": "Ended allergies",
+        "code": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "1103671000000101",
+              "display": "Ended allergies"
+            }
+          ]
+        },
+        "subject": {
+          "reference": "Patient/e2f6100000000000"
+        },
+        "date": "2024-06-04T08:43:15+01:00",
+        "contained": [
+          {
+            "resourceType": "AllergyIntolerance",
+            "id": "b000000000000000_d50c000000000000",
+            "meta": {
+              "profile": [
+                "https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-AllergyIntolerance-1"
+              ]
+            },
+            "identifier": [
+              {
+                "system": "https://tpp-uk.com/Id/ccs-id",
+                "value": "b000000000000000_d50c000000000000"
+              }
+            ],
+            "extension": [
+              {
+                "url": "http://hl7.org/fhir/StructureDefinition/encounter-associatedEncounter",
+                "valueReference": {
+                  "reference": "Encounter/4000000000000000_c8845a0000000000"
+                }
+              },
+              {
+                "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-AllergyIntoleranceEnd-1",
+                "extension": [
+                  {
+                    "url": "endDate",
+                    "valueDateTime": "2024-01-15T00:00:00+00:00"
+                  },
+                  {
+                    "url": "reasonEnded",
+                    "valueString": "Patient tolerated re-challenge under specialist supervision"
+                  }
+                ]
+              }
+            ],
+            "verificationStatus": "unconfirmed",
+            "assertedDate": "2007-01",
+            "type": "allergy",
+            "code": {
+              "coding": [
+                {
+                  "system": "http://snomed.info/sct",
+                  "code": "196461000000101",
+                  "display": "Transfer-degraded drug allergy"
+                }
+              ],
+              "text": "Resolved 'Allergy to co-amoxiclav' original code 293594009."
+            },
+            "clinicalStatus": "resolved",
+            "patient": {
+              "reference": "Patient/e2f6100000000000"
+            },
+            "recorder": {
+              "reference": "PractitionerRole/7907200000000000"
+            },
+            "category": [
+              "medication"
+            ],
+            "onsetDateTime": "2007-01-01"
+          }
+        ],
+        "entry": [
+          {
+            "item": {
+              "reference": "#b000000000000000_d50c000000000000"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "AllergyIntolerance",
+        "id": "5000000000000000_052e941000000000",
+        "meta": {
+          "profile": [
+            "https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-AllergyIntolerance-1"
+          ]
+        },
+        "identifier": [
+          {
+            "system": "https://tpp-uk.com/Id/ccs-id",
+            "value": "5000000000000000_052e941000000000"
+          }
+        ],
+        "extension": [
+          {
+            "url": "http://hl7.org/fhir/StructureDefinition/encounter-associatedEncounter",
+            "valueReference": {
+              "reference": "Encounter/4000000000000000_c8845a0000000000"
+            }
+          }
+        ],
+        "verificationStatus": "confirmed",
+        "assertedDate": "2024-06-04T08:43:15+01:00",
+        "type": "allergy",
+        "code": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "91936005",
+              "display": "Allergy to penicillin"
+            }
+          ],
+          "text": "Penicillin"
+        },
+        "clinicalStatus": "active",
+        "patient": {
+          "reference": "Patient/e2f6100000000000"
+        },
+        "recorder": {
+          "reference": "PractitionerRole/7907200000000000"
+        },
+        "category": [
+          "medication"
+        ],
+        "criticality": "high",
+        "onsetDateTime": "2024-06-04",
+        "note": [
+          {
+            "text": "Certainty: Confirmed, Severity: Moderate, NOTES: Widespread urticarial rash"
+          }
+        ],
+        "reaction": [
+          {
+            "manifestation": [
+              {
+                "coding": [
+                  {
+                    "system": "http://snomed.info/sct",
+                    "code": "271807003",
+                    "display": "Skin rash"
+                  }
+                ]
+              }
+            ],
+            "severity": "moderate"
+          }
+        ]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "AllergyIntolerance",
+        "id": "b000000000000000_850c000000000000",
+        "meta": {
+          "profile": [
+            "https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-AllergyIntolerance-1"
+          ]
+        },
+        "identifier": [
+          {
+            "system": "https://tpp-uk.com/Id/ccs-id",
+            "value": "b000000000000000_850c000000000000"
+          }
+        ],
+        "extension": [
+          {
+            "url": "http://hl7.org/fhir/StructureDefinition/encounter-associatedEncounter",
+            "valueReference": {
+              "reference": "Encounter/4000000000000000_c8845a0000000000"
+            }
+          }
+        ],
+        "verificationStatus": "unconfirmed",
+        "assertedDate": "2011-01-21T08:18:35+00:00",
+        "type": "allergy",
+        "code": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "419199007",
+              "display": "Allergy to grass pollen"
+            }
+          ],
+          "text": "Grass pollen"
+        },
+        "clinicalStatus": "active",
+        "patient": {
+          "reference": "Patient/e2f6100000000000"
+        },
+        "recorder": {
+          "reference": "PractitionerRole/7907200000000000"
+        },
+        "category": [
+          "environment"
+        ],
+        "criticality": "low",
+        "onsetDateTime": "2010-12-20",
+        "note": [
+          {
+            "text": "Allergy Type: Adverse Reaction, Certainty: Unconfirmed, Severity: Mild, NOTES: Hay fever symptoms in spring"
+          }
+        ]
+      }
+    }
+  ]
+}

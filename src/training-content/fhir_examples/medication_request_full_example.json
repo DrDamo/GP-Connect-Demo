@@ -1,0 +1,120 @@
+{
+  "resourceType": "MedicationRequest",
+  "id": "canonical-full-example-medicationrequest-order",
+  "meta": {
+    "profile": [
+      "https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-MedicationRequest-1"
+    ]
+  },
+  "identifier": [
+    {
+      "system": "https://tpp-uk.com/Id/ccs-id",
+      "value": "canonical-full-example-medicationrequest-order"
+    }
+  ],
+  "status": "completed",
+  "intent": "order",
+  "contained": [
+    {
+      "resourceType": "Medication",
+      "id": "med1",
+      "meta": {
+        "profile": [
+          "https://fhir.nhs.uk/STU3/StructureDefinition/CareConnect-GPC-Medication-1"
+        ]
+      },
+      "code": {
+        "coding": [
+          {
+            "system": "http://snomed.info/sct",
+            "code": "763158003",
+            "display": "Medicinal product"
+          },
+          {
+            "system": "https://dmd.nhs.uk",
+            "code": "39113611000001102",
+            "display": "Amoxicillin 500mg capsules"
+          }
+        ],
+        "text": "Amoxicillin 500mg capsules"
+      }
+    }
+  ],
+  "medicationReference": {
+    "reference": "#med1"
+  },
+  "subject": {
+    "reference": "Patient/e2f6100000000000"
+  },
+  "context": {
+    "reference": "Encounter/4000000000000000_c8845a0000000000"
+  },
+  "authoredOn": "2024-06-10T11:20:00+01:00",
+  "recorder": {
+    "reference": "PractitionerRole/7907200000000000"
+  },
+  "basedOn": [
+    {
+      "reference": "MedicationRequest/canonical-full-example-medicationrequest-plan"
+    }
+  ],
+  "dosageInstruction": [
+    {
+      "text": "One capsule to be taken three times a day for 7 days",
+      "timing": {
+        "code": {
+          "text": "Three times daily"
+        }
+      },
+      "route": {
+        "coding": [
+          {
+            "system": "http://snomed.info/sct",
+            "code": "26643006",
+            "display": "Oral route"
+          }
+        ]
+      },
+      "doseQuantity": {
+        "value": 1,
+        "unit": "capsule",
+        "system": "http://unitsofmeasure.org"
+      }
+    }
+  ],
+  "dispenseRequest": {
+    "expectedSupplyDuration": {
+      "value": 7,
+      "unit": "day",
+      "system": "http://unitsofmeasure.org",
+      "code": "d"
+    },
+    "quantity": {
+      "extension": [
+        {
+          "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-MedicationQuantityText-1",
+          "valueString": "capsule"
+        }
+      ],
+      "value": 21
+    },
+    "validityPeriod": {
+      "start": "2024-06-10",
+      "end": "2024-06-17"
+    }
+  },
+  "extension": [
+    {
+      "url": "https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-PrescriptionType-1",
+      "valueCodeableConcept": {
+        "coding": [
+          {
+            "system": "https://fhir.nhs.uk/STU3/CodeSystem/CareConnect-PrescriptionType-1",
+            "code": "acute",
+            "display": "Acute"
+          }
+        ]
+      }
+    }
+  ]
+}

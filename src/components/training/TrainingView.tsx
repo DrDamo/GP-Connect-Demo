@@ -178,6 +178,7 @@ const API_TILE_ACCENT: Record<ApiPageId, string> = {
 interface Props {
   initialPage?: DomainId | null
   onNavigate?: (page: DomainId | null) => void
+  onLoadExample?: (filename: string, data: unknown) => void
 }
 
 // ─── Components ──────────────────────────────────────────────────────────────
@@ -285,7 +286,7 @@ function PageEditBar({ isAdmin, onEdit }: { isAdmin: boolean; onEdit: () => void
   )
 }
 
-function DomainPage({ domainId, onBack, overrideContent, notes, isAdmin, onEdit, onAddNote, onUpdateNote, onDeleteNote }: { domainId: DomainId; onBack: () => void } & TrainingPageExtras) {
+function DomainPage({ domainId, onBack, overrideContent, notes, isAdmin, onEdit, onAddNote, onUpdateNote, onDeleteNote, onLoadExample }: { domainId: DomainId; onBack: () => void; onLoadExample?: (filename: string, data: unknown) => void } & TrainingPageExtras) {
   const domain = DOMAINS.find(d => d.id === domainId)!
   const accent = TILE_ACCENT[domainId] ?? 'text-nhs-grey-1'
   const colour = TILE_COLOURS[domainId] ?? 'border-nhs-grey-4 bg-white'
@@ -325,7 +326,7 @@ function DomainPage({ domainId, onBack, overrideContent, notes, isAdmin, onEdit,
           </div>
 
           <div className="bg-white dark:bg-slate-800 rounded-lg border border-nhs-grey-4 dark:border-slate-600 p-6">
-            <MarkdownContent content={effectiveContent} />
+            <MarkdownContent content={effectiveContent} onLoadExample={onLoadExample} />
           </div>
 
           <TrainingNotesPanel pageId={domainId} notes={notes} onAdd={onAddNote} onUpdate={onUpdateNote} onDelete={onDeleteNote} />
@@ -335,7 +336,7 @@ function DomainPage({ domainId, onBack, overrideContent, notes, isAdmin, onEdit,
   )
 }
 
-function ApiPage({ pageId, onBack, overrideContent, notes, isAdmin, onEdit, onAddNote, onUpdateNote, onDeleteNote }: { pageId: ApiPageId; onBack: () => void } & TrainingPageExtras) {
+function ApiPage({ pageId, onBack, overrideContent, notes, isAdmin, onEdit, onAddNote, onUpdateNote, onDeleteNote, onLoadExample }: { pageId: ApiPageId; onBack: () => void; onLoadExample?: (filename: string, data: unknown) => void } & TrainingPageExtras) {
   const tile = API_TILES.find(t => t.id === pageId)!
   const accent = API_TILE_ACCENT[pageId]
   const colour = API_TILE_COLOURS[pageId]
@@ -366,7 +367,7 @@ function ApiPage({ pageId, onBack, overrideContent, notes, isAdmin, onEdit, onAd
           </div>
 
           <div className="bg-white dark:bg-slate-800 rounded-lg border border-nhs-grey-4 dark:border-slate-600 p-6">
-            <MarkdownContent content={effectiveContent} />
+            <MarkdownContent content={effectiveContent} onLoadExample={onLoadExample} />
           </div>
 
           <TrainingNotesPanel pageId={pageId} notes={notes} onAdd={onAddNote} onUpdate={onUpdateNote} onDelete={onDeleteNote} />
@@ -378,7 +379,7 @@ function ApiPage({ pageId, onBack, overrideContent, notes, isAdmin, onEdit, onAd
 
 // ─── Main export ─────────────────────────────────────────────────────────────
 
-export function TrainingView({ initialPage, onNavigate }: Props) {
+export function TrainingView({ initialPage, onNavigate, onLoadExample }: Props) {
   const [page, setPage] = useState<PageId | null>(initialPage ?? null)
   const [editingPage, setEditingPage] = useState<PageId | null>(null)
 
@@ -411,6 +412,7 @@ export function TrainingView({ initialPage, onNavigate }: Props) {
               notes={notesByPage[page] ?? []}
               isAdmin={isAdmin}
               onEdit={() => setEditingPage(page)}
+              onLoadExample={onLoadExample}
               onAddNote={addNote}
               onUpdateNote={updateNote}
               onDeleteNote={deleteNote}
@@ -424,6 +426,7 @@ export function TrainingView({ initialPage, onNavigate }: Props) {
               notes={notesByPage[page] ?? []}
               isAdmin={isAdmin}
               onEdit={() => setEditingPage(page)}
+              onLoadExample={onLoadExample}
               onAddNote={addNote}
               onUpdateNote={updateNote}
               onDeleteNote={deleteNote}
