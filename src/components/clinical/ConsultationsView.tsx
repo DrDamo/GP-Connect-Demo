@@ -6,6 +6,7 @@ import type {
   GpConnectConsultationItem,
   GpConnectConsultationTopic,
 } from '../../fhir/types'
+import { formatCodedDataValue } from '../../fhir/utils'
 import { DomainTable } from './DomainTable'
 import type { DomainColumn } from './DomainTable'
 import { ReferencedResources } from './ReferencedResources'
@@ -123,13 +124,12 @@ function resolveContent(bundle: GpConnectBundle, item: GpConnectConsultationItem
       // Check coded-data first, then fall through to investigation results
       const coded = bundle.codedData.find(c => c.id === resourceId)
       if (coded) {
-        const valueText = [coded.value, coded.unit].filter(Boolean).join(' ')
         return {
           label: coded.description,
           badge: coded.category ?? 'Observation',
           navId: coded.id,
           navDomain: 'coded-data',
-          value: valueText || undefined,
+          value: formatCodedDataValue(coded),
           comment: coded.comment,
           fields: [
             coded.date   ? { key: 'Date',  value: coded.date } : null,

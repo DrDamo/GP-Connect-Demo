@@ -8,21 +8,52 @@ import {
 // Current vs past classification — GP supplier quirks
 // ---------------------------------------------------------------------------
 //
-// TPP (SystmOne) reports MedicationStatement/Request status accurately —
-// "active" while a course is genuinely ongoing — so current/past can be read
-// straight off status, which is exactly the original (pre-supplier-aware)
-// rule this app already used. EMIS Web marks an Acute "completed" as soon as
-// it's issued, regardless of whether the course has actually finished, so a
-// completed Acute needs date arithmetic to tell current from past. Medicus
-// is documented (by the person who asked for this) to behave the same way
-// as EMIS here; there's no known bundle marker to distinguish it from EMIS
-// yet, so both fall under the same non-TPP branch below. Repeat / repeat
-// dispensing / prescribed-elsewhere rules aren't defined for EMIS/Medicus
-// yet either — those fall back to the TPP-style status-only rule until
-// that's built.
+// TPP (SystmOne) reports MedicationStatement/Request status accurately for
+// every prescription type: "active" while genuinely ongoing, "completed"/
+// "stopped" once it's not — including repeats, where reauthorising or
+// changing dosage completes the old plan/statement and creates a fresh
+// active one. So for TPP, current/past can always be read straight off
+// status.
+//
+// EMIS Web (and Medicus, documented by the person who asked for this to
+// behave the same way — there's no known bundle marker to distinguish it
+// from EMIS yet) do not:
+//
+// - Acute: marked "completed" as soon as it's issued, regardless of whether
+//   the course has actually finished, so a completed Acute needs date
+//   arithmetic to tell current from past.
+// - Repeat: stays "active" until the last of the allowed issues has been
+//   made, at which point it flips to "completed" — but it's still the
+//   patient's current repeat. It only stops being current once it's
+//   "stopped", or once it's been reauthorised (a new active plan/statement
+//   is created and this one is left "completed" with a statusReason to that
+//   effect).
+// - Repeat dispensing: all issues are prescribed in one batch up front, so
+//   it flips to "completed" as soon as the first issue is made — again,
+//   still current until stopped or reauthorised.
+//
+// Prescribed elsewhere is the one prescriptionType where "completed" isn't
+// a vendor quirk to work around at all — it's a record of something
+// prescribed outside this GP system, so current/past follows the same
+// stopped-or-not rule for every vendor (see the prescribed-elsewhere check
+// below, ahead of the TPP/EMIS split).
+//
+// Delayed-prescribing rules aren't defined for EMIS/Medicus yet — that
+// falls back to the TPP-style status-only rule until it's built.
 //
 // Note: this only controls which section (current/past) a medication is
 // grouped under — the actual FHIR status is always displayed unchanged.
+
+// Matches the statusReason text EMIS/Medicus use on a "completed" repeat or
+// repeat dispensing that's been superseded by a fresh authorisation — e.g.
+// "Reauthorised", "Re-authorised", "reauthorized". This is the only signal
+// that a completed repeat is no longer current rather than just between
+// issues or awaiting collection of its last one.
+const REAUTHORISED_REASON = /re[-\s]?authoris|re[-\s]?authoriz/i
+
+function isReauthorisedReason(statusReason: string | undefined): boolean {
+  return !!statusReason && REAUTHORISED_REASON.test(statusReason)
+}
 
 function detectIsTpp(bundle: fhir3.Bundle): boolean {
   const systems = getEntries<fhir3.Medication>(bundle, 'Medication')
@@ -54,15 +85,46 @@ function parseFhirDate(raw: string | undefined): Date | undefined {
 function classifyIsCurrent(params: {
   status: string
   prescriptionType?: string
+  prescribingAgency?: string
   isTpp: boolean
   startRaw?: string
   endRaw?: string
   supplyDuration?: fhir3.Duration
+  statusReason?: string
 }): boolean {
-  const { status, prescriptionType, isTpp, startRaw, endRaw, supplyDuration } = params
+  const { status, prescriptionType, prescribingAgency, isTpp, startRaw, endRaw, supplyDuration, statusReason } = params
   const legacyIsPast = status === 'completed' || status === 'stopped' || status === 'entered-in-error'
 
-  if (isTpp || prescriptionType !== 'acute') {
+  // Prescribed elsewhere — this is a record of something prescribed outside
+  // the practice (e.g. by a hospital), not a course this GP system is
+  // tracking to completion, so "completed" doesn't mean finished the way it
+  // does for a locally-issued prescription. In real bundles this is signalled
+  // by the PrescribingAgency extension (prescribed-by-another-organisation),
+  // not prescriptionType — a prescribed-elsewhere item is still filed as an
+  // ordinary acute/repeat/repeat-dispensing prescriptionType. The literal
+  // prescriptionType code is kept as a fallback for bundles that do use it
+  // that way. Same rule regardless of vendor or prescriptionType: current
+  // unless actually stopped.
+  if (prescriptionType === 'prescribed-elsewhere' || prescribingAgency === 'prescribed-by-another-organisation') {
+    return status !== 'stopped' && status !== 'entered-in-error'
+  }
+
+  if (isTpp) {
+    return !legacyIsPast
+  }
+
+  // EMIS/Medicus Repeat & Repeat Dispensing rules — "completed" here means
+  // either the last issue has gone out (Repeat) or the single batch of
+  // issues has been raised (Repeat Dispensing), not that the medication has
+  // stopped. It's still current unless actually stopped, or superseded by a
+  // reauthorisation (flagged via statusReason).
+  if (prescriptionType === 'repeat' || prescriptionType === 'repeat-dispensing') {
+    if (status === 'stopped' || status === 'entered-in-error') return false
+    if (status !== 'completed') return true // active, or any other unlisted status
+    return !isReauthorisedReason(statusReason)
+  }
+
+  if (prescriptionType !== 'acute') {
     return !legacyIsPast
   }
 
@@ -129,8 +191,8 @@ function extractPrescriptionType(resource: { extension?: fhir3.Extension[] }): s
   return cc?.coding?.[0]?.code ?? cc?.text
 }
 
-function extractPrescribingAgency(stmt: fhir3.MedicationStatement): string | undefined {
-  const ext = getExtensionValue(stmt.extension, 'Extension-CareConnect-GPC-PrescribingAgency-1')
+function extractPrescribingAgency(resource: { extension?: fhir3.Extension[] }): string | undefined {
+  const ext = getExtensionValue(resource.extension, 'Extension-CareConnect-GPC-PrescribingAgency-1')
   const cc = ext?.valueCodeableConcept as fhir3.CodeableConcept | undefined
   return cc?.coding?.[0]?.code ?? cc?.text
 }
@@ -237,7 +299,7 @@ export function extractMedications(bundle: fhir3.Bundle): GpConnectMedication[] 
       statusReasonSubs?.find(e => e.url === 'statusChangeDate')?.valueDateTime as string | undefined
     )
 
-    const prescribingAgency = extractPrescribingAgency(stmt)
+    const prescribingAgency = extractPrescribingAgency(stmt) ?? extractPrescribingAgency(planRequest ?? {})
 
     // Order requests (individual issues) reference the plan via their own basedOn
     const planId = planRequest?.id
@@ -310,10 +372,12 @@ export function extractMedications(bundle: fhir3.Bundle): GpConnectMedication[] 
     const isCurrent = classifyIsCurrent({
       status: stmt.status ?? 'unknown',
       prescriptionType,
+      prescribingAgency,
       isTpp,
       startRaw: effectivePeriod?.start ?? effectiveDateTime,
       endRaw: effectivePeriod?.end,
       supplyDuration: esd,
+      statusReason,
     })
 
     const noteText = stmt.note?.[0]?.text
@@ -433,13 +497,17 @@ export function extractMedications(bundle: fhir3.Bundle): GpConnectMedication[] 
       ? `${esd.value} ${esd.unit ?? esd.code ?? ''}`.trim()
       : undefined
 
+    const prescribingAgency = extractPrescribingAgency(planReq)
+
     const isCurrent = classifyIsCurrent({
       status: planReq.status ?? 'unknown',
       prescriptionType,
+      prescribingAgency,
       isTpp,
       startRaw: vp?.start ?? planReq.authoredOn,
       endRaw: vp?.end,
       supplyDuration: esd,
+      statusReason,
     })
 
     const reqRef = (planReq as unknown as Record<string, unknown>)['requester'] as { agent?: fhir3.Reference } | undefined
@@ -509,7 +577,7 @@ export function extractMedications(bundle: fhir3.Bundle): GpConnectMedication[] 
       route,
       status: planReq.status ?? 'unknown',
       prescriptionType,
-      prescribingAgency: undefined,
+      prescribingAgency,
       startDate,
       endDate,
       lastIssuedDate: undefined,

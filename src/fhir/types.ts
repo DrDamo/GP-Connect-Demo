@@ -402,7 +402,6 @@ export interface GpConnectDiaryEntry {
 export interface GpConnectCodedDataItem {
   id: string
   date?: string
-  isIssuedDate?: boolean
   category?: string
   snomedCode?: string
   description: string

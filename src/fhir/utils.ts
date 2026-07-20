@@ -1,4 +1,4 @@
-import type { GpConnectPatient, GpConnectContact } from './types'
+import type { GpConnectPatient, GpConnectContact, GpConnectCodedDataItem } from './types'
 
 export type AnyResource = fhir3.Resource & { resourceType: string }
 
@@ -84,6 +84,25 @@ export function formatDate(dateStr: string | undefined): string | undefined {
   } catch {
     return dateStr
   }
+}
+
+/** Formats a coded-data item's value for display, falling back to pairing
+ * systolic/diastolic components (e.g. blood pressure) when there's no
+ * top-level value — used so the Coded Data view, Consultations view, and
+ * Inspector all show BP-style composite observations the same way. */
+export function formatCodedDataValue(item: GpConnectCodedDataItem): string | undefined {
+  if (item.value !== undefined || item.unit) {
+    return [item.value, item.unit].filter(Boolean).join(' ')
+  }
+  if (item.components?.length) {
+    const sys = item.components.find(c => /systolic/i.test(c.name))
+    const dia = item.components.find(c => /diastolic/i.test(c.name))
+    if (sys?.value !== undefined && dia?.value !== undefined) {
+      const unit = sys.unit ?? dia.unit
+      return [sys.value + '/' + dia.value, unit].filter(Boolean).join(' ') || undefined
+    }
+  }
+  return undefined
 }
 
 export function getExtensionValue(extensions: fhir3.Extension[] | undefined, url: string): fhir3.Extension | undefined {

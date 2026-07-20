@@ -25,13 +25,16 @@ function extractObsDescription(obs: ObsLike): string {
 
 const COMMENT_NOTE_CODE = '37331000000100'
 
+type Related = { type?: string; target?: { reference?: string } }
+
 export function extractCodedData(bundle: fhir3.Bundle): GpConnectCodedDataItem[] {
   // Always exclude observations that belong to a DiagnosticReport result set.
   // Also traverse has-member links transitively: GP Connect bundles list only the
   // group-header in DiagnosticReport.result; the individual child results are only
   // reachable via related[type=has-member] on that header.
   const allObsById = new Map<string, ObsLike>()
-  getEntries<ObsLike>(bundle, 'Observation').forEach(obs => { if (obs.id) allObsById.set(obs.id, obs) })
+  const allObs = getEntries<ObsLike>(bundle, 'Observation')
+  allObs.forEach(obs => { if (obs.id) allObsById.set(obs.id, obs) })
 
   const investigationObsIds = new Set<string>()
   getEntries<fhir3.DiagnosticReport>(bundle, 'DiagnosticReport').forEach(report => {
@@ -46,7 +49,6 @@ export function extractCodedData(bundle: fhir3.Bundle): GpConnectCodedDataItem[]
     const id = queue.shift()!
     const obs = allObsById.get(id)
     if (!obs) continue
-    type Related = { type?: string; target?: { reference?: string } }
     const related = (obs as unknown as { related?: Related[] }).related ?? []
     for (const r of related) {
       // Some vendor bundles (e.g. Orange Labs) omit related.type entirely on
@@ -68,7 +70,7 @@ export function extractCodedData(bundle: fhir3.Bundle): GpConnectCodedDataItem[]
   // a free-text comment note (37331000000100) — including ones nested inside
   // consultation topic/category lists (24781000000107), which also surface
   // there but should still appear here as flat coded entries.
-  const observations = getEntries<ObsLike>(bundle, 'Observation')
+  const observations = allObs
     .filter(notAnInvestigation)
     .filter(obs => !obs.code?.coding?.some(c => c.code === COMMENT_NOTE_CODE))
 
@@ -121,7 +123,6 @@ export function extractCodedData(bundle: fhir3.Bundle): GpConnectCodedDataItem[]
       const encounterId = extractId(contextRef)
 
       const effectiveDateTime = cast.effectiveDateTime
-      const isIssuedDate = !effectiveDateTime && !!obs.issued
       const category = extractOriginalTermText((obs.category as fhir3.CodeableConcept[] | undefined)?.[0])
 
       const isTransferDegraded = coding?.some(c => c.code === TRANSFER_DEGRADED_CODE)
@@ -131,7 +132,6 @@ export function extractCodedData(bundle: fhir3.Bundle): GpConnectCodedDataItem[]
       return {
         id: obs.id ?? crypto.randomUUID(),
         date: formatDate(effectiveDateTime ?? obs.issued),
-        isIssuedDate,
         category,
         snomedCode: extractSnomedCode(coding),
         description: extractObsDescription(obs),

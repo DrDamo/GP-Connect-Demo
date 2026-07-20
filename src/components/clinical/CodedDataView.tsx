@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { GpConnectBundle, GpConnectCodedDataItem } from '../../fhir/types'
-import { DomainTable, DegradedTermText } from './DomainTable'
+import { formatCodedDataValue } from '../../fhir/utils'
+import { DomainTable, DegradedTermText, hasDegradeMarker } from './DomainTable'
 import type { DomainColumn } from './DomainTable'
 import { ReferencedResources } from './ReferencedResources'
 import { ReferenceChip } from './ResourceCard'
@@ -28,12 +29,7 @@ const COLUMNS: DomainColumn<GpConnectCodedDataItem>[] = [
   {
     label: 'Date',
     className: 'w-28',
-    render: item => (
-      <div>
-        <div>{item.date ?? 'Unknown'}</div>
-        {item.isIssuedDate && <div className="text-[10px] text-nhs-grey-3 mt-0.5">issued</div>}
-      </div>
-    ),
+    render: item => item.date ?? 'Unknown',
   },
   {
     label: 'Description',
@@ -41,7 +37,7 @@ const COLUMNS: DomainColumn<GpConnectCodedDataItem>[] = [
       <div>
         <div className="font-medium text-nhs-grey-1">
           <DegradedTermText text={item.description} />
-          {item.isTransferDegraded && (
+          {item.isTransferDegraded && !hasDegradeMarker(item.description) && (
             <span className="inline-block ml-1.5 text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200 font-medium leading-none align-middle">Degrade</span>
           )}
         </div>
@@ -56,20 +52,7 @@ const COLUMNS: DomainColumn<GpConnectCodedDataItem>[] = [
   {
     label: 'Value',
     className: 'w-32',
-    render: item => {
-      if (item.value !== undefined || item.unit) {
-        return [item.value, item.unit].filter(Boolean).join(' ')
-      }
-      if (item.components?.length) {
-        const sys = item.components.find(c => /systolic/i.test(c.name))
-        const dia = item.components.find(c => /diastolic/i.test(c.name))
-        if (sys?.value !== undefined && dia?.value !== undefined) {
-          const unit = sys.unit ?? dia.unit
-          return [sys.value + '/' + dia.value, unit].filter(Boolean).join(' ')
-        }
-      }
-      return ''
-    },
+    render: item => formatCodedDataValue(item) ?? '',
   },
   {
     label: 'Performer',
@@ -112,7 +95,7 @@ function CodedDataDetail({ item, bundle, onJumpToSource, onJumpToRecord }: { ite
         {item.snomedCode && (
           <DetailRow label="SNOMED code" value={<span className="font-mono">{item.snomedCode}</span>} />
         )}
-        <DetailRow label={item.isIssuedDate ? 'Issue date' : 'Date'} value={item.date} />
+        <DetailRow label="Date" value={item.date} />
         {valueText && (
           <DetailRow label="Value" value={<span className="font-semibold">{valueText}</span>} />
         )}
