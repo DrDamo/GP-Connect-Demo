@@ -3,6 +3,7 @@ import { DOMAINS, type DomainId, type DomainDef } from '../clinical/domains'
 import { MarkdownContent } from './MarkdownContent'
 import { slugify } from './utils'
 import { useAuth } from '../../auth/AuthContext'
+import { useOnboarding } from '../../onboarding/OnboardingContext'
 import { PencilIcon } from '../../builder/components/Icons'
 import { useTrainingContentOverrides } from './hooks/useTrainingContentOverrides'
 import { useTrainingNotes, type TrainingNote } from './hooks/useTrainingNotes'
@@ -220,6 +221,47 @@ function ApiTile({ tile, onClick }: { tile: ApiTileDef; onClick: () => void }) {
   )
 }
 
+const DISCLAIMER_HINT_ID = 'training-nhs-disclaimer'
+
+function TrainingDisclaimerModal({ onAcknowledge }: { onAcknowledge: () => void }) {
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onAcknowledge()
+    }
+    document.addEventListener('keydown', handleKey)
+    return () => document.removeEventListener('keydown', handleKey)
+  }, [onAcknowledge])
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-md">
+        <div className="px-5 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">Before you start</h2>
+        </div>
+
+        <div className="px-5 py-4 space-y-2">
+          <p className="text-sm text-gray-700 dark:text-gray-300">
+            These training guides are provided <strong>&ldquo;as is&rdquo;</strong> to help explain how GP Connect Access Record Structured data is modelled.
+          </p>
+          <p className="text-sm text-gray-700 dark:text-gray-300">
+            The official NHS websites (NHS Digital / NHS England) are the authoritative sources. NHS guidance is updated regularly, so content here may become out of date &mdash; always verify against the current NHS documentation before relying on it.
+          </p>
+        </div>
+
+        <div className="flex justify-end gap-2 px-5 py-3 border-t border-gray-200 dark:border-gray-700">
+          <button
+            type="button"
+            onClick={onAcknowledge}
+            className="px-4 py-2 rounded-md text-sm font-medium text-white bg-nhs-blue hover:opacity-90 transition-opacity"
+          >
+            I understand
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function IntroPage({ onSelect }: { onSelect: (id: PageId) => void }) {
   return (
     <div className="max-w-4xl mx-auto space-y-8 py-6">
@@ -387,6 +429,8 @@ export function TrainingView({ initialPage, onNavigate, onLoadExample }: Props) 
   const isAdmin = profile?.role === 'admin'
   const { overrides, refetch: refetchOverrides } = useTrainingContentOverrides()
   const { notesByPage, addNote, updateNote, deleteNote } = useTrainingNotes()
+  const { isHintDismissed, dismissHint } = useOnboarding()
+  const showDisclaimer = !isHintDismissed(DISCLAIMER_HINT_ID)
 
   useEffect(() => {
     if (initialPage !== undefined) setPage(initialPage ?? null)
@@ -433,6 +477,10 @@ export function TrainingView({ initialPage, onNavigate, onLoadExample }: Props) 
             />
           )
       }
+
+      {showDisclaimer && (
+        <TrainingDisclaimerModal onAcknowledge={() => dismissHint(DISCLAIMER_HINT_ID)} />
+      )}
 
       {editingPage !== null && (
         <TrainingContentEditor

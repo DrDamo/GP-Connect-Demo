@@ -399,20 +399,20 @@ function MedicationsTable({ medications, record, selectedId, selectedIssueId, on
   if (medications.length === 0) return null
   const showNotForPfsColumn = medications.some(m => m.notForPfs)
   return (
-    <div className="border border-nhs-grey-5 rounded-lg overflow-hidden">
-      <table className="w-full text-left">
-        <thead>
+    <div className="border border-nhs-grey-5 rounded-lg">
+      <table className="w-full text-left border-separate border-spacing-0">
+        <thead className="sticky -top-4 z-10">
           <tr className="bg-nhs-grey-5 text-xs font-semibold text-nhs-grey-2 uppercase tracking-wide">
-            <th className="py-2 px-3">Drug</th>
-            <th className="py-2 px-3">Dose / Frequency</th>
-            <th className="py-2 px-3">Quantity</th>
-            <th className="py-2 px-3">Start date</th>
-            <th className="py-2 px-3">Last issued</th>
-            <th className="py-2 px-3">
+            <th className="bg-nhs-grey-5 pt-6 pb-2 px-3 rounded-tl-lg">Drug</th>
+            <th className="bg-nhs-grey-5 pt-6 pb-2 px-3">Dose / Frequency</th>
+            <th className="bg-nhs-grey-5 pt-6 pb-2 px-3">Quantity</th>
+            <th className="bg-nhs-grey-5 pt-6 pb-2 px-3">Start date</th>
+            <th className="bg-nhs-grey-5 pt-6 pb-2 px-3">Last issued</th>
+            <th className="bg-nhs-grey-5 pt-6 pb-2 px-3">
               <span className="inline-flex items-center gap-1">Status <InfoHint topic="clinical.medications.status-colours" /></span>
             </th>
-            {showNotForPfsColumn && <th className="py-2 px-3"></th>}
-            <th className="py-2 px-3 w-6"></th>
+            {showNotForPfsColumn && <th className="bg-nhs-grey-5 pt-6 pb-2 px-3"></th>}
+            <th className="bg-nhs-grey-5 pt-6 pb-2 px-3 w-6 rounded-tr-lg"></th>
           </tr>
         </thead>
         <tbody>
@@ -484,6 +484,17 @@ export function MedicationsView({ record, selectedId, selectedIssueId, onSelect,
   const activeMeds = counts[activeTab]
   const activeTabDef = TAB_DEFS.find(t => t.id === activeTab)!
 
+  // Within "Past", still group by the original prescription type so the
+  // clinical categories (Acute / Repeat / Repeat Dispensing / Prescribed
+  // Elsewhere) are reachable via a nested sub-tab bar rather than one long
+  // stacked scroll.
+  const PAST_GROUP_ORDER: MedTab[] = ['acute', 'repeat', 'repeat-dispensing', 'prescribed-elsewhere', 'other']
+  const pastGroups = PAST_GROUP_ORDER
+    .map(groupId => ({ groupId, meds: activeMeds.filter(m => getPrescriptionTab(m) === groupId) }))
+    .filter(g => g.meds.length > 0)
+  const [pastSubTab, setPastSubTab] = useState<MedTab | null>(null)
+  const effectivePastSubTab = pastGroups.find(g => g.groupId === pastSubTab)?.groupId ?? pastGroups[0]?.groupId ?? null
+
   const renderTable = (meds: GpConnectMedication[]) => (
     <MedicationsTable
       medications={meds}
@@ -496,11 +507,6 @@ export function MedicationsView({ record, selectedId, selectedIssueId, onSelect,
       onJumpToRecord={onJumpToRecord}
     />
   )
-
-  // Within "Past", still group by the original prescription type so the
-  // clinical categories (Acute / Repeat / Repeat Dispensing / Prescribed
-  // Elsewhere) remain visible rather than one undifferentiated list.
-  const PAST_GROUP_ORDER: MedTab[] = ['acute', 'repeat', 'repeat-dispensing', 'prescribed-elsewhere', 'other']
 
   return (
     <div className="space-y-4">
@@ -554,19 +560,31 @@ export function MedicationsView({ record, selectedId, selectedIssueId, onSelect,
         <div>
           <p className="text-xs text-nhs-grey-3 mb-3">{activeTabDef.description}</p>
           {activeTab === 'past' ? (
-            <div className="space-y-5">
-              {PAST_GROUP_ORDER.map(groupId => {
-                const groupMeds = activeMeds.filter(m => getPrescriptionTab(m) === groupId)
-                if (groupMeds.length === 0) return null
-                return (
-                  <div key={groupId}>
-                    <p className="text-xs font-semibold text-nhs-grey-2 uppercase tracking-wide mb-2">
-                      {TAB_DEFS.find(t => t.id === groupId)!.label}
-                    </p>
-                    {renderTable(groupMeds)}
-                  </div>
-                )
-              })}
+            <div>
+              <div className="flex gap-1.5 mb-3 flex-wrap">
+                {pastGroups.map(g => {
+                  const isActive = g.groupId === effectivePastSubTab
+                  return (
+                    <button
+                      key={g.groupId}
+                      onClick={() => setPastSubTab(g.groupId)}
+                      className={`px-2.5 py-1 text-xs font-medium rounded-full border transition-colors ${
+                        isActive
+                          ? 'bg-nhs-blue text-white border-nhs-blue'
+                          : 'bg-white text-nhs-grey-2 border-nhs-grey-4 hover:border-nhs-blue hover:text-nhs-blue'
+                      }`}
+                    >
+                      {TAB_DEFS.find(t => t.id === g.groupId)!.label}
+                      <span className={`ml-1.5 px-1.5 py-0.5 text-[10px] rounded-full font-semibold ${
+                        isActive ? 'bg-white/20 text-white' : 'bg-nhs-grey-4 text-nhs-grey-2'
+                      }`}>
+                        {g.meds.length}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+              {renderTable(pastGroups.find(g => g.groupId === effectivePastSubTab)?.meds ?? [])}
             </div>
           ) : renderTable(activeMeds)}
         </div>

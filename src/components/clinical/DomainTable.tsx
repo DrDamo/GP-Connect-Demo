@@ -165,12 +165,15 @@ export function DomainTable<T extends { id: string; notForPfs?: boolean }>({
     : columns
 
   return (
-    <div className="border border-nhs-grey-5 rounded-lg overflow-hidden">
-      <table className="w-full text-left">
-        <thead>
+    <div className="border border-nhs-grey-5 rounded-lg">
+      <table className="w-full text-left border-separate border-spacing-0">
+        <thead className="sticky -top-4 z-10">
           <tr className="bg-nhs-grey-5 text-xs font-semibold text-nhs-grey-2 uppercase tracking-wide">
             {effectiveColumns.map((col, idx) => (
-              <th key={col.label || `col-${idx}`} className={`py-2 px-3 ${col.className ?? ''}`}>
+              <th
+                key={col.label || `col-${idx}`}
+                className={`bg-nhs-grey-5 pt-6 pb-2 px-3 ${idx === 0 ? 'rounded-tl-lg' : ''} ${idx === effectiveColumns.length - 1 ? 'rounded-tr-lg' : ''} ${col.className ?? ''}`}
+              >
                 {col.label}
               </th>
             ))}
