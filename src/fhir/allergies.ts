@@ -14,7 +14,17 @@ export function extractAllergies(bundle: fhir3.Bundle): GpConnectAllergy[] {
   const contained = ((endedList as unknown as { contained?: fhir3.Resource[] })?.contained ?? [])
     .filter((r): r is fhir3.AllergyIntolerance => (r as unknown as { resourceType?: string }).resourceType === 'AllergyIntolerance')
 
-  return [...topLevel, ...contained]
+  // Some suppliers (e.g. TPP) duplicate resolved allergies: once as a top-level
+  // entry and again inside the "Ended allergies" List's contained array.
+  const seenIds = new Set<string>()
+  const combined = [...topLevel, ...contained].filter(resource => {
+    if (!resource.id) return true
+    if (seenIds.has(resource.id)) return false
+    seenIds.add(resource.id)
+    return true
+  })
+
+  return combined
     .sort((a, b) => fhirDateKey((b as unknown as {assertedDate?: string}).assertedDate).localeCompare(fhirDateKey((a as unknown as {assertedDate?: string}).assertedDate)))
     .map(resource => {
     const coding = resource.code?.coding

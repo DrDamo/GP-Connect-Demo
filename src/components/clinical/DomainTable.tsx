@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import type React from 'react'
 import { SNOMED_SYSTEM } from '../../fhir/snomedDegrade'
 import { useAnchoredDropdown } from '../../hooks/useAnchoredDropdown'
+import type { CodeStatus } from '../../fhir/types'
 
 export interface DomainColumn<T> {
   label: string
@@ -49,6 +50,32 @@ export function NotForPfsBadge() {
       title="Tagged with a NOPAT security label — withheld from patient-facing services"
     >
       Not for PFS
+    </span>
+  )
+}
+
+// "Inactive"/"Withdrawn" tag for a SNOMED CT or dm+d coding — status comes
+// from bundle.snomedStatus (populated after load, see checkSnomedStatuses in
+// src/fhir/snomedDegrade.ts). This is purely a UI tag: an inactive concept is
+// still a valid, real one and is never transfer-degraded (see DegradeBadge
+// below, which is existence-only). `withdrawn` is a dm+d-specific refinement
+// — set when a medication's AMP has a discontinued prescribing/availability
+// status — and takes precedence over the generic "Inactive" label.
+export function CodeStatusBadge({ status }: { status?: CodeStatus }) {
+  if (!status?.inactive) return null
+  return status.withdrawn ? (
+    <span
+      className="inline-block ml-1.5 px-2 py-0.5 text-xs font-semibold rounded border bg-red-100 text-red-800 border-red-300 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700"
+      title="This medication's AMP has a discontinued prescribing/availability status"
+    >
+      Withdrawn
+    </span>
+  ) : (
+    <span
+      className="inline-block ml-1.5 px-2 py-0.5 text-xs font-semibold rounded border bg-nhs-grey-5 text-nhs-grey-2 border-nhs-grey-4 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600"
+      title="This code is marked inactive on the terminology server"
+    >
+      Inactive
     </span>
   )
 }

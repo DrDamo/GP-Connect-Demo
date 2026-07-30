@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { expandValueSet } from '../fhir/expand.js'
-import { lookupCode, validateCodesBatch } from '../fhir/lookup.js'
+import { lookupCode, validateCodesBatch, lookupStatusBatch } from '../fhir/lookup.js'
 import { snomedValueSetUrl, toSnomedResult, toSnomedDetail } from '../fhir/mappers.js'
 
 export const snomedRouter = Router()
@@ -73,6 +73,37 @@ snomedRouter.post('/validate-batch', async (req, res) => {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     console.error('[snomed/validate-batch]', message)
+    res.status(502).json({ error: message })
+  }
+})
+
+// POST /api/snomed/status-batch  { codes: string[], medicationCodes?: string[] }
+// Response: { results: { [code]: { inactive?: boolean; withdrawn?: boolean } } }
+// Bulk active/inactive check for every SNOMED CT coding in a loaded bundle,
+// tagging in the UI only — this never feeds the transfer-degrade check above
+// (inactive concepts are still valid and must not be degraded). Codes in
+// `medicationCodes` (a subset of `codes`) also get a `withdrawn` flag when
+// their dm+d prescribing/non-availability status indicates the AMP's been
+// discontinued.
+snomedRouter.post('/status-batch', async (req, res) => {
+  const codes = req.body?.codes
+  const medicationCodes = req.body?.medicationCodes
+
+  if (!Array.isArray(codes) || !codes.every((c: unknown) => typeof c === 'string')) {
+    res.status(400).json({ error: 'codes must be an array of strings' })
+    return
+  }
+  if (medicationCodes !== undefined && (!Array.isArray(medicationCodes) || !medicationCodes.every((c: unknown) => typeof c === 'string'))) {
+    res.status(400).json({ error: 'medicationCodes must be an array of strings' })
+    return
+  }
+
+  try {
+    const results = await lookupStatusBatch(codes, new Set(medicationCodes ?? []))
+    res.json({ results })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('[snomed/status-batch]', message)
     res.status(502).json({ error: message })
   }
 })

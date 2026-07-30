@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { GpConnectBundle, GpConnectAllergy } from '../../fhir/types'
-import { DomainTable, StatusBadge, DegradedTermText } from './DomainTable'
+import { DomainTable, StatusBadge, DegradedTermText, CodeStatusBadge } from './DomainTable'
 import type { DomainColumn } from './DomainTable'
 import { ReferencedResources } from './ReferencedResources'
 import { ReferenceChip } from './ResourceCard'
@@ -87,7 +87,12 @@ function AllergyDetail({ allergy, bundle, onJumpToSource, onJumpToRecord }: { al
       <div className="grid grid-cols-2 gap-x-8 gap-y-1.5">
         {showSnomedTerm && <DetailRow label="SNOMED term" value={allergy.snomedDisplay} />}
         {allergy.snomedCode && (
-          <DetailRow label="SNOMED code" value={<span className="font-mono">{allergy.snomedCode}</span>} />
+          <DetailRow label="SNOMED code" value={
+            <>
+              <span className="font-mono">{allergy.snomedCode}</span>
+              <CodeStatusBadge status={bundle.snomedStatus?.[allergy.snomedCode]} />
+            </>
+          } />
         )}
         <DetailRow label="Onset date"     value={allergy.onsetDate} />
         <DetailRow label="Asserted date"  value={allergy.dateRecorded} />

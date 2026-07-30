@@ -171,6 +171,12 @@ type ConceptField =
   | 'dispensedDoseForm' | 'basicDoseForm' | 'route' | 'ontologyFormAndRoute'
   | 'supplier' | 'controlledDrugCategory' | 'prescribingStatus' | 'nonAvailability'
 
+// "Has prescribing status" / "Has non-availability indicator" — also read
+// standalone (not just via CONCEPT_ATTRIBUTES) by extractCodeStatus below, to
+// detect a discontinued AMP without needing the full DmdDetail mapping.
+const PRESCRIBING_STATUS_ATTRIBUTE_ID = '8940001000001105'
+const NON_AVAILABILITY_ATTRIBUTE_ID = '8940601000001102'
+
 // Attribute concept IDs that carry a concept-reference value, mapped to the
 // DmdDetail field they populate. Strength units are handled separately below
 // since they nest inside `strength` rather than sitting at the top level.
@@ -184,8 +190,8 @@ const CONCEPT_ATTRIBUTES: Record<string, ConceptField> = {
   '13088501000001100': 'ontologyFormAndRoute',
   '774159003': 'supplier',                  // Has supplier (AMP)
   '13089101000001102': 'controlledDrugCategory',
-  '8940001000001105': 'prescribingStatus',
-  '8940601000001102': 'nonAvailability',
+  [PRESCRIBING_STATUS_ATTRIBUTE_ID]: 'prescribingStatus',
+  [NON_AVAILABILITY_ATTRIBUTE_ID]: 'nonAvailability',
 }
 
 const UNIT_ATTRIBUTES: Record<string, 'numeratorUnit' | 'denominatorUnit'> = {
@@ -228,13 +234,17 @@ function findNormalFormExpression(parameters: FhirParameters): string | undefine
     ?.part?.find(part => part.name === 'value')?.valueString
 }
 
-export function toDmdDetail(parameters: FhirParameters, type: 'VMP' | 'AMP'): DmdDetail {
-  const code = findParameter(parameters, 'code')?.valueCode ?? ''
-  const display = findParameter(parameters, 'display')?.valueString ?? ''
+export function extractInactive(parameters: FhirParameters): boolean | undefined {
   const inactiveProp = (parameters.parameter ?? []).find(
     p => p.name === 'property' && p.part?.some(part => part.name === 'code' && part.valueCode === 'inactive'),
   )
-  const inactive = inactiveProp?.part?.find(part => part.name === 'value')?.valueBoolean
+  return inactiveProp?.part?.find(part => part.name === 'value')?.valueBoolean
+}
+
+export function toDmdDetail(parameters: FhirParameters, type: 'VMP' | 'AMP'): DmdDetail {
+  const code = findParameter(parameters, 'code')?.valueCode ?? ''
+  const display = findParameter(parameters, 'display')?.valueString ?? ''
+  const inactive = extractInactive(parameters)
 
   const normalForm = findNormalFormExpression(parameters)
   const attrs = normalForm ? parseNormalFormAttributes(normalForm) : []
@@ -362,10 +372,7 @@ export interface SnomedDetail {
 export function toSnomedDetail(parameters: FhirParameters): SnomedDetail {
   const code = findParameter(parameters, 'code')?.valueCode ?? ''
   const display = findParameter(parameters, 'display')?.valueString ?? ''
-  const inactiveProp = (parameters.parameter ?? []).find(
-    p => p.name === 'property' && p.part?.some(part => part.name === 'code' && part.valueCode === 'inactive'),
-  )
-  const inactive = inactiveProp?.part?.find(part => part.name === 'value')?.valueBoolean
+  const inactive = extractInactive(parameters)
 
   const designations: SnomedDesignation[] = (parameters.parameter ?? [])
     .filter(p => p.name === 'designation')
@@ -398,4 +405,43 @@ export function toSnomedDetail(parameters: FhirParameters): SnomedDetail {
     designations,
     attributes,
   }
+}
+
+// ---------------------------------------------------------------------------
+// Bulk active/inactive + withdrawn status — a lightweight companion to the
+// detail mappers above, used to tag every SNOMED CT/dm+d coding in a loaded
+// bundle without pulling the full attribute set toSnomedDetail/toDmdDetail
+// need. Inactive concepts are still valid, real concepts — this is purely a
+// UI tag, and must never feed the transfer-degrade check (see
+// src/fhir/snomedDegrade.ts on the client — that's existence-only, via
+// $validate-code, and stays untouched by this).
+// ---------------------------------------------------------------------------
+
+export interface CodeStatus {
+  inactive?: boolean
+  /** dm+d/medication codes only: true when the concept's prescribing status
+   * or non-availability indicator text says the product's been discontinued
+   * (see isDiscontinuedStatusText) — surfaced in the UI as "Withdrawn"
+   * rather than the generic "Inactive". */
+  withdrawn?: boolean
+}
+
+function isDiscontinuedStatusText(text: string | undefined): boolean {
+  return !!text && /discontinu/i.test(text)
+}
+
+// Extracts inactive/withdrawn from a CodeSystem/$lookup response. `checkWithdrawn`
+// should only be set for dm+d/medication codes — the prescribing-status and
+// non-availability attributes checked here are dm+d-specific and won't be
+// present (or meaningful) on an arbitrary SNOMED CT concept.
+export function extractCodeStatus(parameters: FhirParameters, checkWithdrawn: boolean): CodeStatus {
+  const inactive = extractInactive(parameters)
+  if (!checkWithdrawn || !inactive) return { inactive }
+
+  const normalForm = findNormalFormExpression(parameters)
+  const attrs = normalForm ? parseNormalFormAttributes(normalForm) : []
+  const statusText = attrs.find(a => a.attributeId === PRESCRIBING_STATUS_ATTRIBUTE_ID)?.valueDisplay
+    ?? attrs.find(a => a.attributeId === NON_AVAILABILITY_ATTRIBUTE_ID)?.valueDisplay
+
+  return { inactive, withdrawn: isDiscontinuedStatusText(statusText) }
 }

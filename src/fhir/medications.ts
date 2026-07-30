@@ -20,8 +20,8 @@ import {
 // from EMIS yet) do not:
 //
 // - Acute: marked "completed" as soon as it's issued, regardless of whether
-//   the course has actually finished, so a completed Acute needs date
-//   arithmetic to tell current from past.
+//   the course has actually finished. Treated as current unless stopped,
+//   entered-in-error, or its end date has passed.
 // - Repeat: stays "active" until the last of the allowed issues has been
 //   made, at which point it flips to "completed" — but it's still the
 //   patient's current repeat. It only stops being current once it's
@@ -66,16 +66,6 @@ function detectIsTpp(bundle: fhir3.Bundle): boolean {
   return false
 }
 
-function daysFromDuration(duration: fhir3.Duration | undefined): number | undefined {
-  if (duration?.value === undefined) return undefined
-  const unit = (duration.code ?? duration.unit ?? 'd').toLowerCase()
-  if (unit.startsWith('d')) return duration.value
-  if (unit.startsWith('wk') || unit.startsWith('week')) return duration.value * 7
-  if (unit.startsWith('mo')) return duration.value * 30
-  if (unit.startsWith('a') || unit.startsWith('y')) return duration.value * 365
-  return duration.value
-}
-
 function parseFhirDate(raw: string | undefined): Date | undefined {
   if (!raw) return undefined
   const parsed = new Date(raw)
@@ -87,12 +77,10 @@ function classifyIsCurrent(params: {
   prescriptionType?: string
   prescribingAgency?: string
   isTpp: boolean
-  startRaw?: string
   endRaw?: string
-  supplyDuration?: fhir3.Duration
   statusReason?: string
 }): boolean {
-  const { status, prescriptionType, prescribingAgency, isTpp, startRaw, endRaw, supplyDuration, statusReason } = params
+  const { status, prescriptionType, prescribingAgency, isTpp, endRaw, statusReason } = params
   const legacyIsPast = status === 'completed' || status === 'stopped' || status === 'entered-in-error'
 
   // Prescribed elsewhere — this is a record of something prescribed outside
@@ -128,33 +116,14 @@ function classifyIsCurrent(params: {
     return !legacyIsPast
   }
 
-  // EMIS/Medicus Acute rules
+  // EMIS/Medicus Acute rules — "completed" doesn't reliably mean the course
+  // is finished, so only stopped/entered-in-error, or an end date that has
+  // passed, count as past.
   if (status === 'stopped' || status === 'entered-in-error') return false
-  if (status !== 'completed') return true // active, or any other unlisted status
-
-  // Completed: not reliably "finished" under EMIS/Medicus — work out
-  // whether the course has actually run its course yet.
-  const today = new Date()
 
   const end = parseFhirDate(endRaw)
-  if (end) return today <= end
+  if (end) return new Date() <= end
 
-  const start = parseFhirDate(startRaw)
-  const supplyDays = daysFromDuration(supplyDuration)
-  if (start && supplyDays !== undefined) {
-    const projectedEnd = new Date(start)
-    projectedEnd.setDate(projectedEnd.getDate() + supplyDays)
-    return today <= projectedEnd
-  }
-
-  if (start) {
-    const threeMonthsOut = new Date(start)
-    threeMonthsOut.setMonth(threeMonthsOut.getMonth() + 3)
-    return today <= threeMonthsOut
-  }
-
-  // No usable dates at all — shouldn't happen for real data; default to
-  // current so nothing silently disappears from view.
   return true
 }
 
@@ -374,9 +343,7 @@ export function extractMedications(bundle: fhir3.Bundle): GpConnectMedication[] 
       prescriptionType,
       prescribingAgency,
       isTpp,
-      startRaw: effectivePeriod?.start ?? effectiveDateTime,
       endRaw: effectivePeriod?.end,
-      supplyDuration: esd,
       statusReason,
     })
 
@@ -504,9 +471,7 @@ export function extractMedications(bundle: fhir3.Bundle): GpConnectMedication[] 
       prescriptionType,
       prescribingAgency,
       isTpp,
-      startRaw: vp?.start ?? planReq.authoredOn,
       endRaw: vp?.end,
-      supplyDuration: esd,
       statusReason,
     })
 

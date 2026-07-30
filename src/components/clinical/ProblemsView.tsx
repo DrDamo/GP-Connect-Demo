@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { GpConnectBundle, GpConnectProblem } from '../../fhir/types'
-import { DomainTable, StatusBadge, DegradedTermText } from './DomainTable'
+import { DomainTable, StatusBadge, DegradedTermText, CodeStatusBadge } from './DomainTable'
 import type { DomainColumn } from './DomainTable'
 import { ReferencedResources } from './ReferencedResources'
 import { ReferenceChip } from './ResourceCard'
@@ -103,7 +103,12 @@ function ProblemDetail({ problem, bundle, onJumpToSource, onJumpToRecord }: {
       </div>
       <div className="grid grid-cols-2 gap-x-8 gap-y-1.5">
         {problem.snomedCode && (
-          <DetailRow label="SNOMED code" value={<span className="font-mono">{problem.snomedCode}</span>} />
+          <DetailRow label="SNOMED code" value={
+            <>
+              <span className="font-mono">{problem.snomedCode}</span>
+              <CodeStatusBadge status={bundle.snomedStatus?.[problem.snomedCode]} />
+            </>
+          } />
         )}
         {problem.snomedDisplay && (
           <DetailRow label="SNOMED display" value={problem.snomedDisplay} />

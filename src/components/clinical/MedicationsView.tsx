@@ -5,7 +5,7 @@ import { ReferenceChip } from './ResourceCard'
 import { type DomainId } from './domains'
 import { InfoHint } from '../../onboarding/InfoHint'
 import { SearchFilterBox } from './SearchFilterBox'
-import { NotForPfsBadge, DegradedTermText } from './DomainTable'
+import { NotForPfsBadge, DegradedTermText, CodeStatusBadge } from './DomainTable'
 
 function medicationSearchText(med: GpConnectMedication): string {
   return [
@@ -106,7 +106,10 @@ function MedicationRow({ med, record, selected, selectedIssueId, onSelect, onSel
         onClick={() => onSelect?.(med.id)}
       >
         <td className="py-2.5 px-3">
-          <div className="font-medium text-nhs-grey-1 text-sm"><DegradedTermText text={med.drugName} /></div>
+          <div className="font-medium text-nhs-grey-1 text-sm">
+            <DegradedTermText text={med.drugName} />
+            <CodeStatusBadge status={med.snomedCode ? record.snomedStatus?.[med.snomedCode] : undefined} />
+          </div>
         </td>
         <td className="py-2.5 px-3 text-sm text-nhs-grey-2">
           {med.dosageInstruction ?? [med.dose, med.frequency].filter(Boolean).join(' · ') ?? '—'}

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import type { GpConnectBundle, GpConnectPractitioner, GpConnectPractitionerRole, GpConnectOrganisation, GpConnectHealthcareService, GpConnectLocation, GpConnectFhirMedication } from '../../fhir/types'
+import type { GpConnectBundle, GpConnectPractitioner, GpConnectPractitionerRole, GpConnectOrganisation, GpConnectHealthcareService, GpConnectLocation, GpConnectFhirMedication, CodeStatus } from '../../fhir/types'
 import { SearchFilterBox } from './SearchFilterBox'
+import { CodeStatusBadge } from './DomainTable'
 
 function practitionerSearchText(p: GpConnectPractitioner, roles: GpConnectPractitionerRole[], organisations: GpConnectOrganisation[]): string {
   const myRoles = roles.filter(r => r.practitionerId === p.id)
@@ -173,8 +174,8 @@ function LocationCard({ l, selected, onSelect, onJumpToSource }: {
   )
 }
 
-function MedicationResourceCard({ m, selected, onSelect, onJumpToSource }: {
-  m: GpConnectFhirMedication; selected: boolean
+function MedicationResourceCard({ m, status, selected, onSelect, onJumpToSource }: {
+  m: GpConnectFhirMedication; status?: CodeStatus; selected: boolean
   onSelect?: (id: string) => void; onJumpToSource?: (id: string) => void
 }) {
   return (
@@ -192,7 +193,10 @@ function MedicationResourceCard({ m, selected, onSelect, onJumpToSource }: {
         </div>
       </div>
       <div className="mt-2 space-y-0.5">
-        <Row label="SNOMED / DM+D" value={m.snomedCode} />
+        <div className="flex items-center gap-1.5">
+          <Row label="SNOMED / DM+D" value={m.snomedCode} />
+          <CodeStatusBadge status={status} />
+        </div>
         {m.alternativeCodes?.map(c => (
           <Row key={c.label} label={c.label} value={c.code} />
         ))}
@@ -372,7 +376,7 @@ export function SupportingResourcesView({ bundle, selectedId, onSelect, onJumpTo
           {(openSections.has('fhirMedications') || !!trimmedQuery) && (
             <div className="grid grid-cols-1 gap-3">
               {fhirMedications.map(m => (
-                <MedicationResourceCard key={m.id} m={m} selected={selectedId === m.id} onSelect={onSelect} onJumpToSource={onJumpToSource} />
+                <MedicationResourceCard key={m.id} m={m} status={m.snomedCode ? bundle.snomedStatus?.[m.snomedCode] : undefined} selected={selectedId === m.id} onSelect={onSelect} onJumpToSource={onJumpToSource} />
               ))}
             </div>
           )}

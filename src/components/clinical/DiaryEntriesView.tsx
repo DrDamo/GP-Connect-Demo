@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { GpConnectBundle, GpConnectDiaryEntry } from '../../fhir/types'
-import { DomainTable, StatusBadge, DegradedTermText } from './DomainTable'
+import { DomainTable, StatusBadge, DegradedTermText, CodeStatusBadge } from './DomainTable'
 import type { DomainColumn } from './DomainTable'
 import { ReferencedResources } from './ReferencedResources'
 import { ReferenceChip } from './ResourceCard'
@@ -69,7 +69,12 @@ function DiaryEntryDetail({ entry, bundle, onJumpToSource, onJumpToRecord }: { e
       </div>
       <div className="grid grid-cols-2 gap-x-8 gap-y-1.5">
         {entry.snomedCode && (
-          <DetailRow label="SNOMED code" value={<span className="font-mono">{entry.snomedCode}</span>} />
+          <DetailRow label="SNOMED code" value={
+            <>
+              <span className="font-mono">{entry.snomedCode}</span>
+              <CodeStatusBadge status={bundle.snomedStatus?.[entry.snomedCode]} />
+            </>
+          } />
         )}
         <DetailRow label="Recorded date" value={entry.date} />
         <DetailRow label="Clinician" value={

@@ -511,10 +511,25 @@ export interface GpConnectList {
   notForPfs?: boolean
 }
 
+export interface CodeStatus {
+  inactive?: boolean
+  /** dm+d/medication codes only: true when the concept's prescribing status
+   * or non-availability indicator says the product's been discontinued —
+   * shown in the UI as "Withdrawn" rather than the generic "Inactive". */
+  withdrawn?: boolean
+}
+
+export type SnomedStatusMap = Record<string, CodeStatus>
+
 export interface GpConnectBundle {
   patient?: GpConnectPatient
   practiceOrganisation?: string
   timestamp?: string
+  /** Active/inactive (+ dm+d "withdrawn") status for every SNOMED CT coding
+   * found in the bundle, keyed by code — populated after load by
+   * checkSnomedStatuses (see src/fhir/snomedDegrade.ts). Empty until that
+   * check resolves; absent entries mean "not yet checked", not "active". */
+  snomedStatus?: SnomedStatusMap
   medications: GpConnectMedication[]
   allergies: GpConnectAllergy[]
   problems: GpConnectProblem[]

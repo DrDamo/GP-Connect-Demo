@@ -20,7 +20,7 @@ import { AppGuideView, type GuidePageId } from './onboarding/AppGuideView'
 import type { DraftRecord } from './builder/types'
 import { parseBundle, normalizePastedJson } from './fhir/parser'
 import { validateMedicationsBundle, cleanDanglingRefs } from './fhir/validator'
-import { checkAndDegradeSnomedCodes } from './fhir/snomedDegrade'
+import { checkAndDegradeSnomedCodes, checkSnomedStatuses } from './fhir/snomedDegrade'
 import { SnomedCheckingBanner } from './components/SnomedCheckingBanner'
 import { extractMedications } from './fhir/medications'
 import { extractAllergies } from './fhir/allergies'
@@ -212,7 +212,7 @@ function AppContent() {
             ...prev,
             source: updatedSource,
             originalSource: prev.source,
-            record: buildRecordFromBundle(parsed.data),
+            record: { ...buildRecordFromBundle(parsed.data), snomedStatus: prev.record.snomedStatus },
             validation: mergedValidation,
           }
         })
@@ -220,6 +220,20 @@ function AppContent() {
       .catch(() => {
         if (snomedCheckTokenRef.current !== loadToken) return
         setCheckingSnomed(false)
+      })
+
+    // Bulk active/inactive (+ dm+d "withdrawn") tagging — a separate, purely
+    // additive check alongside the degrade pass above. Runs concurrently
+    // against the same (not-yet-mutated) bundle; safe because the degrade
+    // pass only mutates after its own network round trip resolves, well
+    // after this has taken its own snapshot of the codings to check.
+    checkSnomedStatuses(parsed.data)
+      .then(snomedStatus => {
+        if (snomedCheckTokenRef.current !== loadToken) return
+        setLoaded(prev => (prev ? { ...prev, record: { ...prev.record, snomedStatus } } : prev))
+      })
+      .catch(() => {
+        // Best-effort UI tagging only — leave snomedStatus unset on failure.
       })
   }, [buildRecordFromBundle])
 
@@ -557,7 +571,7 @@ function AppContent() {
                       onClick={handleLoadSample}
                       className="flex-1 py-2 px-4 border border-nhs-grey-4 dark:border-gray-600 text-nhs-grey-2 dark:text-gray-300 rounded-lg text-sm hover:border-nhs-blue hover:text-nhs-blue transition-colors"
                     >
-                      Load medications-only sample
+                      Load small GP Connect sample
                     </button>
                     <InfoHint topic="home.sample-meds" className="text-nhs-grey-2 dark:text-gray-400" />
                   </div>

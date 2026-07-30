@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { GpConnectBundle, GpConnectImmunisation } from '../../fhir/types'
-import { DomainTable, StatusBadge, DegradedTermText } from './DomainTable'
+import { DomainTable, StatusBadge, DegradedTermText, CodeStatusBadge } from './DomainTable'
 import type { DomainColumn } from './DomainTable'
 import { ReferencedResources } from './ReferencedResources'
 import { ReferenceChip } from './ResourceCard'
@@ -103,7 +103,12 @@ function ImmunisationDetail({ immunisation, bundle, onJumpToSource, onJumpToReco
         <span className="text-xs text-nhs-grey-3 uppercase tracking-wide">Procedure</span>
         <div className="grid grid-cols-2 gap-x-8 gap-y-1.5">
           {immunisation.vaccinationProcedureCode && (
-            <DetailRow label="SNOMED code" value={<span className="font-mono">{immunisation.vaccinationProcedureCode}</span>} />
+            <DetailRow label="SNOMED code" value={
+              <>
+                <span className="font-mono">{immunisation.vaccinationProcedureCode}</span>
+                <CodeStatusBadge status={bundle.snomedStatus?.[immunisation.vaccinationProcedureCode]} />
+              </>
+            } />
           )}
           {immunisation.notGiven && (
             <DetailRow label="Not given" value={<span className="px-1.5 py-0.5 rounded text-xs font-semibold bg-amber-100 text-amber-800">Not given</span>} />

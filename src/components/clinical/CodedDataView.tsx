@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { GpConnectBundle, GpConnectCodedDataItem } from '../../fhir/types'
 import { formatCodedDataValue } from '../../fhir/utils'
-import { DomainTable, DegradedTermText, hasDegradeMarker } from './DomainTable'
+import { DomainTable, DegradedTermText, hasDegradeMarker, CodeStatusBadge } from './DomainTable'
 import type { DomainColumn } from './DomainTable'
 import { ReferencedResources } from './ReferencedResources'
 import { ReferenceChip } from './ResourceCard'
@@ -93,7 +93,12 @@ function CodedDataDetail({ item, bundle, onJumpToSource, onJumpToRecord }: { ite
           <DetailRow label="Category" value={item.category} />
         )}
         {item.snomedCode && (
-          <DetailRow label="SNOMED code" value={<span className="font-mono">{item.snomedCode}</span>} />
+          <DetailRow label="SNOMED code" value={
+            <>
+              <span className="font-mono">{item.snomedCode}</span>
+              <CodeStatusBadge status={bundle.snomedStatus?.[item.snomedCode]} />
+            </>
+          } />
         )}
         <DetailRow label="Date" value={item.date} />
         {valueText && (

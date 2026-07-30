@@ -1,4 +1,4 @@
-import type { ValidationIssue } from './types'
+import type { ValidationIssue, SnomedStatusMap } from './types'
 import { extractOriginalTermText } from './utils'
 
 // ---------------------------------------------------------------------------
@@ -149,6 +149,38 @@ async function validateCodesBatch(codes: string[]): Promise<Record<string, boole
     throw new Error(`SNOMED validate-batch failed (HTTP ${res.status})`)
   }
   const json = (await res.json()) as { results: Record<string, boolean> }
+  return json.results
+}
+
+const MEDICATION_RESOURCE_TYPES = new Set(['MedicationStatement', 'MedicationRequest', 'Medication'])
+
+/**
+ * Bulk active/inactive (+ dm+d "withdrawn") status for every SNOMED CT coding
+ * in the bundle — purely a UI tag, never fed into the transfer-degrade check
+ * above (inactive concepts are still valid and must not be degraded).
+ */
+export async function checkSnomedStatuses(bundle: fhir3.Bundle): Promise<SnomedStatusMap> {
+  const refs = findSnomedCodings(bundle)
+  const uniqueCodes = [...new Set(refs.map(r => r.coding.code).filter((c): c is string => !!c))]
+  if (uniqueCodes.length === 0) return {}
+
+  const medicationCodes = [...new Set(
+    refs.filter(r => MEDICATION_RESOURCE_TYPES.has(r.resourceType) && r.coding.code).map(r => r.coding.code!),
+  )]
+
+  const { serverUrl, token } = getServerConfig()
+  const headers: HeadersInit = { 'Content-Type': 'application/json' }
+  if (token) headers['Authorization'] = `Bearer ${token}`
+
+  const res = await fetch(`${serverUrl}/api/snomed/status-batch`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ codes: uniqueCodes, medicationCodes }),
+  })
+  if (!res.ok) {
+    throw new Error(`SNOMED status-batch failed (HTTP ${res.status})`)
+  }
+  const json = (await res.json()) as { results: SnomedStatusMap }
   return json.results
 }
 
