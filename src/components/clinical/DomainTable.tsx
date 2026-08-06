@@ -54,14 +54,27 @@ export function NotForPfsBadge() {
   )
 }
 
-// "Inactive"/"Withdrawn" tag for a SNOMED CT or dm+d coding — status comes
-// from bundle.snomedStatus (populated after load, see checkSnomedStatuses in
-// src/fhir/snomedDegrade.ts). This is purely a UI tag: an inactive concept is
-// still a valid, real one and is never transfer-degraded (see DegradeBadge
-// below, which is existence-only). `withdrawn` is a dm+d-specific refinement
-// — set when a medication's AMP has a discontinued prescribing/availability
-// status — and takes precedence over the generic "Inactive" label.
+// "Inactive"/"Withdrawn"/"Not DM+D" tag for a SNOMED CT or dm+d coding —
+// status comes from bundle.snomedStatus (populated after load, see
+// checkSnomedStatuses in src/fhir/snomedDegrade.ts). This is purely a UI tag:
+// an inactive concept is still a valid, real one and is never
+// transfer-degraded (see DegradeBadge below, which is existence-only).
+// `notDmd` (medication codes only) takes precedence — it means the code
+// isn't a dm+d product at all, which makes inactive/withdrawn status
+// meaningless. `withdrawn` is a dm+d-specific refinement of `inactive` — set
+// when a medication's AMP has a discontinued prescribing/availability status
+// — and takes precedence over the generic "Inactive" label.
 export function CodeStatusBadge({ status }: { status?: CodeStatus }) {
+  if (status?.notDmd) {
+    return (
+      <span
+        className="inline-block ml-1.5 px-2 py-0.5 text-xs font-semibold rounded border bg-red-100 text-red-800 border-red-300 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700"
+        title="This code is not a member of the dm+d VMP/AMP ValueSet — not a genuine dm+d product code"
+      >
+        Not DM+D
+      </span>
+    )
+  }
   if (!status?.inactive) return null
   return status.withdrawn ? (
     <span

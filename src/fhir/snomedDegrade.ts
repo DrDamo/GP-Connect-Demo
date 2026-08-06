@@ -154,10 +154,33 @@ async function validateCodesBatch(codes: string[]): Promise<Record<string, boole
 
 const MEDICATION_RESOURCE_TYPES = new Set(['MedicationStatement', 'MedicationRequest', 'Medication'])
 
+async function validateDmdCodesBatch(codes: string[]): Promise<Record<string, boolean>> {
+  if (codes.length === 0) return {}
+  const { serverUrl, token } = getServerConfig()
+  const headers: HeadersInit = { 'Content-Type': 'application/json' }
+  if (token) headers['Authorization'] = `Bearer ${token}`
+
+  const res = await fetch(`${serverUrl}/api/dmd/validate-batch`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ codes }),
+  })
+  if (!res.ok) {
+    throw new Error(`dm+d validate-batch failed (HTTP ${res.status})`)
+  }
+  const json = (await res.json()) as { results: Record<string, boolean> }
+  return json.results
+}
+
 /**
  * Bulk active/inactive (+ dm+d "withdrawn") status for every SNOMED CT coding
  * in the bundle — purely a UI tag, never fed into the transfer-degrade check
- * above (inactive concepts are still valid and must not be degraded).
+ * above (inactive concepts are still valid and must not be degraded). Also
+ * checks every medication coding for dm+d ValueSet membership, tagging
+ * `notDmd` for any that aren't a genuine VMP/AMP product — merged into the
+ * same map (rather than a separate caller-side fetch) so there's only ever
+ * one write to record.snomedStatus per load, avoiding a last-write-wins race
+ * between two concurrent checks.
  */
 export async function checkSnomedStatuses(bundle: fhir3.Bundle): Promise<SnomedStatusMap> {
   const refs = findSnomedCodings(bundle)
@@ -172,16 +195,24 @@ export async function checkSnomedStatuses(bundle: fhir3.Bundle): Promise<SnomedS
   const headers: HeadersInit = { 'Content-Type': 'application/json' }
   if (token) headers['Authorization'] = `Bearer ${token}`
 
-  const res = await fetch(`${serverUrl}/api/snomed/status-batch`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({ codes: uniqueCodes, medicationCodes }),
-  })
-  if (!res.ok) {
-    throw new Error(`SNOMED status-batch failed (HTTP ${res.status})`)
+  const [statusResult, dmdResult] = await Promise.all([
+    fetch(`${serverUrl}/api/snomed/status-batch`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ codes: uniqueCodes, medicationCodes }),
+    }).then(async res => {
+      if (!res.ok) throw new Error(`SNOMED status-batch failed (HTTP ${res.status})`)
+      return ((await res.json()) as { results: SnomedStatusMap }).results
+    }),
+    validateDmdCodesBatch(medicationCodes),
+  ])
+
+  const results: SnomedStatusMap = { ...statusResult }
+  for (const [code, foundInDmd] of Object.entries(dmdResult)) {
+    if (foundInDmd) continue
+    results[code] = { ...results[code], notDmd: true }
   }
-  const json = (await res.json()) as { results: SnomedStatusMap }
-  return json.results
+  return results
 }
 
 export interface SnomedCheckResult {

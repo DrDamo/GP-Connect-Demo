@@ -517,6 +517,10 @@ export interface CodeStatus {
    * or non-availability indicator says the product's been discontinued —
    * shown in the UI as "Withdrawn" rather than the generic "Inactive". */
   withdrawn?: boolean
+  /** Medication codes only: true when the code is not a member of the dm+d
+   * VMP/AMP ValueSet at all — e.g. a valid SNOMED CT concept from the wrong
+   * hierarchy, or any other non-drug code used on a medication resource. */
+  notDmd?: boolean
 }
 
 export type SnomedStatusMap = Record<string, CodeStatus>

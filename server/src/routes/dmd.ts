@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { expandValueSet } from '../fhir/expand.js'
-import { lookupCode } from '../fhir/lookup.js'
+import { lookupCode, validateDmdCodesBatch } from '../fhir/lookup.js'
 import { dmdValueSetUrl, toDmdResult, toDmdDetail, pickParentVmpCode, mergeParentVmpDetail } from '../fhir/mappers.js'
 
 export const dmdRouter = Router()
@@ -71,6 +71,28 @@ dmdRouter.get('/lookup', async (req, res) => {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     console.error('[dmd/lookup]', message)
+    res.status(502).json({ error: message })
+  }
+})
+
+// POST /api/dmd/validate-batch  { codes: string[] }
+// Response: { results: { [code]: boolean } } — true when the code is a
+// member of the dm+d VMP/AMP ValueSet, false otherwise (including codes that
+// are valid SNOMED CT concepts but not dm+d products at all).
+dmdRouter.post('/validate-batch', async (req, res) => {
+  const codes = req.body?.codes
+
+  if (!Array.isArray(codes) || !codes.every((c: unknown) => typeof c === 'string')) {
+    res.status(400).json({ error: 'codes must be an array of strings' })
+    return
+  }
+
+  try {
+    const results = await validateDmdCodesBatch(codes)
+    res.json({ results })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('[dmd/validate-batch]', message)
     res.status(502).json({ error: message })
   }
 })

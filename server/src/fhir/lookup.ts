@@ -1,7 +1,7 @@
 import { config } from '../config.js'
 import { getToken } from '../auth.js'
 import type { FhirParameters } from './types.js'
-import { extractCodeStatus, type CodeStatus } from './mappers.js'
+import { extractCodeStatus, dmdMembershipValueSetUrl, type CodeStatus } from './mappers.js'
 
 const SNOMED_SYSTEM = 'http://snomed.info/sct'
 const VALIDATE_CODE_BATCH_CHUNK_SIZE = 200
@@ -90,6 +90,59 @@ export async function validateCodesBatch(codes: string[]): Promise<Record<string
     if (!res.ok) {
       const text = await res.text()
       throw new Error(`FHIR batch $validate-code failed (HTTP ${res.status}): ${text}`)
+    }
+
+    const batchResponse = (await res.json()) as FhirBatchResponse
+    const entries = batchResponse.entry ?? []
+    chunk.forEach((code, idx) => {
+      const params = entries[idx]?.resource?.parameter ?? []
+      const result = params.find(p => p.name === 'result')?.valueBoolean
+      results[code] = result === true
+    })
+  }
+
+  return results
+}
+
+// Validates a batch of medication codes against dm+d membership (the
+// combined VMP + AMP ValueSet), not mere SNOMED CT existence — a code can be
+// a perfectly valid, active SNOMED CT concept and still not be a dm+d
+// product (e.g. a clinical finding code mistakenly used on a medication
+// resource). Same ValueSet/$validate-code + batching approach as
+// validateCodesBatch above, but against ValueSet/$validate-code (ValueSet
+// membership) rather than CodeSystem/$validate-code (system existence).
+export async function validateDmdCodesBatch(codes: string[]): Promise<Record<string, boolean>> {
+  const unique = [...new Set(codes)]
+  const results: Record<string, boolean> = {}
+  if (unique.length === 0) return results
+
+  const token = await getToken()
+  const vsUrl = dmdMembershipValueSetUrl()
+
+  for (let i = 0; i < unique.length; i += VALIDATE_CODE_BATCH_CHUNK_SIZE) {
+    const chunk = unique.slice(i, i + VALIDATE_CODE_BATCH_CHUNK_SIZE)
+    const batchBundle = {
+      resourceType: 'Bundle',
+      type: 'batch',
+      entry: chunk.map(code => {
+        const params = new URLSearchParams({ url: vsUrl, system: SNOMED_SYSTEM, code })
+        return { request: { method: 'GET', url: `ValueSet/$validate-code?${params}` } }
+      }),
+    }
+
+    const res = await fetch(config.fhirBase, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/fhir+json',
+        Accept: 'application/fhir+json',
+      },
+      body: JSON.stringify(batchBundle),
+    })
+
+    if (!res.ok) {
+      const text = await res.text()
+      throw new Error(`FHIR batch ValueSet $validate-code failed (HTTP ${res.status}): ${text}`)
     }
 
     const batchResponse = (await res.json()) as FhirBatchResponse

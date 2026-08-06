@@ -63,6 +63,13 @@ export function dmdValueSetUrl(type: 'vmp' | 'amp'): string {
   return `http://snomed.info/sct?fhir_vs=ecl/${DMD_ECL[type]}`
 }
 
+// Combined VMP + AMP ValueSet — used to check whether a medication coding is
+// a genuine dm+d product at all (see validateDmdCodesBatch), as opposed to
+// dmdValueSetUrl above which scopes a search to one type at a time.
+export function dmdMembershipValueSetUrl(): string {
+  return `http://snomed.info/sct?fhir_vs=ecl/${DMD_ECL.vmp} OR ${DMD_ECL.amp}`
+}
+
 // ---------------------------------------------------------------------------
 // FHIR contains → domain result mappers
 // ---------------------------------------------------------------------------
