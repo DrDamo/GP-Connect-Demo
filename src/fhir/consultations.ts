@@ -32,7 +32,8 @@ function encRef(list: fhir3.List): string | undefined {
 
 const COMMENT_NOTE_CODE = '37331000000100'
 
-function itemFromRef(bundle: fhir3.Bundle, ref: string | undefined): GpConnectConsultationItem {
+function itemFromRef(bundle: fhir3.Bundle, item: fhir3.Reference | undefined): GpConnectConsultationItem {
+  const ref = item?.reference
   const resource = resolveReference(bundle, ref)
   const resourceType = ref?.split('/')[0] ?? ''
   const resourceId = extractId(ref) ?? ''
@@ -42,6 +43,13 @@ function itemFromRef(bundle: fhir3.Bundle, ref: string | undefined): GpConnectCo
     if (obs.code?.coding?.some(c => c.code === COMMENT_NOTE_CODE)) {
       return { resourceType, resourceId, narrativeText: obs.comment ?? '' }
     }
+  }
+
+  // No reference — the provider system couldn't export this clinical item
+  // type and returned a free-text display-only placeholder instead
+  // (GP Connect "Unsupported Clinical Items in Consultations").
+  if (!ref && item?.display) {
+    return { resourceType: 'Unsupported', resourceId: '', display: item.display }
   }
 
   return { resourceType, resourceId, display: resolveItemDisplay(bundle, ref) }
@@ -64,20 +72,20 @@ function buildTopic(
         categories.push({
           id: subList.id ?? '',
           title: subList.title,
-          items: (subList.entry ?? []).map(e => itemFromRef(bundle, e.item.reference)),
+          items: (subList.entry ?? []).map(e => itemFromRef(bundle, e.item)),
         })
         continue
       }
       // Sub-list that isn't a category — treat its items as direct
       if (subList) {
         for (const e of subList.entry ?? []) {
-          items.push(itemFromRef(bundle, e.item.reference))
+          items.push(itemFromRef(bundle, e.item))
         }
         continue
       }
     }
     // Direct clinical item
-    items.push(itemFromRef(bundle, ref))
+    items.push(itemFromRef(bundle, entry.item))
   }
 
   return {

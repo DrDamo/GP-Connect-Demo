@@ -59,6 +59,7 @@ interface ItemContent {
   fields: Array<{ key: string; value: string }>
   navId: string
   navDomain?: DomainId
+  variant?: 'warning'
 }
 
 function resolveContent(bundle: GpConnectBundle, item: GpConnectConsultationItem): ItemContent {
@@ -243,6 +244,17 @@ function resolveContent(bundle: GpConnectBundle, item: GpConnectConsultationItem
         ].filter((f): f is { key: string; value: string } => f !== null),
       }
     }
+    case 'Unsupported':
+      // Display-only placeholder: the provider system couldn't export this
+      // clinical item type (GP Connect "Unsupported Clinical Items in Consultations").
+      return {
+        label: display ?? '(item not supported by provider system)',
+        badge: 'Not supported',
+        fields: [],
+        navId: resourceId,
+        navDomain: undefined,
+        variant: 'warning',
+      }
     case 'Encounter': {
       const con = bundle.consultations.find(c => c.id === resourceId)
       if (!con) return fallback
@@ -336,7 +348,11 @@ function ConsultationItemCard({
         </div>
         <span
           onClick={canJumpToRecord ? e => { e.stopPropagation(); onJumpToRecord!(content.navDomain!, content.navId) } : undefined}
-          className={`shrink-0 inline-block text-[10px] px-1.5 py-0.5 rounded bg-nhs-blue/10 text-nhs-blue border border-nhs-blue/20 font-semibold whitespace-nowrap ${canJumpToRecord ? 'cursor-pointer hover:bg-nhs-blue/20' : ''}`}
+          className={`shrink-0 inline-block text-[10px] px-1.5 py-0.5 rounded font-semibold whitespace-nowrap ${
+            content.variant === 'warning'
+              ? 'bg-amber-100 text-amber-700 border border-amber-200'
+              : 'bg-nhs-blue/10 text-nhs-blue border border-nhs-blue/20'
+          } ${canJumpToRecord ? 'cursor-pointer hover:bg-nhs-blue/20' : ''}`}
           title={canJumpToRecord ? 'Click to go to record' : undefined}
         >
           {content.badge}
