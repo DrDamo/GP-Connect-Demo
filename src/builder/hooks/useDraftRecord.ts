@@ -15,6 +15,7 @@ import type {
   DraftConsultationItem,
   DraftImmunisation,
   DraftInvestigation,
+  DraftTestGroup,
   DraftInvestigationResult,
   DraftReferral,
   DraftDiaryEntry,
@@ -119,9 +120,12 @@ export type DraftAction =
   | { type: 'ADD_INVESTIGATION' }
   | { type: 'UPDATE_INVESTIGATION'; payload: { _tempId: string; updates: Partial<DraftInvestigation> } }
   | { type: 'REMOVE_INVESTIGATION'; payload: string }
-  | { type: 'ADD_INVESTIGATION_RESULT'; payload: string }
-  | { type: 'UPDATE_INVESTIGATION_RESULT'; payload: { invTempId: string; resultTempId: string; updates: Partial<DraftInvestigationResult> } }
-  | { type: 'REMOVE_INVESTIGATION_RESULT'; payload: { invTempId: string; resultTempId: string } }
+  | { type: 'ADD_TEST_GROUP'; payload: string }
+  | { type: 'UPDATE_TEST_GROUP'; payload: { invTempId: string; groupTempId: string; updates: Partial<DraftTestGroup> } }
+  | { type: 'REMOVE_TEST_GROUP'; payload: { invTempId: string; groupTempId: string } }
+  | { type: 'ADD_TEST_RESULT'; payload: { invTempId: string; groupTempId: string } }
+  | { type: 'UPDATE_TEST_RESULT'; payload: { invTempId: string; groupTempId: string; resultTempId: string; updates: Partial<DraftInvestigationResult> } }
+  | { type: 'REMOVE_TEST_RESULT'; payload: { invTempId: string; groupTempId: string; resultTempId: string } }
   // Referrals
   | { type: 'ADD_REFERRAL' }
   | { type: 'UPDATE_REFERRAL'; payload: { _tempId: string; updates: Partial<DraftReferral> } }
@@ -683,7 +687,7 @@ function draftReducer(state: DraftRecord, action: DraftAction): DraftRecord {
     case 'ADD_INVESTIGATION':
       return {
         ...state,
-        investigations: [...state.investigations, { _tempId: newTempId(), results: [] }],
+        investigations: [...state.investigations, { _tempId: newTempId(), testGroups: [] }],
       }
 
     case 'UPDATE_INVESTIGATION':
@@ -698,37 +702,94 @@ function draftReducer(state: DraftRecord, action: DraftAction): DraftRecord {
         investigations: removeById(state.investigations, action.payload),
       }
 
-    case 'ADD_INVESTIGATION_RESULT': {
+    case 'ADD_TEST_GROUP': {
       const invTempId = action.payload
       return {
         ...state,
         investigations: state.investigations.map(inv =>
           inv._tempId === invTempId
-            ? { ...inv, results: [...inv.results, { _tempId: newTempId() }] }
+            ? { ...inv, testGroups: [...inv.testGroups, { _tempId: newTempId(), results: [] }] }
             : inv,
         ),
       }
     }
 
-    case 'UPDATE_INVESTIGATION_RESULT': {
-      const { invTempId, resultTempId, updates } = action.payload
+    case 'UPDATE_TEST_GROUP': {
+      const { invTempId, groupTempId, updates } = action.payload
       return {
         ...state,
         investigations: state.investigations.map(inv =>
           inv._tempId === invTempId
-            ? { ...inv, results: updateById(inv.results, resultTempId, updates) }
+            ? { ...inv, testGroups: updateById(inv.testGroups, groupTempId, updates) }
             : inv,
         ),
       }
     }
 
-    case 'REMOVE_INVESTIGATION_RESULT': {
-      const { invTempId, resultTempId } = action.payload
+    case 'REMOVE_TEST_GROUP': {
+      const { invTempId, groupTempId } = action.payload
       return {
         ...state,
         investigations: state.investigations.map(inv =>
           inv._tempId === invTempId
-            ? { ...inv, results: removeById(inv.results, resultTempId) }
+            ? { ...inv, testGroups: removeById(inv.testGroups, groupTempId) }
+            : inv,
+        ),
+      }
+    }
+
+    case 'ADD_TEST_RESULT': {
+      const { invTempId, groupTempId } = action.payload
+      return {
+        ...state,
+        investigations: state.investigations.map(inv =>
+          inv._tempId === invTempId
+            ? {
+                ...inv,
+                testGroups: inv.testGroups.map(g =>
+                  g._tempId === groupTempId
+                    ? { ...g, results: [...g.results, { _tempId: newTempId() }] }
+                    : g,
+                ),
+              }
+            : inv,
+        ),
+      }
+    }
+
+    case 'UPDATE_TEST_RESULT': {
+      const { invTempId, groupTempId, resultTempId, updates } = action.payload
+      return {
+        ...state,
+        investigations: state.investigations.map(inv =>
+          inv._tempId === invTempId
+            ? {
+                ...inv,
+                testGroups: inv.testGroups.map(g =>
+                  g._tempId === groupTempId
+                    ? { ...g, results: updateById(g.results, resultTempId, updates) }
+                    : g,
+                ),
+              }
+            : inv,
+        ),
+      }
+    }
+
+    case 'REMOVE_TEST_RESULT': {
+      const { invTempId, groupTempId, resultTempId } = action.payload
+      return {
+        ...state,
+        investigations: state.investigations.map(inv =>
+          inv._tempId === invTempId
+            ? {
+                ...inv,
+                testGroups: inv.testGroups.map(g =>
+                  g._tempId === groupTempId
+                    ? { ...g, results: removeById(g.results, resultTempId) }
+                    : g,
+                ),
+              }
             : inv,
         ),
       }
@@ -869,7 +930,7 @@ function draftReducer(state: DraftRecord, action: DraftAction): DraftRecord {
     case 'ADD_INVESTIGATION_WITH_ID':
       return {
         ...state,
-        investigations: [...state.investigations, { _tempId: action.payload, date: today(), results: [] }],
+        investigations: [...state.investigations, { _tempId: action.payload, date: today(), testGroups: [] }],
       }
 
     case 'ADD_REFERRAL_WITH_ID':

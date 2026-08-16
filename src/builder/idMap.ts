@@ -28,7 +28,10 @@ export class TempIdMap {
     for (const i of draft.immunisations) this.set(i._tempId)
     for (const inv of draft.investigations) {
       this.set(inv._tempId)
-      for (const r of inv.results) this.set(r._tempId)
+      for (const g of inv.testGroups) {
+        this.set(g._tempId)
+        for (const r of g.results) this.set(r._tempId)
+      }
     }
     for (const r of draft.referrals) this.set(r._tempId)
     for (const d of draft.diaryEntries) this.set(d._tempId)

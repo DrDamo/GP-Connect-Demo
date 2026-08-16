@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { DraftRecord, DraftInvestigation, DraftInvestigationResult } from '../types'
+import type { DraftRecord, DraftInvestigation, DraftTestGroup, DraftInvestigationResult } from '../types'
 import type { DraftAction } from '../hooks/useDraftRecord'
 import { newTempId } from '../hooks/useDraftRecord'
 import { Field } from './shared/FormField'
@@ -7,6 +7,7 @@ import { DateField, isoToDisplay } from './shared/DateField'
 import { SelectField } from './shared/SelectField'
 import { PractitionerSelect } from './shared/PractitionerSelect'
 import { SnomedPicker } from './shared/SnomedPicker'
+import { FormSection } from './shared/FormSection'
 import { BuilderModal } from '../components/BuilderModal'
 import { DeleteConfirmDialog } from '../components/DeleteConfirmDialog'
 import { LinkSection } from './shared/LinkSection'
@@ -15,6 +16,12 @@ import { TrashIcon } from '../components/Icons'
 
 // ---------------------------------------------------------------------------
 // InvestigationForm
+//
+// Mirrors the GP Connect Investigations model: a Test Report (with an
+// optional linked Specimen and Test Request) contains one or more Test
+// Groups, each holding one or more Test Results. A comment can be added at
+// any of the three levels — report, group, or result.
+// https://simplifier.net/guide/gp-connect-access-record-structured/Home/Design/Investigations-guidance
 // ---------------------------------------------------------------------------
 
 interface Props {
@@ -40,23 +47,44 @@ const INTERPRETATION_OPTS = [
   { value: 'critical', label: 'Critical' },
 ]
 
+const SPECIMEN_STATUS_OPTS = [
+  { value: 'available', label: 'Available' },
+  { value: 'unavailable', label: 'Unavailable' },
+  { value: 'unsatisfactory', label: 'Unsatisfactory' },
+  { value: 'entered-in-error', label: 'Entered in error' },
+]
+
+const REQUEST_STATUS_OPTS = [
+  { value: 'active', label: 'Active' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'cancelled', label: 'Cancelled' },
+]
+
+const REQUEST_INTENT_OPTS = [
+  { value: 'order', label: 'Order' },
+  { value: 'plan', label: 'Plan' },
+  { value: 'proposal', label: 'Proposal' },
+]
+
 // ---------------------------------------------------------------------------
-// ResultRow
+// ResultRow — a single Test Result, nested inside a Test Group
 // ---------------------------------------------------------------------------
 
 function ResultRow({
   result,
   invTempId,
+  groupTempId,
   dispatch,
 }: {
   result: DraftInvestigationResult
   invTempId: string
+  groupTempId: string
   dispatch: React.Dispatch<DraftAction>
 }) {
   const upd = (updates: Partial<DraftInvestigationResult>) =>
     dispatch({
-      type: 'UPDATE_INVESTIGATION_RESULT',
-      payload: { invTempId, resultTempId: result._tempId, updates },
+      type: 'UPDATE_TEST_RESULT',
+      payload: { invTempId, groupTempId, resultTempId: result._tempId, updates },
     })
 
   return (
@@ -70,7 +98,7 @@ function ResultRow({
           onChange={({ value, code }) => upd({ name: value, snomedCode: code })}
           required
         />
-        <Field label="Associated text" value={result.comment ?? ''} onChange={v => upd({ comment: v })} />
+        <Field label="Comment" value={result.comment ?? ''} onChange={v => upd({ comment: v })} />
         <div className="flex gap-1">
           <Field label="Value" value={result.value ?? ''} onChange={v => upd({ value: v })} className="flex-1" />
           <Field label="Unit" value={result.unit ?? ''} onChange={v => upd({ unit: v })} className="w-20" />
@@ -92,12 +120,12 @@ function ResultRow({
           type="button"
           onClick={() =>
             dispatch({
-              type: 'REMOVE_INVESTIGATION_RESULT',
-              payload: { invTempId, resultTempId: result._tempId },
+              type: 'REMOVE_TEST_RESULT',
+              payload: { invTempId, groupTempId, resultTempId: result._tempId },
             })
           }
           className="text-nhs-red hover:opacity-70 p-0.5"
-          title="Remove"
+          title="Remove result"
         >
           <TrashIcon className="w-3.5 h-3.5" />
         </button>
@@ -107,7 +135,77 @@ function ResultRow({
 }
 
 // ---------------------------------------------------------------------------
-// InvestigationCard
+// TestGroupCard — a panel/battery of tests, holding one or more results
+// ---------------------------------------------------------------------------
+
+function TestGroupCard({
+  group,
+  invTempId,
+  dispatch,
+}: {
+  group: DraftTestGroup
+  invTempId: string
+  dispatch: React.Dispatch<DraftAction>
+}) {
+  const upd = (updates: Partial<DraftTestGroup>) =>
+    dispatch({ type: 'UPDATE_TEST_GROUP', payload: { invTempId, groupTempId: group._tempId, updates } })
+
+  return (
+    <div className="border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg mb-2 overflow-hidden">
+      <div className="p-3 bg-nhs-grey-5 dark:bg-gray-800 space-y-2">
+        <div className="flex items-start gap-2">
+          <SnomedPicker
+            label="Test group name"
+            value={group.name ?? ''}
+            code={group.snomedCode}
+            semanticTag="observable entity,procedure"
+            onChange={({ value, code }) => upd({ name: value, snomedCode: code })}
+            required
+          />
+          <button
+            type="button"
+            onClick={() => dispatch({ type: 'REMOVE_TEST_GROUP', payload: { invTempId, groupTempId: group._tempId } })}
+            className="text-nhs-red hover:opacity-70 p-1.5 mt-4 shrink-0"
+            title="Remove test group"
+          >
+            <TrashIcon className="w-3.5 h-3.5" />
+          </button>
+        </div>
+        <Field label="Comment" value={group.comment ?? ''} onChange={v => upd({ comment: v })} />
+      </div>
+
+      <div className="p-3 bg-white dark:bg-gray-900">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-xs font-medium text-nhs-grey-3 uppercase tracking-wide">
+            Results ({group.results.length})
+          </span>
+          <button
+            type="button"
+            onClick={() => dispatch({ type: 'ADD_TEST_RESULT', payload: { invTempId, groupTempId: group._tempId } })}
+            className="text-xs text-nhs-blue hover:underline"
+          >
+            + Add result
+          </button>
+        </div>
+        {group.results.map(result => (
+          <ResultRow
+            key={result._tempId}
+            result={result}
+            invTempId={invTempId}
+            groupTempId={group._tempId}
+            dispatch={dispatch}
+          />
+        ))}
+        {group.results.length === 0 && (
+          <p className="text-xs text-nhs-grey-3">No results added yet.</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// InvestigationCard — the Test Report itself
 // ---------------------------------------------------------------------------
 
 function InvestigationCard({
@@ -125,11 +223,13 @@ function InvestigationCard({
   const upd = (updates: Partial<DraftInvestigation>) =>
     dispatch({ type: 'UPDATE_INVESTIGATION', payload: { _tempId: inv._tempId, updates } })
 
+  const resultCount = inv.testGroups.reduce((n, g) => n + g.results.length, 0)
+
   const body = (
     <div className="p-3 bg-white dark:bg-gray-900 space-y-3">
       {/* No Associated Text here: DiagnosticReport has no free-text field for it in STU3 */}
       <SnomedPicker
-        label="Test name"
+        label="Report name"
         value={inv.name ?? ''}
         code={inv.snomedCode}
         semanticTag="observable entity"
@@ -156,25 +256,85 @@ function InvestigationCard({
         />
       </div>
 
-      {/* Results */}
+      <Field label="Comment" value={inv.comment ?? ''} onChange={v => upd({ comment: v })} />
+
+      <FormSection title="Specimen" defaultOpen={false}>
+        <div className="space-y-2">
+          <SnomedPicker
+            label="Specimen type"
+            value={inv.specimenType ?? ''}
+            code={inv.specimenSnomedCode}
+            semanticTag="specimen"
+            onChange={({ value, code }) => upd({ specimenType: value, specimenSnomedCode: code })}
+          />
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <DateField label="Collected" value={inv.specimenCollectedDate ?? ''} onChange={v => upd({ specimenCollectedDate: v })} />
+            <DateField label="Received" value={inv.specimenReceivedDate ?? ''} onChange={v => upd({ specimenReceivedDate: v })} />
+            <SelectField
+              label="Status"
+              value={inv.specimenStatus ?? ''}
+              onChange={v => upd({ specimenStatus: v })}
+              options={SPECIMEN_STATUS_OPTS}
+              placeholder="— Select —"
+            />
+          </div>
+          <Field label="Note" value={inv.specimenNote ?? ''} onChange={v => upd({ specimenNote: v })} />
+        </div>
+      </FormSection>
+
+      <FormSection title="Test Request" defaultOpen={false}>
+        <div className="space-y-2">
+          <SnomedPicker
+            label="Test requested"
+            value={inv.testRequestName ?? ''}
+            code={inv.testRequestSnomedCode}
+            semanticTag="procedure,observable entity"
+            onChange={({ value, code }) => upd({ testRequestName: value, testRequestSnomedCode: code })}
+          />
+          <div className="grid grid-cols-2 gap-2">
+            <SelectField
+              label="Status"
+              value={inv.testRequestStatus ?? ''}
+              onChange={v => upd({ testRequestStatus: v })}
+              options={REQUEST_STATUS_OPTS}
+              placeholder="— Select —"
+            />
+            <SelectField
+              label="Intent"
+              value={inv.testRequestIntent ?? ''}
+              onChange={v => upd({ testRequestIntent: v })}
+              options={REQUEST_INTENT_OPTS}
+              placeholder="— Select —"
+            />
+          </div>
+          <PractitionerSelect
+            label="Requester"
+            draft={draft}
+            value={inv.testRequestRequesterTempId}
+            onChange={v => upd({ testRequestRequesterTempId: v })}
+          />
+        </div>
+      </FormSection>
+
+      {/* Test groups */}
       <div>
         <div className="flex items-center justify-between mb-1">
           <span className="text-xs font-medium text-nhs-grey-3 uppercase tracking-wide">
-            Results ({inv.results.length})
+            Test groups ({inv.testGroups.length})
           </span>
           <button
             type="button"
-            onClick={() => dispatch({ type: 'ADD_INVESTIGATION_RESULT', payload: inv._tempId })}
+            onClick={() => dispatch({ type: 'ADD_TEST_GROUP', payload: inv._tempId })}
             className="text-xs text-nhs-blue hover:underline"
           >
-            + Add result
+            + Add test group
           </button>
         </div>
-        {inv.results.map(result => (
-          <ResultRow key={result._tempId} result={result} invTempId={inv._tempId} dispatch={dispatch} />
+        {inv.testGroups.map(group => (
+          <TestGroupCard key={group._tempId} group={group} invTempId={inv._tempId} dispatch={dispatch} />
         ))}
-        {inv.results.length === 0 && (
-          <p className="text-xs text-nhs-grey-3">No results added yet.</p>
+        {inv.testGroups.length === 0 && (
+          <p className="text-xs text-nhs-grey-3">No test groups added yet.</p>
         )}
       </div>
 
@@ -216,7 +376,7 @@ function InvestigationCard({
             {inv.name || 'New investigation'}
           </span>
           {inv.date && <span className="text-xs text-nhs-grey-3">{isoToDisplay(inv.date)}</span>}
-          <span className="text-xs text-nhs-grey-3">({inv.results.length} results)</span>
+          <span className="text-xs text-nhs-grey-3">({resultCount} results)</span>
         </button>
         <button
           type="button"
@@ -266,9 +426,11 @@ function InvestigationDisplayRow({
   onEdit: () => void
   onDelete: () => void
 }) {
+  const resultCount = inv.testGroups.reduce((n, g) => n + g.results.length, 0)
   const meta = [
     inv.date,
-    `${inv.results.length} ${inv.results.length === 1 ? 'result' : 'results'}`,
+    `${inv.testGroups.length} ${inv.testGroups.length === 1 ? 'group' : 'groups'}`,
+    `${resultCount} ${resultCount === 1 ? 'result' : 'results'}`,
   ].filter(Boolean).join(' · ')
 
   return (
