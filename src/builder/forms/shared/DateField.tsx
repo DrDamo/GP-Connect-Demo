@@ -80,6 +80,7 @@ export function isoToDisplay(iso: string | undefined): string {
 
 export function DateField({ label, value, onChange, required, disabled, className }: DateFieldProps) {
   const [text, setText] = useState(() => isoToDisplay(value ?? ''))
+  const inputRef = useRef<HTMLInputElement>(null)
   const pickerRef = useRef<HTMLInputElement>(null)
   // Tracks the last value this field emitted, so edits made here don't get
   // reformatted mid-typing while genuine external changes (a status toggle
@@ -96,6 +97,16 @@ export function DateField({ label, value, onChange, required, disabled, classNam
 
   const parsed = parseToIso(text)
   const invalid = parsed === null
+
+  // Unparseable text needs to block Save even when the field isn't marked
+  // required — the `required` attribute alone only catches empty values.
+  // setCustomValidity plugs into the same native constraint-validation pass
+  // the modal's <form> submit runs, so a garbled date is treated the same
+  // as a missing required one: submit is blocked and the browser focuses
+  // this field with the message below.
+  useEffect(() => {
+    inputRef.current?.setCustomValidity(invalid ? 'Enter DD-MM-YYYY, MM-YYYY or YYYY' : '')
+  }, [invalid])
 
   const commit = (raw: string) => {
     setText(raw)
@@ -125,6 +136,7 @@ export function DateField({ label, value, onChange, required, disabled, classNam
     <FormField label={label} required={required && !disabled} className={className}>
       <div className="relative">
         <input
+          ref={inputRef}
           type="text"
           inputMode="numeric"
           value={text}
