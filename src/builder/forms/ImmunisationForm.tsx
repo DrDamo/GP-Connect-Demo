@@ -3,7 +3,7 @@ import type { DraftRecord, DraftImmunisation } from '../types'
 import type { DraftAction } from '../hooks/useDraftRecord'
 import { newTempId } from '../hooks/useDraftRecord'
 import { Field } from './shared/FormField'
-import { DateField } from './shared/DateField'
+import { DateField, isoToDisplay } from './shared/DateField'
 import { SelectField } from './shared/SelectField'
 import { PractitionerSelect } from './shared/PractitionerSelect'
 import { SnomedPicker } from './shared/SnomedPicker'
@@ -281,7 +281,7 @@ function ImmunisationCard({
             {imm.vaccinationProcedureDisplay || imm.vaccineName || 'New immunisation'}
           </span>
           {imm.dateGiven && (
-            <span className="text-xs text-nhs-grey-3">{imm.dateGiven}</span>
+            <span className="text-xs text-nhs-grey-3">{isoToDisplay(imm.dateGiven)}</span>
           )}
         </button>
         <button

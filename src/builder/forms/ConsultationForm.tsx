@@ -11,7 +11,7 @@ import type {
 import type { DraftAction } from '../hooks/useDraftRecord'
 import { newTempId } from '../hooks/useDraftRecord'
 import { Field, FormField } from './shared/FormField'
-import { DateField } from './shared/DateField'
+import { DateField, isoToDisplay } from './shared/DateField'
 import { SelectField } from './shared/SelectField'
 import { PractitionerSelect } from './shared/PractitionerSelect'
 import { SnomedPicker } from './shared/SnomedPicker'
@@ -614,7 +614,7 @@ function ConsultationCard({
     dispatch({ type: 'UPDATE_CONSULTATION', payload: { _tempId: consultation._tempId, updates } })
 
   const label = consultation.date
-    ? `${consultation.date}${consultation.typeDisplay ? ' — ' + consultation.typeDisplay : ''}`
+    ? `${isoToDisplay(consultation.date)}${consultation.typeDisplay ? ' — ' + consultation.typeDisplay : ''}`
     : consultation.typeDisplay || 'New consultation'
 
   const body = (
@@ -775,7 +775,7 @@ function ConsultationDisplayRow({
     : null
 
   const title = consultation.date
-    ? `${consultation.date}${consultation.typeDisplay ? ' — ' + consultation.typeDisplay : ''}`
+    ? `${isoToDisplay(consultation.date)}${consultation.typeDisplay ? ' — ' + consultation.typeDisplay : ''}`
     : consultation.typeDisplay || 'New consultation'
 
   return (
@@ -845,13 +845,13 @@ export function ConsultationForm({ draft, dispatch }: Props) {
 
   const modalTitle = activeConsultation
     ? (activeConsultation.date
-        ? `${activeConsultation.date}${activeConsultation.typeDisplay ? ' — ' + activeConsultation.typeDisplay : ''}`
+        ? `${isoToDisplay(activeConsultation.date)}${activeConsultation.typeDisplay ? ' — ' + activeConsultation.typeDisplay : ''}`
         : 'Add Consultation')
     : 'Add Consultation'
 
   const deleteLabel = deleteConsultation
     ? (deleteConsultation.date
-        ? `${deleteConsultation.date}${deleteConsultation.typeDisplay ? ' — ' + deleteConsultation.typeDisplay : ''}`
+        ? `${isoToDisplay(deleteConsultation.date)}${deleteConsultation.typeDisplay ? ' — ' + deleteConsultation.typeDisplay : ''}`
         : 'this consultation')
     : 'this consultation'
 

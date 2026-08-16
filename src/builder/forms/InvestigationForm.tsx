@@ -3,7 +3,7 @@ import type { DraftRecord, DraftInvestigation, DraftInvestigationResult } from '
 import type { DraftAction } from '../hooks/useDraftRecord'
 import { newTempId } from '../hooks/useDraftRecord'
 import { Field } from './shared/FormField'
-import { DateField } from './shared/DateField'
+import { DateField, isoToDisplay } from './shared/DateField'
 import { SelectField } from './shared/SelectField'
 import { PractitionerSelect } from './shared/PractitionerSelect'
 import { SnomedPicker } from './shared/SnomedPicker'
@@ -214,7 +214,7 @@ function InvestigationCard({
           <span className="text-sm font-medium text-nhs-grey-1">
             {inv.name || 'New investigation'}
           </span>
-          {inv.date && <span className="text-xs text-nhs-grey-3">{inv.date}</span>}
+          {inv.date && <span className="text-xs text-nhs-grey-3">{isoToDisplay(inv.date)}</span>}
           <span className="text-xs text-nhs-grey-3">({inv.results.length} results)</span>
         </button>
         <button

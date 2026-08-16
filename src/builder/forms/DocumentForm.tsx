@@ -3,7 +3,7 @@ import type { DraftRecord, DraftDocument } from '../types'
 import type { DraftAction } from '../hooks/useDraftRecord'
 import { newTempId } from '../hooks/useDraftRecord'
 import { Field } from './shared/FormField'
-import { DateField } from './shared/DateField'
+import { DateField, isoToDisplay } from './shared/DateField'
 import { SelectField } from './shared/SelectField'
 import { PractitionerSelect } from './shared/PractitionerSelect'
 import { BuilderModal } from '../components/BuilderModal'
@@ -122,7 +122,7 @@ function DocumentCard({
               {doc.type || doc.description || 'New document'}
             </span>
             {doc.date && (
-              <span className="text-xs text-nhs-grey-3">{doc.date}</span>
+              <span className="text-xs text-nhs-grey-3">{isoToDisplay(doc.date)}</span>
             )}
           </button>
           <button

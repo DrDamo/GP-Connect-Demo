@@ -3,7 +3,7 @@ import type { DraftRecord, DraftReferral } from '../types'
 import type { DraftAction } from '../hooks/useDraftRecord'
 import { newTempId } from '../hooks/useDraftRecord'
 import { Field } from './shared/FormField'
-import { DateField } from './shared/DateField'
+import { DateField, isoToDisplay } from './shared/DateField'
 import { SelectField } from './shared/SelectField'
 import { PractitionerSelect } from './shared/PractitionerSelect'
 import { BuilderModal } from '../components/BuilderModal'
@@ -70,7 +70,7 @@ function ReferralDisplayRow({
           )}
         </div>
         <div className="text-xs text-nhs-grey-3 mt-0.5 flex items-center gap-2">
-          {referral.date && <span>{referral.date}</span>}
+          {referral.date && <span>{isoToDisplay(referral.date)}</span>}
           {referral.status && <span>{referral.status}</span>}
         </div>
       </div>

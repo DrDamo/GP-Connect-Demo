@@ -3,7 +3,7 @@ import type { DraftRecord, DraftMedication, DraftMedicationIssue } from '../type
 import type { DraftAction } from '../hooks/useDraftRecord'
 import { newTempId } from '../hooks/useDraftRecord'
 import { Field } from './shared/FormField'
-import { DateField } from './shared/DateField'
+import { DateField, isoToDisplay } from './shared/DateField'
 import { SelectField } from './shared/SelectField'
 import { PractitionerSelect } from './shared/PractitionerSelect'
 import { DmdPicker } from './shared/DmdPicker'
@@ -490,8 +490,8 @@ function MedicationDisplayRow({
           <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
             {(med.startDate || med.endDate) && (
               <span className="text-xs text-nhs-grey-3 dark:text-gray-400">
-                {med.startDate && <><span className="opacity-70">Start:</span> {med.startDate}</>}
-                {med.endDate && <><span className="opacity-70 ml-1.5">End:</span> {med.endDate}</>}
+                {med.startDate && <><span className="opacity-70">Start:</span> {isoToDisplay(med.startDate)}</>}
+                {med.endDate && <><span className="opacity-70 ml-1.5">End:</span> {isoToDisplay(med.endDate)}</>}
               </span>
             )}
             {qtyParts && (
@@ -642,13 +642,13 @@ function MedicationDisplayRow({
                       #{idx + 1}
                     </span>
                     {issue.issueDate && (
-                      <span><span className="opacity-60">Asserted:</span> {issue.issueDate}</span>
+                      <span><span className="opacity-60">Asserted:</span> {isoToDisplay(issue.issueDate)}</span>
                     )}
                     {issue.startDate && (
-                      <span><span className="opacity-60">Start:</span> {issue.startDate}</span>
+                      <span><span className="opacity-60">Start:</span> {isoToDisplay(issue.startDate)}</span>
                     )}
                     {issue.endDate && (
-                      <span><span className="opacity-60">End:</span> {issue.endDate}</span>
+                      <span><span className="opacity-60">End:</span> {isoToDisplay(issue.endDate)}</span>
                     )}
                     {isCancelled && (
                       <span className="px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 font-medium text-[11px]">

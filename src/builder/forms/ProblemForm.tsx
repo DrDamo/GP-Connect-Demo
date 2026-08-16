@@ -3,7 +3,7 @@ import type { DraftRecord, DraftProblem } from '../types'
 import type { DraftAction } from '../hooks/useDraftRecord'
 import { newTempId } from '../hooks/useDraftRecord'
 import { Field } from './shared/FormField'
-import { DateField } from './shared/DateField'
+import { DateField, isoToDisplay } from './shared/DateField'
 import { SelectField } from './shared/SelectField'
 import { PractitionerSelect } from './shared/PractitionerSelect'
 import { SnomedPicker } from './shared/SnomedPicker'
@@ -219,8 +219,8 @@ function ProblemDisplayRow({
   ) : null
 
   const datePart = [
-    problem.startDate ? `from ${problem.startDate}` : null,
-    problem.endDate ? `to ${problem.endDate}` : null,
+    problem.startDate ? `from ${isoToDisplay(problem.startDate)}` : null,
+    problem.endDate ? `to ${isoToDisplay(problem.endDate)}` : null,
   ].filter(Boolean).join(' ')
 
   return (

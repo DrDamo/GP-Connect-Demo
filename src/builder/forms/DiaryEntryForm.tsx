@@ -3,7 +3,7 @@ import type { DraftRecord, DraftDiaryEntry } from '../types'
 import type { DraftAction } from '../hooks/useDraftRecord'
 import { newTempId } from '../hooks/useDraftRecord'
 import { Field } from './shared/FormField'
-import { DateField } from './shared/DateField'
+import { DateField, isoToDisplay } from './shared/DateField'
 import { SelectField } from './shared/SelectField'
 import { PractitionerSelect } from './shared/PractitionerSelect'
 import { SnomedPicker } from './shared/SnomedPicker'
@@ -72,7 +72,7 @@ function DiaryEntryDisplayRow({
           )}
         </div>
         <div className="text-xs text-nhs-grey-3 mt-0.5">
-          {entry.date && <span>{entry.date}</span>}
+          {entry.date && <span>{isoToDisplay(entry.date)}</span>}
         </div>
       </div>
       <div className="flex items-center gap-2 shrink-0 ml-2">
@@ -121,7 +121,7 @@ function DiaryEntryCard({
               {entry.description || 'New diary entry'}
             </span>
             {entry.date && (
-              <span className="text-xs text-nhs-grey-3">{entry.date}</span>
+              <span className="text-xs text-nhs-grey-3">{isoToDisplay(entry.date)}</span>
             )}
           </button>
           <button

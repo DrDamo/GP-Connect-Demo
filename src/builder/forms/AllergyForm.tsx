@@ -3,7 +3,7 @@ import type { DraftRecord, DraftAllergy } from '../types'
 import type { DraftAction } from '../hooks/useDraftRecord'
 import { newTempId } from '../hooks/useDraftRecord'
 import { Field } from './shared/FormField'
-import { DateField } from './shared/DateField'
+import { DateField, isoToDisplay } from './shared/DateField'
 import { SelectField } from './shared/SelectField'
 import { PractitionerSelect } from './shared/PractitionerSelect'
 import { SnomedPicker } from './shared/SnomedPicker'
@@ -208,9 +208,9 @@ function AllergyDisplayRow({
   ) : null
 
   const datePart = allergy.onsetDate
-    ? `onset ${allergy.onsetDate}`
+    ? `onset ${isoToDisplay(allergy.onsetDate)}`
     : allergy.assertedDate
-    ? `asserted ${allergy.assertedDate}`
+    ? `asserted ${isoToDisplay(allergy.assertedDate)}`
     : null
 
   return (
