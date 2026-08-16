@@ -39,6 +39,40 @@ function today(): string {
 }
 
 // ---------------------------------------------------------------------------
+// Draft migration — normalises a DraftRecord loaded from an external source
+// (localStorage, a shared-patient load, an imported bundle-derived draft)
+// that may pre-date a shape change. Applied everywhere a draft can enter
+// state from outside the reducer's own actions, so old saved data never
+// crashes the app — it's just quietly upgraded on load.
+// ---------------------------------------------------------------------------
+
+// Pre-Investigations-restructure shape: results sat directly on the
+// investigation instead of being nested under testGroups.
+interface LegacyDraftInvestigation extends Omit<DraftInvestigation, 'testGroups'> {
+  testGroups?: DraftTestGroup[]
+  results?: DraftInvestigationResult[]
+}
+
+function migrateInvestigation(inv: LegacyDraftInvestigation): DraftInvestigation {
+  if (Array.isArray(inv.testGroups)) return inv as DraftInvestigation
+  const { results, ...rest } = inv
+  return {
+    ...rest,
+    testGroups: results && results.length > 0
+      ? [{ _tempId: newTempId(), name: inv.name, snomedCode: inv.snomedCode, results }]
+      : [],
+  }
+}
+
+function migrateDraft(draft: DraftRecord): DraftRecord {
+  return {
+    ...draft,
+    organisations: Array.isArray(draft.organisations) ? draft.organisations : [],
+    investigations: (draft.investigations ?? []).map(inv => migrateInvestigation(inv as LegacyDraftInvestigation)),
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Empty draft factory
 // ---------------------------------------------------------------------------
 
@@ -999,15 +1033,11 @@ function draftReducer(state: DraftRecord, action: DraftAction): DraftRecord {
       }
 
     // --- Global ---
-    case 'LOAD_DRAFT': {
-      const loaded = action.payload
-      return { ...loaded, organisations: loaded.organisations ?? [] }
-    }
+    case 'LOAD_DRAFT':
+      return migrateDraft(action.payload)
 
-    case 'AUTO_POPULATE': {
-      const populated = action.payload
-      return { ...populated, organisations: populated.organisations ?? [] }
-    }
+    case 'AUTO_POPULATE':
+      return migrateDraft(action.payload)
 
     case 'CLEAR_ALL':
       return createEmptyDraft()
@@ -1026,11 +1056,7 @@ export function useDraftRecord() {
     try {
       const stored = localStorage.getItem('gpc-builder-draft')
       if (stored) {
-        const parsed = JSON.parse(stored) as DraftRecord
-        if (!Array.isArray(parsed.organisations)) {
-          parsed.organisations = []
-        }
-        return parsed
+        return migrateDraft(JSON.parse(stored) as DraftRecord)
       }
     } catch {}
     return createEmptyDraft()
