@@ -152,6 +152,7 @@ function InvestigationCard({
           draft={draft}
           value={inv.performerTempId}
           onChange={v => upd({ performerTempId: v })}
+          required
         />
       </div>
 

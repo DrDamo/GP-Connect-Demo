@@ -293,6 +293,7 @@ function MedicationCard({
         draft={draft}
         value={med.prescriberTempId}
         onChange={v => upd({ prescriberTempId: v })}
+        required
       />
 
       <Field label="Patient instructions" value={med.patientInstructions ?? ''} onChange={v => upd({ patientInstructions: v })} />

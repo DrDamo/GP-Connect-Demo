@@ -176,6 +176,7 @@ function ReferralCard({
             draft={draft}
             value={referral.requesterTempId}
             onChange={v => upd({ requesterTempId: v })}
+            required
           />
 
           <ConfidentialityCheckboxes

@@ -184,6 +184,7 @@ function DiaryEntryCard({
             draft={draft}
             value={entry.clinicianTempId}
             onChange={v => upd({ clinicianTempId: v })}
+            required
           />
 
           <ConfidentialityCheckboxes

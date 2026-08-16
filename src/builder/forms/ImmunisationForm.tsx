@@ -202,6 +202,7 @@ function ImmunisationCard({
         draft={draft}
         value={imm.administeringPractitionerTempId}
         onChange={v => upd({ administeringPractitionerTempId: v })}
+        required
       />
 
       <PractitionerSelect
@@ -209,6 +210,7 @@ function ImmunisationCard({
         draft={draft}
         value={imm.enteringPractitionerTempId}
         onChange={v => upd({ enteringPractitionerTempId: v })}
+        required
       />
 
       <div>

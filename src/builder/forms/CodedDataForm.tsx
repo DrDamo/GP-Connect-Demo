@@ -183,6 +183,7 @@ function CodedDataCard({
             draft={draft}
             value={item.performerTempId}
             onChange={v => upd({ performerTempId: v })}
+            required
           />
 
           <ConfidentialityCheckboxes
