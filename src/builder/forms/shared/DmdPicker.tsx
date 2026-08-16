@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { FormField } from './FormField'
-import { useAnchoredDropdown } from '../../../hooks/useAnchoredDropdown'
+import { useAnchoredDropdown, widenDropdown } from '../../../hooks/useAnchoredDropdown'
 import { InfoHint } from '../../../onboarding/InfoHint'
 
 // ---------------------------------------------------------------------------
@@ -402,7 +402,7 @@ export function DmdPicker({ value, onChange, code, dmdType = 'VMP', label = 'dm+
           {dropdownOpen && dropdownPos && createPortal(
             <div
               ref={dropdownRef}
-              style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width }}
+              style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, width: widenDropdown(dropdownPos) }}
               className="z-50 max-h-80 overflow-y-auto bg-white dark:bg-gray-900 border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg shadow-lg"
             >
               {results.map((r, idx) => (

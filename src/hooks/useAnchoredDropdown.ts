@@ -38,3 +38,16 @@ export function useAnchoredDropdown(
 
   return isOpen ? pos : null
 }
+
+/**
+ * Widens an anchored dropdown beyond its (possibly narrow) anchor — e.g. a
+ * SNOMED/dm+d search box that's only a few characters wide in a dense grid
+ * still needs room to show a full clinical term. Never narrower than the
+ * anchor itself (so a wide anchor's dropdown looks unchanged), grows up to
+ * `preferredWidth` when there's room, and never overflows past the right
+ * edge of the viewport.
+ */
+export function widenDropdown(pos: AnchoredPosition, preferredWidth = 420, margin = 16): number {
+  const available = window.innerWidth - pos.left - margin
+  return Math.max(pos.width, Math.min(preferredWidth, available))
+}
