@@ -109,11 +109,13 @@ function IssueModal({
             value={issue.issueDate ?? ''}
             onChange={v => upd({ issueDate: v })}
             required
+            fullDateOnly
           />
           <DateField
             label="Start date"
             value={issue.startDate ?? ''}
             onChange={v => upd({ startDate: v })}
+            fullDateOnly
           />
         </div>
         <div className="grid grid-cols-2 gap-2">
@@ -180,8 +182,8 @@ function RepeatDispensingIssueModal({
           Start dates are calculated automatically — each issue begins where the previous ends.
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <DateField label="Asserted date" value={assertedDate} onChange={setAssertedDate} required />
-          <DateField label="Start date (issue 1)" value={startDate} onChange={setStartDate} />
+          <DateField label="Asserted date" value={assertedDate} onChange={setAssertedDate} required fullDateOnly />
+          <DateField label="Start date (issue 1)" value={startDate} onChange={setStartDate} fullDateOnly />
         </div>
         <div className="grid grid-cols-2 gap-2">
           <ReadOnlyField label="Quantity" value={med.prescribedQuantityValue} />
@@ -255,11 +257,11 @@ function MedicationCard({
         <Field label="Route" value={med.route ?? ''} onChange={v => upd({ route: v })} suggestions={ROUTE_SUGGESTIONS} />
       </div>
 
-      <Field label="Dosage instruction" value={med.dosageInstruction ?? ''} onChange={v => upd({ dosageInstruction: v })} />
+      <Field label="Dosage instruction" value={med.dosageInstruction ?? ''} onChange={v => upd({ dosageInstruction: v })} required />
 
       <div className="grid grid-cols-2 gap-2">
-        <Field label="Prescribed qty" type="number" value={med.prescribedQuantityValue ?? ''} onChange={v => upd({ prescribedQuantityValue: v ? Number(v) : undefined })} />
-        <Field label="Qty unit" value={med.prescribedQuantityUnit ?? ''} onChange={v => upd({ prescribedQuantityUnit: v })} suggestions={QTY_UNIT_SUGGESTIONS} />
+        <Field label="Prescribed qty" type="number" value={med.prescribedQuantityValue ?? ''} onChange={v => upd({ prescribedQuantityValue: v ? Number(v) : undefined })} required />
+        <Field label="Qty unit" value={med.prescribedQuantityUnit ?? ''} onChange={v => upd({ prescribedQuantityUnit: v })} suggestions={QTY_UNIT_SUGGESTIONS} required />
       </div>
       <div className="grid grid-cols-3 gap-2">
         <Field label="Supply duration" type="number" value={med.supplyDurationValue ?? ''} onChange={v => upd({ supplyDurationValue: v ? Number(v) : undefined })} required={med.prescriptionType === 'repeat-dispensing'} />
@@ -284,8 +286,8 @@ function MedicationCard({
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        <DateField label="Start date" value={med.startDate ?? ''} onChange={v => upd({ startDate: v })} />
-        <DateField label="End date" value={med.endDate ?? ''} onChange={v => upd({ endDate: v })} />
+        <DateField label="Start date" value={med.startDate ?? ''} onChange={v => upd({ startDate: v })} fullDateOnly />
+        <DateField label="End date" value={med.endDate ?? ''} onChange={v => upd({ endDate: v })} fullDateOnly />
       </div>
 
       <PractitionerSelect

@@ -24,6 +24,9 @@ export interface DateFieldProps {
   required?: boolean
   disabled?: boolean
   className?: string
+  /** Medication is the one area of the record where a partial date (year, or
+   * year+month) isn't acceptable — reject anything short of a full date. */
+  fullDateOnly?: boolean
 }
 
 const pad = (s: string) => (s.length === 1 ? `0${s}` : s)
@@ -32,13 +35,15 @@ function daysInMonth(year: number, month: number): number {
   return new Date(year, month, 0).getDate()
 }
 
-// Parse user text into an ISO partial date. Returns null when unparseable.
-export function parseToIso(input: string): string | null {
+// Parse user text into an ISO date. Returns null when unparseable, or when
+// fullOnly is set and the text doesn't resolve to a complete DD-MM-YYYY date.
+export function parseToIso(input: string, fullOnly = false): string | null {
   const text = input.trim()
   if (text === '') return ''
 
   const parts = text.split(/[-/. ]+/).filter(Boolean)
   if (parts.length === 0 || parts.length > 3) return null
+  if (fullOnly && parts.length !== 3) return null
   if (!parts.every(p => /^\d{1,4}$/.test(p))) return null
 
   // A 4-digit leading part means ISO order was typed; otherwise UK order.
@@ -78,7 +83,7 @@ export function isoToDisplay(iso: string | undefined): string {
   return `${parts[2]}-${parts[1]}-${parts[0]}`
 }
 
-export function DateField({ label, value, onChange, required, disabled, className }: DateFieldProps) {
+export function DateField({ label, value, onChange, required, disabled, className, fullDateOnly }: DateFieldProps) {
   const [text, setText] = useState(() => isoToDisplay(value ?? ''))
   const inputRef = useRef<HTMLInputElement>(null)
   const pickerRef = useRef<HTMLInputElement>(null)
@@ -95,8 +100,9 @@ export function DateField({ label, value, onChange, required, disabled, classNam
     }
   }, [value])
 
-  const parsed = parseToIso(text)
+  const parsed = parseToIso(text, fullDateOnly)
   const invalid = parsed === null
+  const errorMessage = fullDateOnly ? 'Enter a full date as DD-MM-YYYY' : 'Enter DD-MM-YYYY, MM-YYYY or YYYY'
 
   // Unparseable text needs to block Save even when the field isn't marked
   // required — the `required` attribute alone only catches empty values.
@@ -105,12 +111,12 @@ export function DateField({ label, value, onChange, required, disabled, classNam
   // as a missing required one: submit is blocked and the browser focuses
   // this field with the message below.
   useEffect(() => {
-    inputRef.current?.setCustomValidity(invalid ? 'Enter DD-MM-YYYY, MM-YYYY or YYYY' : '')
-  }, [invalid])
+    inputRef.current?.setCustomValidity(invalid ? errorMessage : '')
+  }, [invalid, errorMessage])
 
   const commit = (raw: string) => {
     setText(raw)
-    const iso = parseToIso(raw)
+    const iso = parseToIso(raw, fullDateOnly)
     if (iso !== null && iso !== lastEmitted.current) {
       lastEmitted.current = iso
       onChange(iso)
@@ -145,7 +151,7 @@ export function DateField({ label, value, onChange, required, disabled, classNam
           placeholder="DD-MM-YYYY"
           required={required && !disabled}
           disabled={disabled}
-          title="Enter DD-MM-YYYY, MM-YYYY for month and year, or YYYY for year only"
+          title={fullDateOnly ? 'Enter a full date as DD-MM-YYYY' : 'Enter DD-MM-YYYY, MM-YYYY for month and year, or YYYY for year only'}
           className={`${INPUT_CLS} pr-8 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-nhs-grey-5 dark:disabled:bg-gray-800 ${
             invalid ? 'border-nhs-red focus:border-nhs-red focus:ring-nhs-red' : ''
           }`}
@@ -177,7 +183,7 @@ export function DateField({ label, value, onChange, required, disabled, classNam
         />
       </div>
       {invalid && (
-        <p className="mt-0.5 text-xs text-nhs-red">Use DD-MM-YYYY, MM-YYYY or YYYY</p>
+        <p className="mt-0.5 text-xs text-nhs-red">{fullDateOnly ? 'Use DD-MM-YYYY' : 'Use DD-MM-YYYY, MM-YYYY or YYYY'}</p>
       )}
     </FormField>
   )
