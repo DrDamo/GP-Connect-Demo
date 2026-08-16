@@ -3,6 +3,7 @@ import type { DraftRecord, DraftProblem } from '../types'
 import type { DraftAction } from '../hooks/useDraftRecord'
 import { newTempId } from '../hooks/useDraftRecord'
 import { Field } from './shared/FormField'
+import { DateField, isoToDisplay } from './shared/DateField'
 import { SelectField } from './shared/SelectField'
 import { PractitionerSelect } from './shared/PractitionerSelect'
 import { SnomedPicker } from './shared/SnomedPicker'
@@ -72,6 +73,11 @@ function ProblemCard({
 
   const expanded = isModal ? true : open
 
+  // An active problem hasn't ended, so no end date can be recorded; an
+  // inactive/resolved problem must have one to say when it stopped being current.
+  const endDateDisabled = problem.clinicalStatus === 'active'
+  const endDateRequired = problem.clinicalStatus === 'inactive' || problem.clinicalStatus === 'resolved'
+
   return (
     <div className="border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg overflow-hidden mb-2">
       <div className="flex items-center justify-between px-3 py-2 bg-nhs-grey-5 dark:bg-gray-800">
@@ -127,7 +133,12 @@ function ProblemCard({
             <SelectField
               label="Clinical status"
               value={problem.clinicalStatus ?? ''}
-              onChange={v => upd({ clinicalStatus: v as DraftProblem['clinicalStatus'] })}
+              onChange={v => upd({
+                clinicalStatus: v as DraftProblem['clinicalStatus'],
+                // Active problems have no end date — clear any value left over
+                // from a previous status so it can't be silently submitted.
+                ...(v === 'active' ? { endDate: '' } : {}),
+              })}
               options={CLINICAL_STATUS_OPTS}
               placeholder="— Select —"
               required
@@ -143,15 +154,15 @@ function ProblemCard({
           </div>
 
           <div className="grid grid-cols-3 gap-2">
-            <Field label="Start date" type="date" value={problem.startDate ?? ''} onChange={v => upd({ startDate: v })} />
-            <Field
+            <DateField label="Start date" value={problem.startDate ?? ''} onChange={v => upd({ startDate: v })} />
+            <DateField
               label="End date"
-              type="date"
               value={problem.endDate ?? ''}
               onChange={v => upd({ endDate: v })}
-              required={problem.clinicalStatus === 'inactive'}
+              required={endDateRequired}
+              disabled={endDateDisabled}
             />
-            <Field label="Asserted date" type="date" value={problem.assertedDate ?? ''} onChange={v => upd({ assertedDate: v })} />
+            <DateField label="Asserted date" value={problem.assertedDate ?? ''} onChange={v => upd({ assertedDate: v })} />
           </div>
 
           <PractitionerSelect
@@ -208,8 +219,8 @@ function ProblemDisplayRow({
   ) : null
 
   const datePart = [
-    problem.startDate ? `from ${problem.startDate}` : null,
-    problem.endDate ? `to ${problem.endDate}` : null,
+    problem.startDate ? `from ${isoToDisplay(problem.startDate)}` : null,
+    problem.endDate ? `to ${isoToDisplay(problem.endDate)}` : null,
   ].filter(Boolean).join(' ')
 
   return (

@@ -3,6 +3,7 @@ import type { DraftRecord, DraftImmunisation } from '../types'
 import type { DraftAction } from '../hooks/useDraftRecord'
 import { newTempId } from '../hooks/useDraftRecord'
 import { Field } from './shared/FormField'
+import { DateField, isoToDisplay } from './shared/DateField'
 import { SelectField } from './shared/SelectField'
 import { PractitionerSelect } from './shared/PractitionerSelect'
 import { SnomedPicker } from './shared/SnomedPicker'
@@ -94,8 +95,8 @@ function ImmunisationCard({
       <Field label="Associated text" value={imm.associatedText ?? ''} onChange={v => upd({ associatedText: v })} />
 
       <div className="grid grid-cols-2 gap-2">
-        <Field label="Date given" type="date" value={imm.dateGiven ?? ''} onChange={v => upd({ dateGiven: v })} required />
-        <Field label="Date recorded" type="date" value={imm.dateRecorded ?? ''} onChange={v => upd({ dateRecorded: v })} />
+        <DateField label="Date given" value={imm.dateGiven ?? ''} onChange={v => upd({ dateGiven: v })} required />
+        <DateField label="Date recorded" value={imm.dateRecorded ?? ''} onChange={v => upd({ dateRecorded: v })} />
       </div>
 
       <div className="grid grid-cols-2 gap-2">
@@ -190,7 +191,7 @@ function ImmunisationCard({
         ) : (
           <>
             <Field label="Batch number" value={imm.batchNumber ?? ''} onChange={v => upd({ batchNumber: v })} />
-            <Field label="Expiration date" type="date" value={imm.expirationDate ?? ''} onChange={v => upd({ expirationDate: v })} />
+            <DateField label="Expiration date" value={imm.expirationDate ?? ''} onChange={v => upd({ expirationDate: v })} />
             <Field label="Manufacturer" value={imm.manufacturer ?? ''} onChange={v => upd({ manufacturer: v })} />
           </>
         )}
@@ -280,7 +281,7 @@ function ImmunisationCard({
             {imm.vaccinationProcedureDisplay || imm.vaccineName || 'New immunisation'}
           </span>
           {imm.dateGiven && (
-            <span className="text-xs text-nhs-grey-3">{imm.dateGiven}</span>
+            <span className="text-xs text-nhs-grey-3">{isoToDisplay(imm.dateGiven)}</span>
           )}
         </button>
         <button

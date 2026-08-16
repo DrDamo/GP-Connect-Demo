@@ -28,7 +28,7 @@ export function FormField({ label, required, children, className }: FormFieldPro
 // Field — labeled input shorthand
 // ---------------------------------------------------------------------------
 
-const INPUT_CLS =
+export const INPUT_CLS =
   'w-full rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-2 py-1.5 text-sm ' +
   'text-nhs-grey-1 dark:bg-gray-800 ' +
   'focus:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue'
@@ -40,6 +40,7 @@ export interface FieldProps {
   onChange: (val: string) => void
   placeholder?: string
   required?: boolean
+  disabled?: boolean
   className?: string
   suggestions?: string[]
 }
@@ -51,6 +52,7 @@ export function Field({
   onChange,
   placeholder,
   required,
+  disabled,
   className,
   suggestions,
 }: FieldProps) {
@@ -58,14 +60,15 @@ export function Field({
   const listId = suggestions?.length ? `fl-${uid}` : undefined
 
   return (
-    <FormField label={label} required={required} className={className}>
+    <FormField label={label} required={required && !disabled} className={className}>
       <input
         type={type}
         value={value ?? ''}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
-        required={required}
-        className={INPUT_CLS}
+        required={required && !disabled}
+        disabled={disabled}
+        className={`${INPUT_CLS} disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-nhs-grey-5 dark:disabled:bg-gray-800`}
         list={listId}
         autoComplete="off"
       />

@@ -3,6 +3,7 @@ import type { DraftRecord, DraftAllergy } from '../types'
 import type { DraftAction } from '../hooks/useDraftRecord'
 import { newTempId } from '../hooks/useDraftRecord'
 import { Field } from './shared/FormField'
+import { DateField, isoToDisplay } from './shared/DateField'
 import { SelectField } from './shared/SelectField'
 import { PractitionerSelect } from './shared/PractitionerSelect'
 import { SnomedPicker } from './shared/SnomedPicker'
@@ -142,13 +143,13 @@ function AllergyCard({
           />
 
           <div className="grid grid-cols-2 gap-2">
-            <Field label="Asserted date" type="date" value={allergy.assertedDate ?? ''} onChange={v => upd({ assertedDate: v })} />
-            <Field label="Onset date" type="date" value={allergy.onsetDate ?? ''} onChange={v => upd({ onsetDate: v })} />
+            <DateField label="Asserted date" value={allergy.assertedDate ?? ''} onChange={v => upd({ assertedDate: v })} />
+            <DateField label="Onset date" value={allergy.onsetDate ?? ''} onChange={v => upd({ onsetDate: v })} />
           </div>
 
           {isResolved && (
             <div className="grid grid-cols-2 gap-2">
-              <Field label="End date" type="date" value={allergy.endDate ?? ''} onChange={v => upd({ endDate: v })} />
+              <DateField label="End date" value={allergy.endDate ?? ''} onChange={v => upd({ endDate: v })} />
               <Field label="End reason" value={allergy.endReason ?? ''} onChange={v => upd({ endReason: v })} />
             </div>
           )}
@@ -207,9 +208,9 @@ function AllergyDisplayRow({
   ) : null
 
   const datePart = allergy.onsetDate
-    ? `onset ${allergy.onsetDate}`
+    ? `onset ${isoToDisplay(allergy.onsetDate)}`
     : allergy.assertedDate
-    ? `asserted ${allergy.assertedDate}`
+    ? `asserted ${isoToDisplay(allergy.assertedDate)}`
     : null
 
   return (

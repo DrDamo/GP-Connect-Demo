@@ -3,6 +3,7 @@ import type { DraftRecord, DraftCodedDataItem } from '../types'
 import type { DraftAction } from '../hooks/useDraftRecord'
 import { newTempId } from '../hooks/useDraftRecord'
 import { Field } from './shared/FormField'
+import { DateField, isoToDisplay } from './shared/DateField'
 import { SelectField } from './shared/SelectField'
 import { PractitionerSelect } from './shared/PractitionerSelect'
 import { SnomedPicker } from './shared/SnomedPicker'
@@ -130,7 +131,7 @@ function CodedDataCard({
               {item.description || 'New coded data item'}
             </span>
             {item.date && (
-              <span className="text-xs text-nhs-grey-3">{item.date}</span>
+              <span className="text-xs text-nhs-grey-3">{isoToDisplay(item.date)}</span>
             )}
           </button>
           <button
@@ -156,7 +157,7 @@ function CodedDataCard({
           <Field label="Associated text" value={item.comment ?? ''} onChange={v => upd({ comment: v })} />
 
           <div className="grid grid-cols-3 gap-2">
-            <Field label="Date" type="date" value={item.date ?? ''} onChange={v => upd({ date: v })} />
+            <DateField label="Date" value={item.date ?? ''} onChange={v => upd({ date: v })} />
             <Field label="Value" value={item.value ?? ''} onChange={v => upd({ value: v })} />
             <Field label="Unit" value={item.unit ?? ''} onChange={v => upd({ unit: v })} />
           </div>

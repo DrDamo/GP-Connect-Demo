@@ -3,6 +3,7 @@ import type { DraftRecord, DraftDocument } from '../types'
 import type { DraftAction } from '../hooks/useDraftRecord'
 import { newTempId } from '../hooks/useDraftRecord'
 import { Field } from './shared/FormField'
+import { DateField, isoToDisplay } from './shared/DateField'
 import { SelectField } from './shared/SelectField'
 import { PractitionerSelect } from './shared/PractitionerSelect'
 import { BuilderModal } from '../components/BuilderModal'
@@ -121,7 +122,7 @@ function DocumentCard({
               {doc.type || doc.description || 'New document'}
             </span>
             {doc.date && (
-              <span className="text-xs text-nhs-grey-3">{doc.date}</span>
+              <span className="text-xs text-nhs-grey-3">{isoToDisplay(doc.date)}</span>
             )}
           </button>
           <button
@@ -139,7 +140,7 @@ function DocumentCard({
         <div className="p-3 bg-white dark:bg-gray-900 space-y-3">
           <div className="grid grid-cols-2 gap-2">
             <Field label="Document type" value={doc.type ?? ''} onChange={v => upd({ type: v })} required />
-            <Field label="Date" type="date" value={doc.date ?? ''} onChange={v => upd({ date: v })} />
+            <DateField label="Date" value={doc.date ?? ''} onChange={v => upd({ date: v })} />
           </div>
 
           <Field label="Description" value={doc.description ?? ''} onChange={v => upd({ description: v })} />

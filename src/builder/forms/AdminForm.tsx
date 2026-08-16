@@ -4,6 +4,7 @@ import type { DraftAction } from '../hooks/useDraftRecord'
 import { newTempId } from '../hooks/useDraftRecord'
 import { FormSection } from './shared/FormSection'
 import { Field } from './shared/FormField'
+import { DateField } from './shared/DateField'
 import { SelectField } from './shared/SelectField'
 import { BuilderModal } from '../components/BuilderModal'
 import { DeleteConfirmDialog } from '../components/DeleteConfirmDialog'
@@ -576,7 +577,7 @@ export function AdminForm({ draft, dispatch, onAutoPopulate }: Props) {
             </label>
           </div>
           <Field label="Registration type" value={p.registrationType ?? ''} onChange={v => setPatient({ registrationType: v })} />
-          <Field label="Registration start" type="date" value={p.registrationStart ?? ''} onChange={v => setPatient({ registrationStart: v })} />
+          <DateField label="Registration start" value={p.registrationStart ?? ''} onChange={v => setPatient({ registrationStart: v })} />
           <div />
           <Field label="Address" value={p.address ?? ''} onChange={v => setPatient({ address: v })} className="col-span-2 sm:col-span-3" />
           <Field label="Phone" type="tel" value={p.phone ?? ''} onChange={v => setPatient({ phone: v })} />

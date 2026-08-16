@@ -11,6 +11,7 @@ import type {
 import type { DraftAction } from '../hooks/useDraftRecord'
 import { newTempId } from '../hooks/useDraftRecord'
 import { Field, FormField } from './shared/FormField'
+import { DateField, isoToDisplay } from './shared/DateField'
 import { SelectField } from './shared/SelectField'
 import { PractitionerSelect } from './shared/PractitionerSelect'
 import { SnomedPicker } from './shared/SnomedPicker'
@@ -198,7 +199,7 @@ function ConsultationItemRow({
           />
         </div>
         <div className="w-40 shrink-0">
-          <Field label="Date" type="date" value={item.date ?? ''} onChange={v => upd({ date: v })} />
+          <DateField label="Date" value={item.date ?? ''} onChange={v => upd({ date: v })} />
         </div>
         <div className="flex-1" />
         <button
@@ -613,15 +614,15 @@ function ConsultationCard({
     dispatch({ type: 'UPDATE_CONSULTATION', payload: { _tempId: consultation._tempId, updates } })
 
   const label = consultation.date
-    ? `${consultation.date}${consultation.typeDisplay ? ' — ' + consultation.typeDisplay : ''}`
+    ? `${isoToDisplay(consultation.date)}${consultation.typeDisplay ? ' — ' + consultation.typeDisplay : ''}`
     : consultation.typeDisplay || 'New consultation'
 
   const body = (
     <div className="p-3 bg-white dark:bg-gray-900 space-y-3">
       {/* Header fields */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <Field label="Date" type="date" value={consultation.date ?? ''} onChange={v => upd({ date: v })} required />
-        <Field label="End date" type="date" value={consultation.endDate ?? ''} onChange={v => upd({ endDate: v })} />
+        <DateField label="Date" value={consultation.date ?? ''} onChange={v => upd({ date: v })} required />
+        <DateField label="End date" value={consultation.endDate ?? ''} onChange={v => upd({ endDate: v })} />
         <ConsultationTypeField
           typeDisplay={consultation.typeDisplay}
           typeCode={consultation.typeCode}
@@ -774,7 +775,7 @@ function ConsultationDisplayRow({
     : null
 
   const title = consultation.date
-    ? `${consultation.date}${consultation.typeDisplay ? ' — ' + consultation.typeDisplay : ''}`
+    ? `${isoToDisplay(consultation.date)}${consultation.typeDisplay ? ' — ' + consultation.typeDisplay : ''}`
     : consultation.typeDisplay || 'New consultation'
 
   return (
@@ -844,13 +845,13 @@ export function ConsultationForm({ draft, dispatch }: Props) {
 
   const modalTitle = activeConsultation
     ? (activeConsultation.date
-        ? `${activeConsultation.date}${activeConsultation.typeDisplay ? ' — ' + activeConsultation.typeDisplay : ''}`
+        ? `${isoToDisplay(activeConsultation.date)}${activeConsultation.typeDisplay ? ' — ' + activeConsultation.typeDisplay : ''}`
         : 'Add Consultation')
     : 'Add Consultation'
 
   const deleteLabel = deleteConsultation
     ? (deleteConsultation.date
-        ? `${deleteConsultation.date}${deleteConsultation.typeDisplay ? ' — ' + deleteConsultation.typeDisplay : ''}`
+        ? `${isoToDisplay(deleteConsultation.date)}${deleteConsultation.typeDisplay ? ' — ' + deleteConsultation.typeDisplay : ''}`
         : 'this consultation')
     : 'this consultation'
 

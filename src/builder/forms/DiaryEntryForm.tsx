@@ -3,6 +3,7 @@ import type { DraftRecord, DraftDiaryEntry } from '../types'
 import type { DraftAction } from '../hooks/useDraftRecord'
 import { newTempId } from '../hooks/useDraftRecord'
 import { Field } from './shared/FormField'
+import { DateField, isoToDisplay } from './shared/DateField'
 import { SelectField } from './shared/SelectField'
 import { PractitionerSelect } from './shared/PractitionerSelect'
 import { SnomedPicker } from './shared/SnomedPicker'
@@ -71,7 +72,7 @@ function DiaryEntryDisplayRow({
           )}
         </div>
         <div className="text-xs text-nhs-grey-3 mt-0.5">
-          {entry.date && <span>{entry.date}</span>}
+          {entry.date && <span>{isoToDisplay(entry.date)}</span>}
         </div>
       </div>
       <div className="flex items-center gap-2 shrink-0 ml-2">
@@ -120,7 +121,7 @@ function DiaryEntryCard({
               {entry.description || 'New diary entry'}
             </span>
             {entry.date && (
-              <span className="text-xs text-nhs-grey-3">{entry.date}</span>
+              <span className="text-xs text-nhs-grey-3">{isoToDisplay(entry.date)}</span>
             )}
           </button>
           <button
@@ -147,9 +148,9 @@ function DiaryEntryCard({
           <Field label="Associated text" value={entry.associatedText ?? ''} onChange={v => upd({ associatedText: v })} />
 
           <div className="grid grid-cols-3 gap-2">
-            <Field label="Date" type="date" value={entry.date ?? ''} onChange={v => upd({ date: v })} />
-            <Field label="Occurrence start" type="date" value={entry.occurrenceStart ?? ''} onChange={v => upd({ occurrenceStart: v })} />
-            <Field label="Occurrence end" type="date" value={entry.occurrenceEnd ?? ''} onChange={v => upd({ occurrenceEnd: v })} />
+            <DateField label="Date" value={entry.date ?? ''} onChange={v => upd({ date: v })} />
+            <DateField label="Occurrence start" value={entry.occurrenceStart ?? ''} onChange={v => upd({ occurrenceStart: v })} />
+            <DateField label="Occurrence end" value={entry.occurrenceEnd ?? ''} onChange={v => upd({ occurrenceEnd: v })} />
           </div>
 
           <div className="grid grid-cols-3 gap-2">
