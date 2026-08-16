@@ -271,10 +271,11 @@ export function DmdPicker({ value, onChange, code, dmdType = 'VMP', label = 'dm+
               onKeyDown={handleKeyDown}
               placeholder={isConnected ? `Search dm+d ${activeType} or type free text…` : 'Type free text (configure server to enable dm+d search)'}
               required={required}
+              title={value}
               className={
-                'w-full rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-2 py-1.5 text-sm ' +
+                'w-full rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-2 py-1.5 text-sm truncate ' +
                 'text-nhs-grey-1 dark:bg-gray-800 ' +
-                (code ? 'pr-24 ' : 'pr-8 ') +
+                (code ? 'pr-16 ' : 'pr-8 ') +
                 'focus:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue'
               }
             />
@@ -286,11 +287,15 @@ export function DmdPicker({ value, onChange, code, dmdType = 'VMP', label = 'dm+
                 </svg>
               )}
               {code && !isLoading && (
+                // dm+d codes can run to 15 digits — showing them inline
+                // overflowed the reserved gutter and bled over the term text
+                // in a narrow box. dmdType (VMP/AMP/…) is always short and
+                // stays visible; the full code is still on the tooltip.
                 <span
-                  className={`flex items-center gap-1 text-xs font-mono px-1.5 py-0.5 rounded ${typeCls(dmdType)}`}
-                  title={`dm+d ${dmdType} ${code} — click × to unlink and keep as free text`}
+                  className={`flex items-center gap-1 shrink-0 text-xs font-mono px-1.5 py-0.5 rounded ${typeCls(dmdType)}`}
+                  title={`${value} — dm+d ${dmdType} ${code} — click × to unlink and keep as free text`}
                 >
-                  {code}
+                  {dmdType}
                   {import.meta.env.DEV && (
                     <button type="button" onClick={handleLookupDetails} className="hover:opacity-70" title="Fetch full $lookup detail (dev only)">🔍</button>
                   )}

@@ -466,10 +466,11 @@ export function SnomedPicker({ value, onChange, code, label = 'SNOMED CT', seman
                   onKeyDown={handleKeyDown}
                   placeholder={isConnected ? 'Search SNOMED CT or type free text…' : 'Type free text (configure server to enable SNOMED search)'}
                   required={required}
+                  title={value}
                   className={
-                    'w-full rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-2 py-1.5 text-sm ' +
+                    'w-full rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-2 py-1.5 text-sm truncate ' +
                     'text-nhs-grey-1 dark:bg-gray-800 ' +
-                    (code ? 'pr-24 ' : 'pr-8 ') +
+                    (code ? 'pr-14 ' : 'pr-8 ') +
                     'focus:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue'
                   }
                 />
@@ -481,11 +482,18 @@ export function SnomedPicker({ value, onChange, code, label = 'SNOMED CT', seman
                     </svg>
                   )}
                   {code && !isLoading && (
+                    // A SNOMED code can run to 18 digits — showing it inline
+                    // here overflowed the reserved gutter and bled over the
+                    // term text in a narrow box (e.g. a Result name column).
+                    // A fixed-width checkmark can never overflow; the code
+                    // and term are still available via the tooltip.
                     <span
-                      className="flex items-center gap-1 text-xs font-mono px-1.5 py-0.5 rounded bg-nhs-blue/10 text-nhs-blue dark:bg-blue-900/40 dark:text-blue-300"
-                      title={`SNOMED CT ${code} — click × to unlink and keep as free text`}
+                      className="flex items-center gap-1 shrink-0 px-1 py-0.5 rounded bg-nhs-blue/10 text-nhs-blue dark:bg-blue-900/40 dark:text-blue-300"
+                      title={`${value} — SNOMED CT ${code} — click × to unlink and keep as free text`}
                     >
-                      {code}
+                      <svg className="w-3.5 h-3.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
                       {import.meta.env.DEV && (
                         <button type="button" onClick={handleLookupDetails} className="hover:opacity-70" title="Fetch full $lookup detail (dev only)">🔍</button>
                       )}
