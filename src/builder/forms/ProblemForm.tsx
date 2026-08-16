@@ -170,6 +170,7 @@ function ProblemCard({
             draft={draft}
             value={problem.asserterTempId}
             onChange={v => upd({ asserterTempId: v })}
+            required
           />
 
           <ConfidentialityCheckboxes

@@ -168,6 +168,7 @@ function DocumentCard({
             draft={draft}
             value={doc.authorTempId}
             onChange={v => upd({ authorTempId: v })}
+            required
           />
 
           {/* Custodian org — display only */}

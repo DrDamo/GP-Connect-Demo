@@ -14,9 +14,10 @@ export interface PractitionerSelectProps {
   draft: DraftRecord
   value?: string
   onChange: (tempId: string | undefined) => void
+  required?: boolean
 }
 
-export function PractitionerSelect({ label, draft, value, onChange }: PractitionerSelectProps) {
+export function PractitionerSelect({ label, draft, value, onChange, required }: PractitionerSelectProps) {
   const options = [
     { value: '', label: '— None —' },
     ...draft.practitioners.map(p => ({
@@ -29,10 +30,12 @@ export function PractitionerSelect({ label, draft, value, onChange }: Practition
     <div>
       <label className="block text-xs font-medium text-nhs-grey-3 uppercase tracking-wide mb-0.5">
         {label}
+        {required && <span className="text-nhs-red ml-0.5">*</span>}
       </label>
       <select
         value={value ?? ''}
         onChange={e => onChange(e.target.value || undefined)}
+        required={required}
         className={SELECT_CLS}
       >
         {options.map(opt => (
@@ -41,6 +44,9 @@ export function PractitionerSelect({ label, draft, value, onChange }: Practition
           </option>
         ))}
       </select>
+      {required && draft.practitioners.length === 0 && (
+        <p className="mt-0.5 text-xs text-nhs-red">No practitioners yet — add one in Admin first</p>
+      )}
     </div>
   )
 }

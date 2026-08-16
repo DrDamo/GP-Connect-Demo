@@ -636,6 +636,7 @@ function ConsultationCard({
           draft={draft}
           value={consultation.clinicianTempId}
           onChange={v => upd({ clinicianTempId: v })}
+          required
         />
         <SelectField
           label="Encounter class"

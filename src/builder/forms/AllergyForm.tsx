@@ -159,6 +159,7 @@ function AllergyCard({
             draft={draft}
             value={allergy.recorderTempId}
             onChange={v => upd({ recorderTempId: v })}
+            required
           />
 
           <ConfidentialityCheckboxes
