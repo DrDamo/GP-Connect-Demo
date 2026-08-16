@@ -239,6 +239,17 @@ export interface DraftInvestigationResult {
   comment?: string
 }
 
+// A panel/battery of tests (e.g. "Full blood count") — the middle tier of the
+// GP Connect Investigations model: Test Report > Test Group > Test Result.
+// https://simplifier.net/guide/gp-connect-access-record-structured/Home/Design/Investigations-guidance
+export interface DraftTestGroup {
+  _tempId: string
+  name?: string
+  snomedCode?: string
+  comment?: string
+  results: DraftInvestigationResult[]
+}
+
 export interface DraftInvestigation {
   _tempId: string
   name?: string
@@ -246,7 +257,24 @@ export interface DraftInvestigation {
   date?: string
   status?: string
   performerTempId?: string
-  results: DraftInvestigationResult[]
+  // Report-level filing comment
+  comment?: string
+  // Linked specimen — all optional; a Specimen resource is only generated
+  // when at least one of these is set
+  specimenType?: string
+  specimenSnomedCode?: string
+  specimenCollectedDate?: string
+  specimenReceivedDate?: string
+  specimenStatus?: string
+  specimenNote?: string
+  // Linked test request — all optional; a ProcedureRequest resource is only
+  // generated when a name is set
+  testRequestName?: string
+  testRequestSnomedCode?: string
+  testRequestStatus?: string
+  testRequestIntent?: string
+  testRequestRequesterTempId?: string
+  testGroups: DraftTestGroup[]
   linkedProblemTempIds?: string[]
   linkedConsultationTempId?: string
   confidential?: boolean
