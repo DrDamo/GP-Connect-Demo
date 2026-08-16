@@ -40,6 +40,7 @@ export interface FieldProps {
   onChange: (val: string) => void
   placeholder?: string
   required?: boolean
+  disabled?: boolean
   className?: string
   suggestions?: string[]
 }
@@ -51,6 +52,7 @@ export function Field({
   onChange,
   placeholder,
   required,
+  disabled,
   className,
   suggestions,
 }: FieldProps) {
@@ -58,14 +60,15 @@ export function Field({
   const listId = suggestions?.length ? `fl-${uid}` : undefined
 
   return (
-    <FormField label={label} required={required} className={className}>
+    <FormField label={label} required={required && !disabled} className={className}>
       <input
         type={type}
         value={value ?? ''}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
-        required={required}
-        className={INPUT_CLS}
+        required={required && !disabled}
+        disabled={disabled}
+        className={`${INPUT_CLS} disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-nhs-grey-5 dark:disabled:bg-gray-800`}
         list={listId}
         autoComplete="off"
       />

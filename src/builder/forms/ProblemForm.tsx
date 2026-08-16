@@ -72,6 +72,11 @@ function ProblemCard({
 
   const expanded = isModal ? true : open
 
+  // An active problem hasn't ended, so no end date can be recorded; an
+  // inactive/resolved problem must have one to say when it stopped being current.
+  const endDateDisabled = problem.clinicalStatus === 'active'
+  const endDateRequired = problem.clinicalStatus === 'inactive' || problem.clinicalStatus === 'resolved'
+
   return (
     <div className="border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg overflow-hidden mb-2">
       <div className="flex items-center justify-between px-3 py-2 bg-nhs-grey-5 dark:bg-gray-800">
@@ -127,7 +132,12 @@ function ProblemCard({
             <SelectField
               label="Clinical status"
               value={problem.clinicalStatus ?? ''}
-              onChange={v => upd({ clinicalStatus: v as DraftProblem['clinicalStatus'] })}
+              onChange={v => upd({
+                clinicalStatus: v as DraftProblem['clinicalStatus'],
+                // Active problems have no end date — clear any value left over
+                // from a previous status so it can't be silently submitted.
+                ...(v === 'active' ? { endDate: '' } : {}),
+              })}
               options={CLINICAL_STATUS_OPTS}
               placeholder="— Select —"
               required
@@ -149,7 +159,8 @@ function ProblemCard({
               type="date"
               value={problem.endDate ?? ''}
               onChange={v => upd({ endDate: v })}
-              required={problem.clinicalStatus === 'inactive'}
+              required={endDateRequired}
+              disabled={endDateDisabled}
             />
             <Field label="Asserted date" type="date" value={problem.assertedDate ?? ''} onChange={v => upd({ assertedDate: v })} />
           </div>
