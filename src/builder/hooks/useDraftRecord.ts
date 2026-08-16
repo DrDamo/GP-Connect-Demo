@@ -30,6 +30,13 @@ export function newTempId(): string {
   return crypto.randomUUID().slice(0, 8)
 }
 
+// Default for "when it happened / was recorded" dates on newly added items
+// (start, onset, asserted, given, recorded, occurrence start). End/expiry
+// style dates stay blank.
+function today(): string {
+  return new Date().toISOString().split('T')[0]
+}
+
 // ---------------------------------------------------------------------------
 // Empty draft factory
 // ---------------------------------------------------------------------------
@@ -421,7 +428,13 @@ function draftReducer(state: DraftRecord, action: DraftAction): DraftRecord {
       }))
       return {
         ...state,
-        problems: [...state.problems, { _tempId: problemTempId, linkedConsultationTempId: consTempId }],
+        problems: [...state.problems, {
+          _tempId: problemTempId,
+          linkedConsultationTempId: consTempId,
+          clinicalStatus: 'active',
+          startDate: today(),
+          assertedDate: today(),
+        }],
         consultations: state.consultations.map(c =>
           c._tempId === consTempId
             ? {
@@ -468,7 +481,13 @@ function draftReducer(state: DraftRecord, action: DraftAction): DraftRecord {
       const problemTempId = newTempId()
       return {
         ...state,
-        problems: [...state.problems, { _tempId: problemTempId, linkedConsultationTempId: consTempId }],
+        problems: [...state.problems, {
+          _tempId: problemTempId,
+          linkedConsultationTempId: consTempId,
+          clinicalStatus: 'active',
+          startDate: today(),
+          assertedDate: today(),
+        }],
         consultations: state.consultations.map(c =>
           c._tempId === consTempId
             ? { ...c, topics: updateById(c.topics, topicTempId, { problemTempId }) }
@@ -800,7 +819,7 @@ function draftReducer(state: DraftRecord, action: DraftAction): DraftRecord {
           issues: [],
           status: 'active',
           route: 'oral',
-          startDate: new Date().toISOString().split('T')[0],
+          startDate: today(),
           prescriptionType: 'acute',
         }],
       }
@@ -811,22 +830,21 @@ function draftReducer(state: DraftRecord, action: DraftAction): DraftRecord {
         allergies: [...state.allergies, {
           _tempId: action.payload,
           status: 'active' as const,
-          assertedDate: new Date().toISOString().split('T')[0],
+          assertedDate: today(),
+          onsetDate: today(),
         }],
       }
 
-    case 'ADD_PROBLEM_WITH_ID': {
-      const today = new Date().toISOString().split('T')[0]
+    case 'ADD_PROBLEM_WITH_ID':
       return {
         ...state,
         problems: [...state.problems, {
           _tempId: action.payload,
           clinicalStatus: 'active',
-          startDate: today,
-          assertedDate: today,
+          startDate: today(),
+          assertedDate: today(),
         }],
       }
-    }
 
     case 'ADD_CONSULTATION_WITH_ID':
       return {
@@ -834,44 +852,52 @@ function draftReducer(state: DraftRecord, action: DraftAction): DraftRecord {
         consultations: [...state.consultations, {
           _tempId: action.payload,
           topics: [],
-          date: new Date().toISOString().split('T')[0],
+          date: today(),
         }],
       }
 
     case 'ADD_IMMUNISATION_WITH_ID':
       return {
         ...state,
-        immunisations: [...state.immunisations, { _tempId: action.payload }],
+        immunisations: [...state.immunisations, {
+          _tempId: action.payload,
+          dateGiven: today(),
+          dateRecorded: today(),
+        }],
       }
 
     case 'ADD_INVESTIGATION_WITH_ID':
       return {
         ...state,
-        investigations: [...state.investigations, { _tempId: action.payload, results: [] }],
+        investigations: [...state.investigations, { _tempId: action.payload, date: today(), results: [] }],
       }
 
     case 'ADD_REFERRAL_WITH_ID':
       return {
         ...state,
-        referrals: [...state.referrals, { _tempId: action.payload }],
+        referrals: [...state.referrals, { _tempId: action.payload, date: today() }],
       }
 
     case 'ADD_DIARY_ENTRY_WITH_ID':
       return {
         ...state,
-        diaryEntries: [...state.diaryEntries, { _tempId: action.payload }],
+        diaryEntries: [...state.diaryEntries, {
+          _tempId: action.payload,
+          date: today(),
+          occurrenceStart: today(),
+        }],
       }
 
     case 'ADD_CODED_DATA_WITH_ID':
       return {
         ...state,
-        codedData: [...state.codedData, { _tempId: action.payload }],
+        codedData: [...state.codedData, { _tempId: action.payload, date: today() }],
       }
 
     case 'ADD_DOCUMENT_WITH_ID':
       return {
         ...state,
-        documents: [...state.documents, { _tempId: action.payload }],
+        documents: [...state.documents, { _tempId: action.payload, date: today() }],
       }
 
     case 'ADD_PRACTITIONER_WITH_ID':

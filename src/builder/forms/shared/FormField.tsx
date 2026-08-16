@@ -28,7 +28,7 @@ export function FormField({ label, required, children, className }: FormFieldPro
 // Field — labeled input shorthand
 // ---------------------------------------------------------------------------
 
-const INPUT_CLS =
+export const INPUT_CLS =
   'w-full rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-2 py-1.5 text-sm ' +
   'text-nhs-grey-1 dark:bg-gray-800 ' +
   'focus:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue'

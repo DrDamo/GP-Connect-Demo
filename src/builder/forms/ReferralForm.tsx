@@ -3,6 +3,7 @@ import type { DraftRecord, DraftReferral } from '../types'
 import type { DraftAction } from '../hooks/useDraftRecord'
 import { newTempId } from '../hooks/useDraftRecord'
 import { Field } from './shared/FormField'
+import { DateField } from './shared/DateField'
 import { SelectField } from './shared/SelectField'
 import { PractitionerSelect } from './shared/PractitionerSelect'
 import { BuilderModal } from '../components/BuilderModal'
@@ -136,7 +137,7 @@ function ReferralCard({
       {expanded && (
         <div className="p-3 bg-white dark:bg-gray-900 space-y-3">
           <div className="grid grid-cols-2 gap-2">
-            <Field label="Date" type="date" value={referral.date ?? ''} onChange={v => upd({ date: v })} />
+            <DateField label="Date" value={referral.date ?? ''} onChange={v => upd({ date: v })} />
             <Field label="Recipient name" value={referral.recipientName ?? ''} onChange={v => upd({ recipientName: v })} required />
           </div>
 

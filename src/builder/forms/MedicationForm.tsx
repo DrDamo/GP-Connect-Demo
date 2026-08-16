@@ -3,6 +3,7 @@ import type { DraftRecord, DraftMedication, DraftMedicationIssue } from '../type
 import type { DraftAction } from '../hooks/useDraftRecord'
 import { newTempId } from '../hooks/useDraftRecord'
 import { Field } from './shared/FormField'
+import { DateField } from './shared/DateField'
 import { SelectField } from './shared/SelectField'
 import { PractitionerSelect } from './shared/PractitionerSelect'
 import { DmdPicker } from './shared/DmdPicker'
@@ -103,16 +104,14 @@ function IssueModal({
           </div>
         )}
         <div className="grid grid-cols-2 gap-2">
-          <Field
+          <DateField
             label="Asserted date"
-            type="date"
             value={issue.issueDate ?? ''}
             onChange={v => upd({ issueDate: v })}
             required
           />
-          <Field
+          <DateField
             label="Start date"
-            type="date"
             value={issue.startDate ?? ''}
             onChange={v => upd({ startDate: v })}
           />
@@ -181,8 +180,8 @@ function RepeatDispensingIssueModal({
           Start dates are calculated automatically — each issue begins where the previous ends.
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <Field label="Asserted date" type="date" value={assertedDate} onChange={setAssertedDate} required />
-          <Field label="Start date (issue 1)" type="date" value={startDate} onChange={setStartDate} />
+          <DateField label="Asserted date" value={assertedDate} onChange={setAssertedDate} required />
+          <DateField label="Start date (issue 1)" value={startDate} onChange={setStartDate} />
         </div>
         <div className="grid grid-cols-2 gap-2">
           <ReadOnlyField label="Quantity" value={med.prescribedQuantityValue} />
@@ -285,8 +284,8 @@ function MedicationCard({
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        <Field label="Start date" type="date" value={med.startDate ?? ''} onChange={v => upd({ startDate: v })} />
-        <Field label="End date" type="date" value={med.endDate ?? ''} onChange={v => upd({ endDate: v })} />
+        <DateField label="Start date" value={med.startDate ?? ''} onChange={v => upd({ startDate: v })} />
+        <DateField label="End date" value={med.endDate ?? ''} onChange={v => upd({ endDate: v })} />
       </div>
 
       <PractitionerSelect

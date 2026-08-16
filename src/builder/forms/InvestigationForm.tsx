@@ -3,6 +3,7 @@ import type { DraftRecord, DraftInvestigation, DraftInvestigationResult } from '
 import type { DraftAction } from '../hooks/useDraftRecord'
 import { newTempId } from '../hooks/useDraftRecord'
 import { Field } from './shared/FormField'
+import { DateField } from './shared/DateField'
 import { SelectField } from './shared/SelectField'
 import { PractitionerSelect } from './shared/PractitionerSelect'
 import { SnomedPicker } from './shared/SnomedPicker'
@@ -145,7 +146,7 @@ function InvestigationCard({
           placeholder="— Select —"
           required
         />
-        <Field label="Date" type="date" value={inv.date ?? ''} onChange={v => upd({ date: v })} required />
+        <DateField label="Date" value={inv.date ?? ''} onChange={v => upd({ date: v })} required />
         <PractitionerSelect
           label="Performer"
           draft={draft}

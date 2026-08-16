@@ -11,6 +11,7 @@ import type {
 import type { DraftAction } from '../hooks/useDraftRecord'
 import { newTempId } from '../hooks/useDraftRecord'
 import { Field, FormField } from './shared/FormField'
+import { DateField } from './shared/DateField'
 import { SelectField } from './shared/SelectField'
 import { PractitionerSelect } from './shared/PractitionerSelect'
 import { SnomedPicker } from './shared/SnomedPicker'
@@ -198,7 +199,7 @@ function ConsultationItemRow({
           />
         </div>
         <div className="w-40 shrink-0">
-          <Field label="Date" type="date" value={item.date ?? ''} onChange={v => upd({ date: v })} />
+          <DateField label="Date" value={item.date ?? ''} onChange={v => upd({ date: v })} />
         </div>
         <div className="flex-1" />
         <button
@@ -620,8 +621,8 @@ function ConsultationCard({
     <div className="p-3 bg-white dark:bg-gray-900 space-y-3">
       {/* Header fields */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <Field label="Date" type="date" value={consultation.date ?? ''} onChange={v => upd({ date: v })} required />
-        <Field label="End date" type="date" value={consultation.endDate ?? ''} onChange={v => upd({ endDate: v })} />
+        <DateField label="Date" value={consultation.date ?? ''} onChange={v => upd({ date: v })} required />
+        <DateField label="End date" value={consultation.endDate ?? ''} onChange={v => upd({ endDate: v })} />
         <ConsultationTypeField
           typeDisplay={consultation.typeDisplay}
           typeCode={consultation.typeCode}

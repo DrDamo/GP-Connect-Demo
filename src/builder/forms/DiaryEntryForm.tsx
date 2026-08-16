@@ -3,6 +3,7 @@ import type { DraftRecord, DraftDiaryEntry } from '../types'
 import type { DraftAction } from '../hooks/useDraftRecord'
 import { newTempId } from '../hooks/useDraftRecord'
 import { Field } from './shared/FormField'
+import { DateField } from './shared/DateField'
 import { SelectField } from './shared/SelectField'
 import { PractitionerSelect } from './shared/PractitionerSelect'
 import { SnomedPicker } from './shared/SnomedPicker'
@@ -147,9 +148,9 @@ function DiaryEntryCard({
           <Field label="Associated text" value={entry.associatedText ?? ''} onChange={v => upd({ associatedText: v })} />
 
           <div className="grid grid-cols-3 gap-2">
-            <Field label="Date" type="date" value={entry.date ?? ''} onChange={v => upd({ date: v })} />
-            <Field label="Occurrence start" type="date" value={entry.occurrenceStart ?? ''} onChange={v => upd({ occurrenceStart: v })} />
-            <Field label="Occurrence end" type="date" value={entry.occurrenceEnd ?? ''} onChange={v => upd({ occurrenceEnd: v })} />
+            <DateField label="Date" value={entry.date ?? ''} onChange={v => upd({ date: v })} />
+            <DateField label="Occurrence start" value={entry.occurrenceStart ?? ''} onChange={v => upd({ occurrenceStart: v })} />
+            <DateField label="Occurrence end" value={entry.occurrenceEnd ?? ''} onChange={v => upd({ occurrenceEnd: v })} />
           </div>
 
           <div className="grid grid-cols-3 gap-2">

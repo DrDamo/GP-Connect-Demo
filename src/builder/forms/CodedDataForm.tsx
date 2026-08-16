@@ -3,6 +3,7 @@ import type { DraftRecord, DraftCodedDataItem } from '../types'
 import type { DraftAction } from '../hooks/useDraftRecord'
 import { newTempId } from '../hooks/useDraftRecord'
 import { Field } from './shared/FormField'
+import { DateField } from './shared/DateField'
 import { SelectField } from './shared/SelectField'
 import { PractitionerSelect } from './shared/PractitionerSelect'
 import { SnomedPicker } from './shared/SnomedPicker'
@@ -156,7 +157,7 @@ function CodedDataCard({
           <Field label="Associated text" value={item.comment ?? ''} onChange={v => upd({ comment: v })} />
 
           <div className="grid grid-cols-3 gap-2">
-            <Field label="Date" type="date" value={item.date ?? ''} onChange={v => upd({ date: v })} />
+            <DateField label="Date" value={item.date ?? ''} onChange={v => upd({ date: v })} />
             <Field label="Value" value={item.value ?? ''} onChange={v => upd({ value: v })} />
             <Field label="Unit" value={item.unit ?? ''} onChange={v => upd({ unit: v })} />
           </div>
