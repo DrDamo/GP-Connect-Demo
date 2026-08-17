@@ -26,7 +26,7 @@ function makeAllergyResource(
     resourceType: 'AllergyIntolerance',
     id,
     ...nopatMeta(draft.notForPfs),
-    clinicalStatus: draft.status === 'resolved' ? 'resolved' : 'active',
+    clinicalStatus: draft.status ?? 'active',
     verificationStatus: 'confirmed',
     ...(draft.category ? { category: [draft.category] } : {}),
     ...(draft.criticality ? { criticality: draft.criticality } : {}),
@@ -46,6 +46,7 @@ function makeAllergyResource(
     },
     patient: { reference: patientRef },
     ...(draft.onsetDate ? { onsetDateTime: draft.onsetDate } : {}),
+    ...(draft.lastOccurrence ? { lastOccurrence: draft.lastOccurrence } : {}),
     ...(draft.recorderTempId
       ? { recorder: { reference: map.ref(draft.recorderTempId, 'Practitioner') } }
       : {}),
@@ -63,6 +64,9 @@ function makeAllergyResource(
                   ...(draft.reaction ? { text: draft.reaction } : {}),
                 },
               ],
+              ...(draft.reactionDescription ? { description: draft.reactionDescription } : {}),
+              ...(draft.reactionOnset ? { onset: draft.reactionOnset } : {}),
+              ...(draft.reactionSeverity ? { severity: draft.reactionSeverity } : {}),
             },
           ],
         }

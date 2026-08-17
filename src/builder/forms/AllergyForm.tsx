@@ -37,7 +37,14 @@ const CRITICALITY_OPTS = [
 
 const STATUS_OPTS = [
   { value: 'active', label: 'Active' },
+  { value: 'inactive', label: 'Inactive' },
   { value: 'resolved', label: 'Resolved' },
+]
+
+const REACTION_SEVERITY_OPTS = [
+  { value: 'mild', label: 'Mild' },
+  { value: 'moderate', label: 'Moderate' },
+  { value: 'severe', label: 'Severe' },
 ]
 
 function AllergyCard({
@@ -57,6 +64,13 @@ function AllergyCard({
 
   const isResolved = allergy.status === 'resolved'
   const expanded = isModal ? true : open
+
+  // Reaction is an optional section as a whole, but once any part of it is
+  // filled in, the coded Manifestation becomes mandatory — a description,
+  // onset or severity with nothing to attach it to isn't a valid record.
+  const reactionSectionUsed = !!(
+    allergy.reaction || allergy.reactionDescription || allergy.reactionOnset || allergy.reactionSeverity
+  )
 
   return (
     <div className="border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg overflow-hidden mb-2">
@@ -134,18 +148,44 @@ function AllergyCard({
             />
           </div>
 
+          <div className="grid grid-cols-3 gap-2">
+            <DateField label="Asserted date" value={allergy.assertedDate ?? ''} onChange={v => upd({ assertedDate: v })} />
+            <DateField label="Onset date" value={allergy.onsetDate ?? ''} onChange={v => upd({ onsetDate: v })} />
+            <DateField label="Last occurrence" value={allergy.lastOccurrence ?? ''} onChange={v => upd({ lastOccurrence: v })} />
+          </div>
+
+          {/* Reaction — an optional section in its own right. Filling in any
+              part of it (description, onset, severity) makes the coded
+              Manifestation mandatory, since those details need something to
+              describe. */}
+          <hr className="border-nhs-grey-4 dark:border-nhs-grey-2" />
+          <h3 className="text-xs font-semibold text-nhs-grey-2 uppercase tracking-wide">Reaction</h3>
+
           <SnomedPicker
-            label="Reaction"
+            label="Manifestation"
             value={allergy.reaction ?? ''}
             code={allergy.reactionCode}
             semanticTag="finding,disorder"
             onChange={({ value, code }) => upd({ reaction: value, reactionCode: code })}
+            required={reactionSectionUsed}
           />
-
+          <Field
+            label="Description"
+            value={allergy.reactionDescription ?? ''}
+            onChange={v => upd({ reactionDescription: v })}
+          />
           <div className="grid grid-cols-2 gap-2">
-            <DateField label="Asserted date" value={allergy.assertedDate ?? ''} onChange={v => upd({ assertedDate: v })} />
-            <DateField label="Onset date" value={allergy.onsetDate ?? ''} onChange={v => upd({ onsetDate: v })} />
+            <DateField label="Reaction onset" value={allergy.reactionOnset ?? ''} onChange={v => upd({ reactionOnset: v })} />
+            <SelectField
+              label="Reaction severity"
+              value={allergy.reactionSeverity ?? ''}
+              onChange={v => upd({ reactionSeverity: v as DraftAllergy['reactionSeverity'] })}
+              options={REACTION_SEVERITY_OPTS}
+              placeholder="— Not recorded —"
+            />
           </div>
+
+          <hr className="border-nhs-grey-4 dark:border-nhs-grey-2" />
 
           {isResolved && (
             <div className="grid grid-cols-2 gap-2">

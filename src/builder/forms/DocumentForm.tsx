@@ -54,7 +54,7 @@ function DocumentDisplayRow({
   onDelete: () => void
 }) {
   const metaParts = [
-    doc.date || null,
+    doc.indexedDate ? isoToDisplay(doc.indexedDate) : null,
     doc.mimeType || null,
   ].filter(Boolean).join(' · ')
 
@@ -121,8 +121,8 @@ function DocumentCard({
             <span className="text-sm font-medium text-nhs-grey-1">
               {doc.type || doc.description || 'New document'}
             </span>
-            {doc.date && (
-              <span className="text-xs text-nhs-grey-3">{isoToDisplay(doc.date)}</span>
+            {doc.indexedDate && (
+              <span className="text-xs text-nhs-grey-3">{isoToDisplay(doc.indexedDate)}</span>
             )}
           </button>
           <button
@@ -138,9 +138,21 @@ function DocumentCard({
 
       {expanded && (
         <div className="p-3 bg-white dark:bg-gray-900 space-y-3">
+          <Field label="Document type" value={doc.type ?? ''} onChange={v => upd({ type: v })} required />
+
           <div className="grid grid-cols-2 gap-2">
-            <Field label="Document type" value={doc.type ?? ''} onChange={v => upd({ type: v })} required />
-            <DateField label="Date" value={doc.date ?? ''} onChange={v => upd({ date: v })} />
+            <DateField
+              label="Indexed date"
+              value={doc.indexedDate ?? ''}
+              onChange={v => upd({ indexedDate: v })}
+              required
+              fullDateOnly
+            />
+            <DateField
+              label="Created date"
+              value={doc.createdDate ?? ''}
+              onChange={v => upd({ createdDate: v })}
+            />
           </div>
 
           <Field label="Description" value={doc.description ?? ''} onChange={v => upd({ description: v })} />

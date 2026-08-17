@@ -118,11 +118,20 @@ export interface DraftAllergy {
   snomedCode?: string
   category?: 'food' | 'medication' | 'environment' | 'biologic'
   criticality?: 'low' | 'high' | 'unable-to-assess'
+  /** The coded manifestation of the reaction (FHIR AllergyIntolerance.reaction.manifestation). */
   reaction?: string
   reactionCode?: string
-  status?: 'active' | 'resolved'
+  /** Free-text description of the reaction event as a whole. Only meaningful once a manifestation is recorded. */
+  reactionDescription?: string
+  /** Date/time the manifestation showed. */
+  reactionOnset?: string
+  /** Clinical assessment of the severity of the reaction event as a whole. */
+  reactionSeverity?: 'mild' | 'moderate' | 'severe'
+  status?: 'active' | 'inactive' | 'resolved'
   assertedDate?: string
   onsetDate?: string
+  /** Date the reaction most recently occurred (FHIR AllergyIntolerance.lastOccurrence). Not mandatory. */
+  lastOccurrence?: string
   endDate?: string
   endReason?: string
   recorderTempId?: string
@@ -137,8 +146,10 @@ export interface DraftProblem {
   _tempId: string
   problem?: string
   snomedCode?: string
-  clinicalStatus?: 'active' | 'inactive' | 'resolved'
+  clinicalStatus?: 'active' | 'inactive' | 'recurrence' | 'remission' | 'resolved'
   significance?: 'major' | 'minor'
+  /** Subjective severity of the problem — fixed SNOMED CT set (Condition.severity). Not mandatory. */
+  severity?: 'severe' | 'moderate' | 'mild'
   startDate?: string
   endDate?: string
   assertedDate?: string
@@ -336,7 +347,10 @@ export interface DraftCodedDataItem {
 export interface DraftDocument {
   _tempId: string
   type?: string
-  date?: string
+  /** Date of filing to the record-keeping system (DocumentReference.indexed). Mandatory, full date only. */
+  indexedDate?: string
+  /** Date the original document was created (DocumentReference.created). Optional. */
+  createdDate?: string
   description?: string
   mimeType?: string
   url?: string
