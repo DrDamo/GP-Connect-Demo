@@ -20,8 +20,17 @@ export function BuilderModal({ title, onDone, onCancel, children, size = 'lg' }:
   // constraint validation (required fields, DateField's custom validity for
   // unparseable text) runs before onDone fires — an invalid form blocks the
   // submit event entirely and focuses the offending field.
+  //
+  // stopPropagation matters once a modal can open another modal from inside
+  // its own content (e.g. a linked Allergy/Medication/… editor opened from
+  // inside the Consultation editor): both <form>s are portalled to <body>,
+  // so they're unrelated in the real DOM, but React's synthetic event system
+  // still bubbles through the *component* tree a portal was rendered from —
+  // without this, saving the inner form would also fire the outer form's
+  // onSubmit and close it.
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    e.stopPropagation()
     onDone()
   }
 

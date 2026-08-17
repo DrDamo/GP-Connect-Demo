@@ -6,6 +6,8 @@ import type {
   DraftConsultationCategory,
   DraftConsultationItem,
   DraftConsultationItemType,
+  DraftConsultationLinkedRef,
+  ConsultationLinkKind,
   DraftProblem,
 } from '../types'
 import type { DraftAction } from '../hooks/useDraftRecord'
@@ -21,6 +23,12 @@ import { LinkSection } from './shared/LinkSection'
 import { ConfidentialityCheckboxes } from './shared/ConfidentialityCheckboxes'
 import { TrashIcon } from '../components/Icons'
 import { InfoHint } from '../../onboarding/InfoHint'
+import { AllergyCard, AllergyDisplayRow } from './AllergyForm'
+import { DocumentCard, DocumentDisplayRow } from './DocumentForm'
+import { InvestigationCard, InvestigationDisplayRow } from './InvestigationForm'
+import { ReferralCard, ReferralDisplayRow } from './ReferralForm'
+import { DiaryEntryCard, DiaryEntryDisplayRow } from './DiaryEntryForm'
+import { MedicationCard, MedicationDisplayRow } from './MedicationForm'
 
 // ---------------------------------------------------------------------------
 // ConsultationForm — three-level nested structure
@@ -144,7 +152,7 @@ const FIXED_CATEGORY_TITLES = ['History', 'Examination', 'Assessment', 'Plan']
 // just the SOAP-note four above.
 const ALL_CATEGORY_TITLES = [
   'Additional', 'Administration', 'Allergy', 'Assessment', 'Comment',
-  'Diagnosis', 'Document', 'Examination', 'Family History', 'Follow up',
+  'Diagnosis', 'Diary Entry', 'Document', 'Examination', 'Family History', 'Follow up',
   'History', 'Intervention', 'Investigation', 'Lab Results', 'Medication',
   'Other', 'Patient Medication Review', 'Plan', 'Problem', 'Procedure',
   'Protocols', 'Referral', 'Regime Review', 'Social', 'Template entry',
@@ -152,6 +160,30 @@ const ALL_CATEGORY_TITLES = [
 ]
 
 const CUSTOM_CATEGORY_OPTION = '__custom__'
+
+// These six category titles don't hold free note/coded items like History or
+// Examination — picking one opens the matching section's own "Add" dialogue
+// instead, so the record gets exactly the fields that resource type needs.
+// The created record lands in its own section's list (and is tagged with
+// this consultation via linkedConsultationTempId), and is only *referenced*
+// here — see DraftConsultationLinkedRef.
+const CATEGORY_LINK_KIND: Partial<Record<string, ConsultationLinkKind>> = {
+  Allergy: 'allergy',
+  Document: 'document',
+  Investigation: 'investigation',
+  'Diary Entry': 'diaryEntry',
+  Medication: 'medication',
+  Referral: 'referral',
+}
+
+const LINK_KIND_LABEL: Record<ConsultationLinkKind, string> = {
+  allergy: 'Allergy',
+  document: 'Document',
+  investigation: 'Investigation',
+  diaryEntry: 'Diary Entry',
+  medication: 'Medication',
+  referral: 'Referral',
+}
 
 const CLINICAL_STATUS_OPTS = [
   { value: 'active', label: 'Active' },
@@ -368,6 +400,132 @@ function TopicProblemBox({
 }
 
 // ---------------------------------------------------------------------------
+// LinkedRefRow / LinkedItemModal — a linked-kind category's items are
+// references to records that live in their own section (Allergies,
+// Documents, …), not note/coded items owned by the consultation. Each row
+// reuses that section's own compact DisplayRow, and Edit reopens that same
+// section's own Card — the exact form used from its standalone "+ Add"
+// button — in a modal nested inside the consultation's modal.
+// ---------------------------------------------------------------------------
+
+function LinkedRefRow({
+  linkedRef,
+  draft,
+  dispatch,
+  onEdit,
+  onRemove,
+}: {
+  linkedRef: DraftConsultationLinkedRef
+  draft: DraftRecord
+  dispatch: React.Dispatch<DraftAction>
+  onEdit: () => void
+  onRemove: () => void
+}) {
+  switch (linkedRef.kind) {
+    case 'allergy': {
+      const item = draft.allergies.find(a => a._tempId === linkedRef.tempId)
+      return item ? <AllergyDisplayRow allergy={item} onEdit={onEdit} onDelete={onRemove} /> : null
+    }
+    case 'document': {
+      const item = draft.documents.find(d => d._tempId === linkedRef.tempId)
+      return item ? <DocumentDisplayRow doc={item} onEdit={onEdit} onDelete={onRemove} /> : null
+    }
+    case 'investigation': {
+      const item = draft.investigations.find(i => i._tempId === linkedRef.tempId)
+      return item ? <InvestigationDisplayRow inv={item} onEdit={onEdit} onDelete={onRemove} /> : null
+    }
+    case 'diaryEntry': {
+      const item = draft.diaryEntries.find(e => e._tempId === linkedRef.tempId)
+      return item ? <DiaryEntryDisplayRow entry={item} onEdit={onEdit} onDelete={onRemove} /> : null
+    }
+    case 'medication': {
+      const item = draft.medications.find(m => m._tempId === linkedRef.tempId)
+      return item ? <MedicationDisplayRow med={item} draft={draft} dispatch={dispatch} onEdit={onEdit} onDelete={onRemove} /> : null
+    }
+    case 'referral': {
+      const item = draft.referrals.find(r => r._tempId === linkedRef.tempId)
+      return item ? <ReferralDisplayRow referral={item} onEdit={onEdit} onDelete={onRemove} /> : null
+    }
+  }
+}
+
+// The modal content for adding/editing one linked-category record — same
+// Card component, and same title convention, as that resource's own
+// standalone Add/Edit dialogue.
+function LinkedItemModal({
+  kind,
+  tempId,
+  draft,
+  dispatch,
+  onDone,
+  onCancel,
+}: {
+  kind: ConsultationLinkKind
+  tempId: string
+  draft: DraftRecord
+  dispatch: React.Dispatch<DraftAction>
+  onDone: () => void
+  onCancel: () => void
+}) {
+  switch (kind) {
+    case 'allergy': {
+      const item = draft.allergies.find(a => a._tempId === tempId)
+      if (!item) return null
+      return (
+        <BuilderModal title={item.causativeAgent ? `Edit: ${item.causativeAgent}` : 'Add Allergy'} onDone={onDone} onCancel={onCancel}>
+          <AllergyCard allergy={item} draft={draft} dispatch={dispatch} isModal />
+        </BuilderModal>
+      )
+    }
+    case 'document': {
+      const item = draft.documents.find(d => d._tempId === tempId)
+      if (!item) return null
+      return (
+        <BuilderModal title={item.type ? `Edit: ${item.type}` : 'Add Document'} onDone={onDone} onCancel={onCancel}>
+          <DocumentCard doc={item} draft={draft} dispatch={dispatch} isModal />
+        </BuilderModal>
+      )
+    }
+    case 'investigation': {
+      const item = draft.investigations.find(i => i._tempId === tempId)
+      if (!item) return null
+      return (
+        <BuilderModal title={item.name || 'Add Investigation'} onDone={onDone} onCancel={onCancel} size="lg">
+          <InvestigationCard inv={item} draft={draft} dispatch={dispatch} isModal />
+        </BuilderModal>
+      )
+    }
+    case 'diaryEntry': {
+      const item = draft.diaryEntries.find(e => e._tempId === tempId)
+      if (!item) return null
+      return (
+        <BuilderModal title={item.description ? `Edit: ${item.description}` : 'Add Diary Entry'} onDone={onDone} onCancel={onCancel}>
+          <DiaryEntryCard entry={item} draft={draft} dispatch={dispatch} isModal />
+        </BuilderModal>
+      )
+    }
+    case 'medication': {
+      const item = draft.medications.find(m => m._tempId === tempId)
+      if (!item) return null
+      return (
+        <BuilderModal title={item.drugName ? `Edit: ${item.drugName}` : 'Add Medication'} onDone={onDone} onCancel={onCancel} size="xl">
+          <MedicationCard med={item} draft={draft} dispatch={dispatch} />
+        </BuilderModal>
+      )
+    }
+    case 'referral': {
+      const item = draft.referrals.find(r => r._tempId === tempId)
+      if (!item) return null
+      return (
+        <BuilderModal title={item.recipientName ? `Edit: ${item.recipientName}` : 'Add Referral'} onDone={onDone} onCancel={onCancel}>
+          <ReferralCard referral={item} draft={draft} dispatch={dispatch} isModal />
+        </BuilderModal>
+      )
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // ConsultationCategory
 // ---------------------------------------------------------------------------
 
@@ -375,15 +533,23 @@ function CategoryBlock({
   cat,
   consTempId,
   topicTempId,
+  draft,
   dispatch,
+  onEditLinked,
+  onAddLinked,
 }: {
   cat: DraftConsultationCategory
   consTempId: string
   topicTempId: string
+  draft: DraftRecord
   dispatch: React.Dispatch<DraftAction>
+  onEditLinked: (kind: ConsultationLinkKind, tempId: string) => void
+  onAddLinked: (kind: ConsultationLinkKind, title: string) => void
 }) {
   const [open, setOpen] = useState(true)
   const isFixed = FIXED_CATEGORY_TITLES.includes(cat.title ?? '')
+  const linkKind = CATEGORY_LINK_KIND[cat.title ?? '']
+  const itemCount = linkKind ? (cat.linkedRefs ?? []).length : cat.items.length
 
   return (
     <div className="border border-nhs-grey-4 dark:border-nhs-grey-2 rounded mb-1.5 overflow-hidden">
@@ -397,7 +563,7 @@ function CategoryBlock({
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
             </svg>
           </button>
-          {isFixed ? (
+          {isFixed || linkKind ? (
             <span className="text-xs font-medium text-nhs-grey-2 shrink-0">{cat.title}</span>
           ) : (
             <input
@@ -414,7 +580,7 @@ function CategoryBlock({
               className="min-w-0 flex-1 text-xs font-medium text-nhs-grey-2 rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-1.5 py-0.5 dark:bg-gray-800 focus:border-nhs-blue focus:outline-none"
             />
           )}
-          <span className="text-xs text-nhs-grey-3 shrink-0">({cat.items.length} items)</span>
+          <span className="text-xs text-nhs-grey-3 shrink-0">({itemCount} items)</span>
         </div>
         <button
           type="button"
@@ -431,7 +597,34 @@ function CategoryBlock({
         </button>
       </div>
 
-      {open && (
+      {open && linkKind && (
+        <div className="p-2 bg-white dark:bg-gray-900">
+          {(cat.linkedRefs ?? []).map(ref => (
+            <LinkedRefRow
+              key={ref.tempId}
+              linkedRef={ref}
+              draft={draft}
+              dispatch={dispatch}
+              onEdit={() => onEditLinked(ref.kind, ref.tempId)}
+              onRemove={() =>
+                dispatch({
+                  type: 'REMOVE_CONSULTATION_LINKED_ITEM',
+                  payload: { consTempId, topicTempId, catTempId: cat._tempId, kind: ref.kind, resourceTempId: ref.tempId },
+                })
+              }
+            />
+          ))}
+          <button
+            type="button"
+            onClick={() => onAddLinked(linkKind, cat.title!)}
+            className="text-xs text-nhs-blue hover:underline mt-0.5"
+          >
+            + Add {LINK_KIND_LABEL[linkKind]}
+          </button>
+        </div>
+      )}
+
+      {open && !linkKind && (
         <div className="p-2 bg-white dark:bg-gray-900">
           {cat.items.map(item => (
             <ConsultationItemRow
@@ -467,10 +660,12 @@ function AddCategorySelect({
   topic,
   consTempId,
   dispatch,
+  onPickLinked,
 }: {
   topic: DraftConsultationTopic
   consTempId: string
   dispatch: React.Dispatch<DraftAction>
+  onPickLinked: (kind: ConsultationLinkKind, title: string) => void
 }) {
   return (
     <select
@@ -478,6 +673,11 @@ function AddCategorySelect({
       onChange={e => {
         const val = e.target.value
         if (!val) return
+        const linkKind = CATEGORY_LINK_KIND[val]
+        if (linkKind) {
+          onPickLinked(linkKind, val)
+          return
+        }
         const title = val === CUSTOM_CATEGORY_OPTION ? '' : val
         dispatch({ type: 'ADD_CONSULTATION_CATEGORY', payload: { consTempId, topicTempId: topic._tempId, title } })
       }}
@@ -509,6 +709,33 @@ function TopicBlock({
   draft: DraftRecord
   dispatch: React.Dispatch<DraftAction>
 }) {
+  // Add/Edit modal for one linked-category record (Allergy, Document, …).
+  // Snapshotting before both add and edit — same pattern every standalone
+  // *Form.tsx uses — means Cancel discards a freshly-created record entirely,
+  // and reverts edits to an existing one, rather than leaving a half-filled
+  // record behind either way.
+  const [linkedEdit, setLinkedEdit] = useState<{ kind: ConsultationLinkKind; tempId: string; snapshot: DraftRecord } | null>(null)
+
+  const openLinkedEditor = (kind: ConsultationLinkKind, tempId: string) => {
+    setLinkedEdit({ kind, tempId, snapshot: structuredClone(draft) })
+  }
+
+  const addLinkedItem = (kind: ConsultationLinkKind, title: string) => {
+    const resourceTempId = newTempId()
+    const snapshot = structuredClone(draft)
+    dispatch({
+      type: 'ADD_CONSULTATION_LINKED_ITEM',
+      payload: { consTempId, topicTempId: topic._tempId, title, kind, resourceTempId },
+    })
+    setLinkedEdit({ kind, tempId: resourceTempId, snapshot })
+  }
+
+  const handleLinkedDone = () => setLinkedEdit(null)
+  const handleLinkedCancel = () => {
+    if (linkedEdit) dispatch({ type: 'LOAD_DRAFT', payload: linkedEdit.snapshot })
+    setLinkedEdit(null)
+  }
+
   return (
     <div className="border border-nhs-grey-4 dark:border-nhs-grey-2 border-t-0 rounded-b-lg p-3 bg-white dark:bg-gray-900 space-y-2">
       <Field
@@ -524,7 +751,10 @@ function TopicBlock({
 
       <TopicProblemBox topic={topic} consTempId={consTempId} draft={draft} dispatch={dispatch} />
 
-      {/* Categories — one each of History/Examination/Assessment/Plan, unlimited Other */}
+      {/* Categories — one each of History/Examination/Assessment/Plan, unlimited
+          Other, plus the six linked kinds (Allergy, Document, Investigation,
+          Diary Entry, Medication, Referral) that reference records created via
+          their own section's Add dialogue instead of holding items directly. */}
       <div>
         <div className="flex items-center justify-between mb-1 flex-wrap gap-1">
           <span className="text-xs font-medium text-nhs-grey-3 uppercase tracking-wide">
@@ -543,7 +773,7 @@ function TopicBlock({
                 + {title}
               </button>
             ))}
-            <AddCategorySelect topic={topic} consTempId={consTempId} dispatch={dispatch} />
+            <AddCategorySelect topic={topic} consTempId={consTempId} dispatch={dispatch} onPickLinked={addLinkedItem} />
           </div>
         </div>
         {topic.categories.map(cat => (
@@ -552,12 +782,15 @@ function TopicBlock({
             cat={cat}
             consTempId={consTempId}
             topicTempId={topic._tempId}
+            draft={draft}
             dispatch={dispatch}
+            onEditLinked={openLinkedEditor}
+            onAddLinked={addLinkedItem}
           />
         ))}
         {topic.categories.length > 0 && (
           <div className="flex justify-end mt-1">
-            <AddCategorySelect topic={topic} consTempId={consTempId} dispatch={dispatch} />
+            <AddCategorySelect topic={topic} consTempId={consTempId} dispatch={dispatch} onPickLinked={addLinkedItem} />
           </div>
         )}
       </div>
@@ -588,6 +821,17 @@ function TopicBlock({
           />
         ))}
       </div>
+
+      {linkedEdit && (
+        <LinkedItemModal
+          kind={linkedEdit.kind}
+          tempId={linkedEdit.tempId}
+          draft={draft}
+          dispatch={dispatch}
+          onDone={handleLinkedDone}
+          onCancel={handleLinkedCancel}
+        />
+      )}
     </div>
   )
 }

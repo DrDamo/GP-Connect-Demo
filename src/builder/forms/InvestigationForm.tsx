@@ -208,7 +208,7 @@ function TestGroupCard({
 // InvestigationCard — the Test Report itself
 // ---------------------------------------------------------------------------
 
-function InvestigationCard({
+export function InvestigationCard({
   inv,
   draft,
   dispatch,
@@ -417,7 +417,7 @@ function invStatusBadge(status: string | undefined) {
   )
 }
 
-function InvestigationDisplayRow({
+export function InvestigationDisplayRow({
   inv,
   onEdit,
   onDelete,
