@@ -23,10 +23,10 @@ export function generateDocuments(
       id,
       ...nopatMeta(doc.notForPfs),
       status: (doc.status as fhir3.DocumentReference['status']) ?? 'current',
-      indexed: doc.date ?? new Date().toISOString(),
+      indexed: doc.indexedDate ?? new Date().toISOString(),
       ...(doc.type ? { type: { text: doc.type } } : { type: {} }),
       subject: { reference: patientRef },
-      ...(doc.date ? { created: doc.date } : {}),
+      ...(doc.createdDate ? { created: doc.createdDate } : {}),
       ...(doc.description ? { description: doc.description } : {}),
       ...(doc.authorTempId
         ? { author: [{ reference: map.ref(doc.authorTempId, 'Practitioner') }] }

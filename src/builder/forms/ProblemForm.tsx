@@ -25,12 +25,21 @@ interface Props {
 const CLINICAL_STATUS_OPTS = [
   { value: 'active', label: 'Active' },
   { value: 'inactive', label: 'Inactive' },
+  { value: 'recurrence', label: 'Recurrence' },
+  { value: 'remission', label: 'Remission' },
   { value: 'resolved', label: 'Resolved' },
 ]
 
 const SIGNIFICANCE_OPTS = [
   { value: 'major', label: 'Major' },
   { value: 'minor', label: 'Minor' },
+]
+
+// Fixed SNOMED CT set for the (optional) subjective severity of the problem.
+const SEVERITY_OPTS = [
+  { value: 'severe', label: 'Severe' },
+  { value: 'moderate', label: 'Moderate' },
+  { value: 'mild', label: 'Mild' },
 ]
 
 type ProblemGroup = 'active' | 'major-inactive' | 'minor-inactive' | 'other'
@@ -47,8 +56,10 @@ const PROBLEM_GROUP_LABELS: Record<ProblemGroup, string> = {
 // 'resolved' counts as inactive for grouping purposes, same as 'inactive' —
 // both need a significance to land in Major/Minor Inactive, otherwise they
 // fall into 'other' alongside anything with no clinical status set at all.
+// 'recurrence' and 'remission' are still current problems (just with a more
+// specific sub-status), so they group alongside 'active'.
 function getProblemGroup(problem: DraftProblem): ProblemGroup {
-  if (problem.clinicalStatus === 'active') return 'active'
+  if (problem.clinicalStatus === 'active' || problem.clinicalStatus === 'recurrence' || problem.clinicalStatus === 'remission') return 'active'
   if (problem.clinicalStatus === 'inactive' || problem.clinicalStatus === 'resolved') {
     if (problem.significance === 'major') return 'major-inactive'
     if (problem.significance === 'minor') return 'minor-inactive'
@@ -73,9 +84,10 @@ function ProblemCard({
 
   const expanded = isModal ? true : open
 
-  // An active problem hasn't ended, so no end date can be recorded; an
-  // inactive/resolved problem must have one to say when it stopped being current.
-  const endDateDisabled = problem.clinicalStatus === 'active'
+  // A problem that's still current (active, or recurred/in remission but not
+  // ended) can't have an end date; an inactive/resolved problem must have one
+  // to say when it stopped being current.
+  const endDateDisabled = problem.clinicalStatus === 'active' || problem.clinicalStatus === 'recurrence' || problem.clinicalStatus === 'remission'
   const endDateRequired = problem.clinicalStatus === 'inactive' || problem.clinicalStatus === 'resolved'
 
   return (
@@ -129,15 +141,16 @@ function ProblemCard({
           />
           <Field label="Associated text" value={problem.associatedText ?? ''} onChange={v => upd({ associatedText: v })} />
 
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             <SelectField
               label="Clinical status"
               value={problem.clinicalStatus ?? ''}
               onChange={v => upd({
                 clinicalStatus: v as DraftProblem['clinicalStatus'],
-                // Active problems have no end date — clear any value left over
-                // from a previous status so it can't be silently submitted.
-                ...(v === 'active' ? { endDate: '' } : {}),
+                // Only active/recurrence/remission are still "current" — clear
+                // any end date left over from a previous status so it can't
+                // be silently submitted against a problem that hasn't ended.
+                ...(v === 'active' || v === 'recurrence' || v === 'remission' ? { endDate: '' } : {}),
               })}
               options={CLINICAL_STATUS_OPTS}
               placeholder="— Select —"
@@ -150,6 +163,13 @@ function ProblemCard({
               options={SIGNIFICANCE_OPTS}
               placeholder="— Select —"
               required
+            />
+            <SelectField
+              label="Severity"
+              value={problem.severity ?? ''}
+              onChange={v => upd({ severity: v as DraftProblem['severity'] })}
+              options={SEVERITY_OPTS}
+              placeholder="— Not recorded —"
             />
           </div>
 

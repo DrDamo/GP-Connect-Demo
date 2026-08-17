@@ -6,6 +6,14 @@ const SIGNIFICANCE_EXT = 'https://fhir.hl7.org.uk/STU3/StructureDefinition/Exten
 const SIGNIFICANCE_SYSTEM = 'https://fhir.nhs.uk/STU3/CodeSystem/CareConnect-ProblemSignificance-1'
 const RELATED_CONTENT_EXT = 'https://fhir.nhs.uk/STU3/StructureDefinition/Extension-CareConnect-GPC-RelatedClinicalContent-1'
 
+// Fixed SNOMED CT codes for Condition.severity — a subjective clinician
+// assessment, not a coded search field, so the UI offers just these three.
+const SEVERITY_CODES: Record<'severe' | 'moderate' | 'mild', { code: string; display: string }> = {
+  severe: { code: '24484000', display: 'Severe' },
+  moderate: { code: '6736007', display: 'Moderate' },
+  mild: { code: '255604002', display: 'Mild' },
+}
+
 export function generateProblems(
   draft: DraftRecord,
   map: TempIdMap,
@@ -59,6 +67,19 @@ export function generateProblems(
           : {}),
         ...(p.problem ? { text: p.problem } : {}),
       },
+      ...(p.severity
+        ? {
+            severity: {
+              coding: [
+                {
+                  system: 'http://snomed.info/sct',
+                  code: SEVERITY_CODES[p.severity].code,
+                  display: SEVERITY_CODES[p.severity].display,
+                },
+              ],
+            },
+          }
+        : {}),
       subject: { reference: patientRef },
       ...(p.startDate ? { onsetDateTime: p.startDate } : {}),
       ...(p.endDate ? { abatementDateTime: p.endDate } : {}),

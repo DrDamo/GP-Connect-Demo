@@ -64,11 +64,28 @@ function migrateInvestigation(inv: LegacyDraftInvestigation): DraftInvestigation
   }
 }
 
+// Pre-indexed/created-split shape: documents carried a single `date` field
+// standing in for both DocumentReference.indexed (mandatory) and .created
+// (optional). Treat that lone date as the indexed date — it's always been
+// mandatory for filing purposes — and leave created date unset.
+interface LegacyDraftDocument extends Omit<DraftDocument, 'indexedDate' | 'createdDate'> {
+  indexedDate?: string
+  createdDate?: string
+  date?: string
+}
+
+function migrateDocument(doc: LegacyDraftDocument): DraftDocument {
+  if (doc.indexedDate !== undefined || doc.date === undefined) return doc as DraftDocument
+  const { date, ...rest } = doc
+  return { ...rest, indexedDate: date }
+}
+
 function migrateDraft(draft: DraftRecord): DraftRecord {
   return {
     ...draft,
     organisations: Array.isArray(draft.organisations) ? draft.organisations : [],
     investigations: (draft.investigations ?? []).map(inv => migrateInvestigation(inv as LegacyDraftInvestigation)),
+    documents: (draft.documents ?? []).map(doc => migrateDocument(doc as LegacyDraftDocument)),
   }
 }
 
@@ -992,7 +1009,7 @@ function draftReducer(state: DraftRecord, action: DraftAction): DraftRecord {
     case 'ADD_DOCUMENT_WITH_ID':
       return {
         ...state,
-        documents: [...state.documents, { _tempId: action.payload, date: today() }],
+        documents: [...state.documents, { _tempId: action.payload, indexedDate: today() }],
       }
 
     case 'ADD_PRACTITIONER_WITH_ID':

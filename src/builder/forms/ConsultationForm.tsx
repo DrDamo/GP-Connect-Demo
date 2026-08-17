@@ -156,12 +156,20 @@ const CUSTOM_CATEGORY_OPTION = '__custom__'
 const CLINICAL_STATUS_OPTS = [
   { value: 'active', label: 'Active' },
   { value: 'inactive', label: 'Inactive' },
+  { value: 'recurrence', label: 'Recurrence' },
+  { value: 'remission', label: 'Remission' },
   { value: 'resolved', label: 'Resolved' },
 ]
 
 const SIGNIFICANCE_OPTS = [
   { value: 'major', label: 'Major' },
   { value: 'minor', label: 'Minor' },
+]
+
+const SEVERITY_OPTS = [
+  { value: 'severe', label: 'Severe' },
+  { value: 'moderate', label: 'Moderate' },
+  { value: 'mild', label: 'Mild' },
 ]
 
 // ---------------------------------------------------------------------------
@@ -330,7 +338,7 @@ function TopicProblemBox({
           required
         />
         <Field label="Associated text" value={problem.associatedText ?? ''} onChange={v => upd({ associatedText: v })} />
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           <SelectField
             label="Clinical status"
             value={problem.clinicalStatus ?? ''}
@@ -345,6 +353,13 @@ function TopicProblemBox({
             onChange={v => upd({ significance: v as DraftProblem['significance'] })}
             options={SIGNIFICANCE_OPTS}
             placeholder="— Select —"
+          />
+          <SelectField
+            label="Severity"
+            value={problem.severity ?? ''}
+            onChange={v => upd({ severity: v as DraftProblem['severity'] })}
+            options={SEVERITY_OPTS}
+            placeholder="— Not recorded —"
           />
         </div>
       </div>

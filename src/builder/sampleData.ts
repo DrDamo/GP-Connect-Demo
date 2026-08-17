@@ -580,7 +580,8 @@ export function createFullSampleDraft(): DraftRecord {
     documents: [{
       _tempId: 'doc-1',
       type: 'Discharge summary',
-      date: '2023-11-20',
+      indexedDate: '2023-11-20',
+      createdDate: '2023-11-19',
       description: 'Discharge summary from Leeds General Infirmary',
       status: 'current',
       authorTempId: 'prac-1',
