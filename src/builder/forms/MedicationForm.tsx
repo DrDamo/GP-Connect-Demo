@@ -205,7 +205,7 @@ function RepeatDispensingIssueModal({
 // MedicationCard — drug details only (no issues), used inside the add/edit modal
 // ---------------------------------------------------------------------------
 
-function MedicationCard({
+export function MedicationCard({
   med,
   draft,
   dispatch,
@@ -322,7 +322,7 @@ function MedicationCard({
 // MedicationDisplayRow — medication row with issues list and Add Issue button
 // ---------------------------------------------------------------------------
 
-function MedicationDisplayRow({
+export function MedicationDisplayRow({
   med,
   draft,
   dispatch,

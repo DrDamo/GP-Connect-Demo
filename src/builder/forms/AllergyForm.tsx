@@ -47,7 +47,7 @@ const REACTION_SEVERITY_OPTS = [
   { value: 'severe', label: 'Severe' },
 ]
 
-function AllergyCard({
+export function AllergyCard({
   allergy,
   draft,
   dispatch,
@@ -221,7 +221,7 @@ function AllergyCard({
   )
 }
 
-function AllergyDisplayRow({
+export function AllergyDisplayRow({
   allergy,
   onEdit,
   onDelete,

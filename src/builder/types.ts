@@ -181,10 +181,26 @@ export interface DraftConsultationItem {
   associatedText?: string
 }
 
+// A category whose title is one of these (Allergy, Document, Investigation,
+// Diary Entry, Medication, Referral) doesn't hold free note/coded items like
+// History or Examination — instead it references records created in their
+// own section via the matching "Add <kind>" dialogue, so the right data
+// items are always collected for that resource type.
+export type ConsultationLinkKind = 'allergy' | 'document' | 'investigation' | 'diaryEntry' | 'medication' | 'referral'
+
+export interface DraftConsultationLinkedRef {
+  kind: ConsultationLinkKind
+  /** _tempId of the record in its own top-level list (draft.allergies, draft.documents, …). */
+  tempId: string
+}
+
 export interface DraftConsultationCategory {
   _tempId: string
   title?: string
   items: DraftConsultationItem[]
+  /** Present only for a linked-kind category (see ConsultationLinkKind) — the
+   * records it references, in the order they were added. */
+  linkedRefs?: DraftConsultationLinkedRef[]
 }
 
 export interface DraftConsultationTopic {

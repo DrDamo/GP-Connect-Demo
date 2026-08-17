@@ -49,7 +49,7 @@ function statusBadgeClass(status: string | undefined): string {
   return 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
 }
 
-function DiaryEntryDisplayRow({
+export function DiaryEntryDisplayRow({
   entry,
   onEdit,
   onDelete,
@@ -85,7 +85,7 @@ function DiaryEntryDisplayRow({
   )
 }
 
-function DiaryEntryCard({
+export function DiaryEntryCard({
   entry,
   draft,
   dispatch,

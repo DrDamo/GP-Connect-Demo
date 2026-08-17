@@ -44,7 +44,7 @@ function statusBadgeClass(status: string | undefined): string {
   return 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
 }
 
-function DocumentDisplayRow({
+export function DocumentDisplayRow({
   doc,
   onEdit,
   onDelete,
@@ -85,7 +85,7 @@ function DocumentDisplayRow({
   )
 }
 
-function DocumentCard({
+export function DocumentCard({
   doc,
   draft,
   dispatch,

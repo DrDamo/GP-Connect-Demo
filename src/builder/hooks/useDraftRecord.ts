@@ -13,6 +13,7 @@ import type {
   DraftConsultationTopic,
   DraftConsultationCategory,
   DraftConsultationItem,
+  ConsultationLinkKind,
   DraftImmunisation,
   DraftInvestigation,
   DraftTestGroup,
@@ -36,6 +37,37 @@ export function newTempId(): string {
 // style dates stay blank.
 function today(): string {
   return new Date().toISOString().split('T')[0]
+}
+
+// Default Encounter.type for a newly added consultation — SNOMED CT
+// 1258986006 "Face-to-face encounter", the commonest GP Connect consultation
+// type. Still a fully editable field in ConsultationForm afterwards.
+const DEFAULT_CONSULTATION_TYPE = { typeCode: '1258986006', typeDisplay: 'Face-to-face encounter' }
+
+// ---------------------------------------------------------------------------
+// Default-record factories — shared by the standalone ADD_X_WITH_ID cases
+// and by ADD_CONSULTATION_LINKED_ITEM, which creates the same kind of record
+// but from inside a consultation's category picker instead of that record's
+// own "+ Add" button.
+// ---------------------------------------------------------------------------
+
+function defaultMedication(id: string): DraftMedication {
+  return { _tempId: id, issues: [], status: 'active', route: 'oral', startDate: today(), prescriptionType: 'acute' }
+}
+function defaultAllergy(id: string): DraftAllergy {
+  return { _tempId: id, status: 'active', assertedDate: today(), onsetDate: today() }
+}
+function defaultInvestigation(id: string): DraftInvestigation {
+  return { _tempId: id, date: today(), testGroups: [] }
+}
+function defaultReferral(id: string): DraftReferral {
+  return { _tempId: id, date: today() }
+}
+function defaultDiaryEntry(id: string): DraftDiaryEntry {
+  return { _tempId: id, date: today(), occurrenceStart: today() }
+}
+function defaultDocument(id: string): DraftDocument {
+  return { _tempId: id, indexedDate: today() }
 }
 
 // ---------------------------------------------------------------------------
@@ -163,6 +195,16 @@ export type DraftAction =
   | { type: 'ADD_CONSULTATION_ITEM'; payload: { consTempId: string; topicTempId: string; catTempId?: string } }
   | { type: 'UPDATE_CONSULTATION_ITEM'; payload: { consTempId: string; topicTempId: string; catTempId?: string; itemTempId: string; updates: Partial<DraftConsultationItem> } }
   | { type: 'REMOVE_CONSULTATION_ITEM'; payload: { consTempId: string; topicTempId: string; catTempId?: string; itemTempId: string } }
+  // A linked-kind category (Allergy/Document/Investigation/Diary Entry/Medication/Referral)
+  // references records in their own section instead of holding items directly.
+  | {
+      type: 'ADD_CONSULTATION_LINKED_ITEM'
+      payload: { consTempId: string; topicTempId: string; title: string; kind: ConsultationLinkKind; resourceTempId: string }
+    }
+  | {
+      type: 'REMOVE_CONSULTATION_LINKED_ITEM'
+      payload: { consTempId: string; topicTempId: string; catTempId: string; kind: ConsultationLinkKind; resourceTempId: string }
+    }
   // Immunisations
   | { type: 'ADD_IMMUNISATION' }
   | { type: 'UPDATE_IMMUNISATION'; payload: { _tempId: string; updates: Partial<DraftImmunisation> } }
@@ -232,6 +274,45 @@ function updateById<T extends { _tempId: string }>(
 
 function removeById<T extends { _tempId: string }>(arr: T[], tempId: string): T[] {
   return arr.filter(item => item._tempId !== tempId)
+}
+
+// Creates a linked-category resource (tagged with the owning consultation)
+// in its own top-level list, shared by ADD_CONSULTATION_LINKED_ITEM.
+function addLinkedResource(state: DraftRecord, kind: ConsultationLinkKind, id: string, consTempId: string): DraftRecord {
+  const linkedConsultationTempId = consTempId
+  switch (kind) {
+    case 'allergy':
+      return { ...state, allergies: [...state.allergies, { ...defaultAllergy(id), linkedConsultationTempId }] }
+    case 'document':
+      return { ...state, documents: [...state.documents, { ...defaultDocument(id), linkedConsultationTempId }] }
+    case 'investigation':
+      return { ...state, investigations: [...state.investigations, { ...defaultInvestigation(id), linkedConsultationTempId }] }
+    case 'diaryEntry':
+      return { ...state, diaryEntries: [...state.diaryEntries, { ...defaultDiaryEntry(id), linkedConsultationTempId }] }
+    case 'medication':
+      return { ...state, medications: [...state.medications, { ...defaultMedication(id), linkedConsultationTempId }] }
+    case 'referral':
+      return { ...state, referrals: [...state.referrals, { ...defaultReferral(id), linkedConsultationTempId }] }
+  }
+}
+
+// Removes a linked-category resource from its own top-level list, shared by
+// REMOVE_CONSULTATION_LINKED_ITEM and the category-cascade in REMOVE_CONSULTATION_CATEGORY.
+function removeLinkedResource(state: DraftRecord, kind: ConsultationLinkKind, id: string): DraftRecord {
+  switch (kind) {
+    case 'allergy':
+      return { ...state, allergies: removeById(state.allergies, id) }
+    case 'document':
+      return { ...state, documents: removeById(state.documents, id) }
+    case 'investigation':
+      return { ...state, investigations: removeById(state.investigations, id) }
+    case 'diaryEntry':
+      return { ...state, diaryEntries: removeById(state.diaryEntries, id) }
+    case 'medication':
+      return { ...state, medications: removeById(state.medications, id) }
+    case 'referral':
+      return { ...state, referrals: removeById(state.referrals, id) }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -457,7 +538,7 @@ function draftReducer(state: DraftRecord, action: DraftAction): DraftRecord {
     case 'ADD_CONSULTATION':
       return {
         ...state,
-        consultations: [...state.consultations, { _tempId: newTempId(), topics: [] }],
+        consultations: [...state.consultations, { _tempId: newTempId(), topics: [], ...DEFAULT_CONSULTATION_TYPE }],
       }
 
     case 'UPDATE_CONSULTATION':
@@ -475,7 +556,8 @@ function draftReducer(state: DraftRecord, action: DraftAction): DraftRecord {
     case 'ADD_CONSULTATION_TOPIC': {
       const consTempId = action.payload
       const problemTempId = newTempId()
-      const consultationDate = state.consultations.find(c => c._tempId === consTempId)?.date
+      const consultation = state.consultations.find(c => c._tempId === consTempId)
+      const consultationDate = consultation?.date
       const defaultCategories: DraftConsultationCategory[] = ['History', 'Examination', 'Assessment', 'Plan'].map(title => ({
         _tempId: newTempId(),
         title,
@@ -486,6 +568,9 @@ function draftReducer(state: DraftRecord, action: DraftAction): DraftRecord {
         problems: [...state.problems, {
           _tempId: problemTempId,
           linkedConsultationTempId: consTempId,
+          // The clinician running the encounter is asserting any problem
+          // raised in it, unless changed by hand afterwards.
+          asserterTempId: consultation?.clinicianTempId,
           clinicalStatus: 'active',
           startDate: today(),
           assertedDate: today(),
@@ -534,11 +619,15 @@ function draftReducer(state: DraftRecord, action: DraftAction): DraftRecord {
     case 'ADD_TOPIC_PROBLEM': {
       const { consTempId, topicTempId } = action.payload
       const problemTempId = newTempId()
+      const clinicianTempId = state.consultations.find(c => c._tempId === consTempId)?.clinicianTempId
       return {
         ...state,
         problems: [...state.problems, {
           _tempId: problemTempId,
           linkedConsultationTempId: consTempId,
+          // The clinician running the encounter is asserting any problem
+          // raised in it, unless changed by hand afterwards.
+          asserterTempId: clinicianTempId,
           clinicalStatus: 'active',
           startDate: today(),
           assertedDate: today(),
@@ -612,15 +701,84 @@ function draftReducer(state: DraftRecord, action: DraftAction): DraftRecord {
 
     case 'REMOVE_CONSULTATION_CATEGORY': {
       const { consTempId, topicTempId, catTempId } = action.payload
+      const cons = state.consultations.find(c => c._tempId === consTempId)
+      const cat = cons?.topics.find(t => t._tempId === topicTempId)?.categories.find(c => c._tempId === catTempId)
+      // A linked-kind category's items are records that only exist because
+      // this category created them — remove the whole category and they go
+      // with it, same as removing a topic's linked problem.
+      const stateAfterCascade = (cat?.linkedRefs ?? []).reduce(
+        (s, ref) => removeLinkedResource(s, ref.kind, ref.tempId),
+        state,
+      )
       return {
-        ...state,
-        consultations: state.consultations.map(c =>
+        ...stateAfterCascade,
+        consultations: stateAfterCascade.consultations.map(c =>
           c._tempId === consTempId
             ? {
                 ...c,
                 topics: c.topics.map(t =>
                   t._tempId === topicTempId
                     ? { ...t, categories: removeById(t.categories, catTempId) }
+                    : t,
+                ),
+              }
+            : c,
+        ),
+      }
+    }
+
+    case 'ADD_CONSULTATION_LINKED_ITEM': {
+      const { consTempId, topicTempId, title, kind, resourceTempId } = action.payload
+      const stateWithResource = addLinkedResource(state, kind, resourceTempId, consTempId)
+      return {
+        ...stateWithResource,
+        consultations: stateWithResource.consultations.map(c =>
+          c._tempId === consTempId
+            ? {
+                ...c,
+                topics: c.topics.map(t => {
+                  if (t._tempId !== topicTempId) return t
+                  const existing = t.categories.find(cat => cat.title === title)
+                  return existing
+                    ? {
+                        ...t,
+                        categories: updateById(t.categories, existing._tempId, {
+                          linkedRefs: [...(existing.linkedRefs ?? []), { kind, tempId: resourceTempId }],
+                        }),
+                      }
+                    : {
+                        ...t,
+                        categories: [
+                          ...t.categories,
+                          { _tempId: newTempId(), title, items: [], linkedRefs: [{ kind, tempId: resourceTempId }] },
+                        ],
+                      }
+                }),
+              }
+            : c,
+        ),
+      }
+    }
+
+    case 'REMOVE_CONSULTATION_LINKED_ITEM': {
+      const { consTempId, topicTempId, catTempId, kind, resourceTempId } = action.payload
+      const stateWithoutResource = removeLinkedResource(state, kind, resourceTempId)
+      return {
+        ...stateWithoutResource,
+        consultations: stateWithoutResource.consultations.map(c =>
+          c._tempId === consTempId
+            ? {
+                ...c,
+                topics: c.topics.map(t =>
+                  t._tempId === topicTempId
+                    ? {
+                        ...t,
+                        categories: t.categories.map(cat =>
+                          cat._tempId === catTempId
+                            ? { ...cat, linkedRefs: (cat.linkedRefs ?? []).filter(r => r.tempId !== resourceTempId) }
+                            : cat,
+                        ),
+                      }
                     : t,
                 ),
               }
@@ -926,25 +1084,13 @@ function draftReducer(state: DraftRecord, action: DraftAction): DraftRecord {
     case 'ADD_MEDICATION_WITH_ID':
       return {
         ...state,
-        medications: [...state.medications, {
-          _tempId: action.payload,
-          issues: [],
-          status: 'active',
-          route: 'oral',
-          startDate: today(),
-          prescriptionType: 'acute',
-        }],
+        medications: [...state.medications, defaultMedication(action.payload)],
       }
 
     case 'ADD_ALLERGY_WITH_ID':
       return {
         ...state,
-        allergies: [...state.allergies, {
-          _tempId: action.payload,
-          status: 'active' as const,
-          assertedDate: today(),
-          onsetDate: today(),
-        }],
+        allergies: [...state.allergies, defaultAllergy(action.payload)],
       }
 
     case 'ADD_PROBLEM_WITH_ID':
@@ -965,6 +1111,7 @@ function draftReducer(state: DraftRecord, action: DraftAction): DraftRecord {
           _tempId: action.payload,
           topics: [],
           date: today(),
+          ...DEFAULT_CONSULTATION_TYPE,
         }],
       }
 
@@ -981,23 +1128,19 @@ function draftReducer(state: DraftRecord, action: DraftAction): DraftRecord {
     case 'ADD_INVESTIGATION_WITH_ID':
       return {
         ...state,
-        investigations: [...state.investigations, { _tempId: action.payload, date: today(), testGroups: [] }],
+        investigations: [...state.investigations, defaultInvestigation(action.payload)],
       }
 
     case 'ADD_REFERRAL_WITH_ID':
       return {
         ...state,
-        referrals: [...state.referrals, { _tempId: action.payload, date: today() }],
+        referrals: [...state.referrals, defaultReferral(action.payload)],
       }
 
     case 'ADD_DIARY_ENTRY_WITH_ID':
       return {
         ...state,
-        diaryEntries: [...state.diaryEntries, {
-          _tempId: action.payload,
-          date: today(),
-          occurrenceStart: today(),
-        }],
+        diaryEntries: [...state.diaryEntries, defaultDiaryEntry(action.payload)],
       }
 
     case 'ADD_CODED_DATA_WITH_ID':
@@ -1009,7 +1152,7 @@ function draftReducer(state: DraftRecord, action: DraftAction): DraftRecord {
     case 'ADD_DOCUMENT_WITH_ID':
       return {
         ...state,
-        documents: [...state.documents, { _tempId: action.payload, indexedDate: today() }],
+        documents: [...state.documents, defaultDocument(action.payload)],
       }
 
     case 'ADD_PRACTITIONER_WITH_ID':
