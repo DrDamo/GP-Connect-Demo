@@ -522,6 +522,7 @@ export function MedicationDisplayRow({
         <div className="flex items-center gap-2 shrink-0">
           {!isStopped && (
             <button
+              type="button"
               onClick={() => setConfirmReauth(true)}
               className="text-xs border border-purple-400 dark:border-purple-600 text-purple-600 dark:text-purple-400 px-2 py-0.5 rounded hover:bg-purple-50 dark:hover:bg-purple-900/20"
             >
@@ -530,6 +531,7 @@ export function MedicationDisplayRow({
           )}
           {!isStopped && (
             <button
+              type="button"
               onClick={() => setConfirmStop('')}
               className="text-xs border border-amber-500 dark:border-amber-600 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded hover:bg-amber-50 dark:hover:bg-amber-900/20"
             >
@@ -537,6 +539,7 @@ export function MedicationDisplayRow({
             </button>
           )}
           <button
+            type="button"
             onClick={onEdit}
             className="text-xs border border-nhs-blue text-nhs-blue px-2 py-0.5 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
           >
@@ -544,6 +547,7 @@ export function MedicationDisplayRow({
           </button>
           <span className="w-px h-4 bg-nhs-grey-4 dark:bg-gray-600 mx-1 shrink-0" />
           <button
+            type="button"
             onClick={onDelete}
             className="text-nhs-red hover:opacity-70 p-0.5"
             title="Delete medication"
@@ -911,6 +915,7 @@ export function MedicationForm({ draft, dispatch }: Props) {
         <span className="text-sm font-medium text-nhs-grey-2">Medications</span>
         {tab === 'active' && (
           <button
+            type="button"
             onClick={handleAdd}
             className="bg-nhs-blue text-white px-3 py-1.5 rounded text-sm font-medium hover:opacity-90 transition-opacity"
           >

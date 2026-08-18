@@ -277,7 +277,7 @@ export function AllergyDisplayRow({
         </div>
       </div>
       <div className="flex items-center gap-2 shrink-0">
-        <button onClick={onEdit} className="text-xs border border-nhs-blue text-nhs-blue px-2 py-0.5 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20">Edit</button>
+        <button type="button" onClick={onEdit} className="text-xs border border-nhs-blue text-nhs-blue px-2 py-0.5 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20">Edit</button>
         <button type="button" onClick={onDelete} className="text-nhs-red hover:opacity-70 p-0.5" title="Delete">
           <TrashIcon />
         </button>
@@ -337,6 +337,7 @@ export function AllergyForm({ draft, dispatch }: Props) {
       <div className="flex items-center justify-between mb-3">
         <span className="text-sm font-medium text-nhs-grey-2">Allergies</span>
         <button
+          type="button"
           onClick={handleAdd}
           className="bg-nhs-blue text-white px-3 py-1.5 rounded text-sm font-medium hover:opacity-90 transition-opacity"
         >
