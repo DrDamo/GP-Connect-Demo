@@ -71,6 +71,13 @@ function AppContent() {
   const [guideAnchor, setGuideAnchor] = useState<string | null>(null)
   const prevTabRef = useRef<ActiveTab>('inspector')
   const builderDirtyRef = useRef(false)
+  // True once the currently loaded record was produced by "Build a Record"
+  // (Preview FHIR / Load into viewer), so the main workspace tab bar can
+  // offer a way back into the builder — otherwise navigating to Raw Source
+  // or Clinical View from there is a one-way trip. Cleared on any load that
+  // didn't originate from the builder (sample data, paste, upload, shared
+  // drafts, training examples all go through handleLoad directly).
+  const [loadedFromBuilder, setLoadedFromBuilder] = useState(false)
 
   const { startTour, isTourCompleted } = useOnboarding()
 
@@ -179,6 +186,7 @@ function AppContent() {
 
   const handleLoad = useCallback((text: string, filename: string, label?: string, initialTab: ActiveTab = 'inspector') => {
     setParseError(null)
+    setLoadedFromBuilder(false)
     const parsed = parseBundle(text)
     if (!parsed.ok) {
       setParseError(parsed.error)
@@ -283,7 +291,13 @@ function AppContent() {
   const handleClear = useCallback(() => {
     setLoaded(null)
     setParseError(null)
+    setLoadedFromBuilder(false)
   }, [])
+
+  const handleLoadFromBuilder = useCallback((json: string, filename: string, initialTab?: 'inspector' | 'raw') => {
+    handleLoad(json, filename, 'Built Patient Record', initialTab)
+    setLoadedFromBuilder(true)
+  }, [handleLoad])
 
   if (isSupabaseConfigured && isLoading) {
     return (
@@ -388,7 +402,7 @@ function AppContent() {
           </div>
           <div className="flex-1 min-h-0 bg-white rounded-lg border border-nhs-grey-4 overflow-hidden">
             <BuilderView
-              onLoad={(json, filename, initialTab) => { handleLoad(json, filename, 'Built Patient Record', initialTab) }}
+              onLoad={handleLoadFromBuilder}
               onDirtyChange={handleBuilderDirtyChange}
               pendingDraft={pendingSharedDraft}
               pendingDraftId={pendingSharedDraftId}
@@ -641,6 +655,14 @@ function AppContent() {
         <main className={`flex-1 flex flex-col w-full p-4 gap-4 min-h-0 ${tab !== 'inspector' ? 'max-w-screen-2xl mx-auto' : ''}`}>
           {/* Tabs */}
           <div className="flex gap-1 border-b border-nhs-grey-4">
+            {loadedFromBuilder && (
+              <button
+                onClick={() => setTab('builder')}
+                className="px-4 py-2 text-sm font-medium rounded-t transition-colors text-nhs-grey-2 hover:text-nhs-blue border-r border-nhs-grey-4 mr-1"
+              >
+                ← Build a Record
+              </button>
+            )}
             {(['inspector', 'clinical', 'raw', 'validation', 'training', 'app-guide'] as ActiveTab[]).map(t => (
               <button
                 key={t}
