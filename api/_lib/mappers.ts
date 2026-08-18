@@ -1,4 +1,5 @@
-import type { FhirContains } from './types'
+import type { FhirContains, FhirParameters } from './types'
+import { parseNormalFormAttributes } from './normalForm'
 
 export interface SnomedResult {
   code: string
@@ -48,6 +49,13 @@ export function dmdValueSetUrl(type: 'vmp' | 'amp'): string {
   return `http://snomed.info/sct?fhir_vs=ecl/${DMD_ECL[type]}`
 }
 
+// Combined VMP + AMP ValueSet — used to check whether a medication coding is
+// a genuine dm+d product at all (see validateDmdCodesBatch in lookup.ts), as
+// opposed to dmdValueSetUrl above which scopes a search to one type at a time.
+export function dmdMembershipValueSetUrl(): string {
+  return `http://snomed.info/sct?fhir_vs=ecl/${DMD_ECL.vmp} OR ${DMD_ECL.amp}`
+}
+
 const FSN_USE_CODE = '900000000000003001'
 
 function findFsn(item: FhirContains): string | undefined {
@@ -71,4 +79,60 @@ export function toSnomedResult(item: FhirContains): SnomedResult {
 
 export function toDmdResult(item: FhirContains, type: 'VMP' | 'AMP'): DmdResult {
   return { code: item.code, display: item.display, type, system: 'https://dmd.nhs.uk' }
+}
+
+// ---------------------------------------------------------------------------
+// Bulk active/inactive + withdrawn status — a lightweight companion to the
+// search/result mappers above, used to tag every SNOMED CT/dm+d coding in a
+// loaded bundle. Inactive concepts are still valid, real concepts — this is
+// purely a UI tag, and must never feed the transfer-degrade check (that's
+// validateCodesBatch in lookup.ts — existence-only, via $validate-code).
+// ---------------------------------------------------------------------------
+
+// "Has prescribing status" / "Has non-availability indicator" — read directly
+// (not via a general CONCEPT_ATTRIBUTES map, since this mapper only needs
+// these two, unlike the full dm+d detail mapper on the Express server) to
+// detect a discontinued AMP.
+const PRESCRIBING_STATUS_ATTRIBUTE_ID = '8940001000001105'
+const NON_AVAILABILITY_ATTRIBUTE_ID = '8940601000001102'
+
+export interface CodeStatus {
+  inactive?: boolean
+  /** dm+d/medication codes only: true when the concept's prescribing status
+   * or non-availability indicator text says the product's been discontinued
+   * — surfaced in the UI as "Withdrawn" rather than the generic "Inactive". */
+  withdrawn?: boolean
+}
+
+function findNormalFormExpression(parameters: FhirParameters): string | undefined {
+  return (parameters.parameter ?? [])
+    .find(p => p.name === 'property' && p.part?.some(part => part.name === 'code' && part.valueCode === 'normalForm'))
+    ?.part?.find(part => part.name === 'value')?.valueString
+}
+
+export function extractInactive(parameters: FhirParameters): boolean | undefined {
+  const inactiveProp = (parameters.parameter ?? []).find(
+    p => p.name === 'property' && p.part?.some(part => part.name === 'code' && part.valueCode === 'inactive'),
+  )
+  return inactiveProp?.part?.find(part => part.name === 'value')?.valueBoolean
+}
+
+function isDiscontinuedStatusText(text: string | undefined): boolean {
+  return !!text && /discontinu/i.test(text)
+}
+
+// Extracts inactive/withdrawn from a CodeSystem/$lookup response. `checkWithdrawn`
+// should only be set for dm+d/medication codes — the prescribing-status and
+// non-availability attributes checked here are dm+d-specific and won't be
+// present (or meaningful) on an arbitrary SNOMED CT concept.
+export function extractCodeStatus(parameters: FhirParameters, checkWithdrawn: boolean): CodeStatus {
+  const inactive = extractInactive(parameters)
+  if (!checkWithdrawn || !inactive) return { inactive }
+
+  const normalForm = findNormalFormExpression(parameters)
+  const attrs = normalForm ? parseNormalFormAttributes(normalForm) : []
+  const statusText = attrs.find(a => a.attributeId === PRESCRIBING_STATUS_ATTRIBUTE_ID)?.valueDisplay
+    ?? attrs.find(a => a.attributeId === NON_AVAILABILITY_ATTRIBUTE_ID)?.valueDisplay
+
+  return { inactive, withdrawn: isDiscontinuedStatusText(statusText) }
 }
