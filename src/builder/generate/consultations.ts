@@ -133,6 +133,16 @@ function makeCodedObservation(
   return { fullUrl, resource }
 }
 
+// Every category (default History/Examination/Assessment/Plan included) and
+// every "+ Add item" click seeds a blank item — a note with no narrative
+// text, or a coded entry with nothing picked — so item count alone doesn't
+// tell you whether a category has anything actually recorded in it. This is
+// what "empty" means for filtering purposes.
+function isItemEmpty(item: DraftConsultationItem): boolean {
+  if (item.itemType === 'coded') return !item.snomedCode && !item.description
+  return !item.narrativeText
+}
+
 function processItem(
   item: DraftConsultationItem,
   map: TempIdMap,
@@ -236,9 +246,17 @@ function processConsultation(
     const categoryListRefs: string[] = []
 
     for (const cat of topic.categories) {
+      const catItems = cat.items.filter(item => !isItemEmpty(item))
+
+      // A category with nothing actually recorded — no filled-in items and
+      // no linked records (e.g. a default "History" left untouched) — has
+      // nothing to file. Skip it rather than emitting an empty List.
+      const isEmptyCategory = catItems.length === 0 && (cat.linkedRefs ?? []).length === 0
+      if (isEmptyCategory) continue
+
       const catItemRefs: string[] = []
 
-      for (const item of cat.items) {
+      for (const item of catItems) {
         catItemRefs.push(processItem(item, map, patientRef, encRef, entries))
       }
 
@@ -259,9 +277,14 @@ function processConsultation(
 
     // Direct topic items (not in a category)
     const directItemRefs: string[] = []
-    for (const item of topic.items) {
+    for (const item of topic.items.filter(item => !isItemEmpty(item))) {
       directItemRefs.push(processItem(item, map, patientRef, encRef, entries))
     }
+
+    // A topic with no non-empty categories and no direct items has nothing
+    // to file either — skip it rather than emitting an empty List.
+    const isEmptyTopic = categoryListRefs.length === 0 && directItemRefs.length === 0
+    if (isEmptyTopic) continue
 
     const topicListId = map.resolve(topic._tempId)
     const topicList = makeListBase(
