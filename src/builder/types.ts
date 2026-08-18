@@ -273,9 +273,13 @@ export interface DraftTestGroup {
   _tempId: string
   name?: string
   snomedCode?: string
-  /** "GP Filing Comment" — generated as its own Comment Note Observation
-   * has-member linked to this group, same mechanism as the report-level
-   * comment but scoped to just this group's results. */
+  /** "Lab Comment" for this group — same mechanism as the report-level Lab
+   * Comment (its own Comment Note Observation, has-member linked to this
+   * group), just scoped to this group's results instead of the whole report. */
+  labComment?: string
+  /** "GP Filing Comment" — also its own Comment Note Observation has-member
+   * linked to this group, alongside labComment; the two are independent
+   * (lab's comment on the results vs. the GP's comment on filing them). */
   comment?: string
   results: DraftInvestigationResult[]
 }

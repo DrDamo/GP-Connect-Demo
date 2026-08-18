@@ -7,12 +7,12 @@ import { excludeConfidential, nopatMeta } from './security'
 // one or more Test Groups (Observation, linked via `related` has-member to
 // their child Test Results), plus zero or more linked Specimens and Test
 // Requests (ProcedureRequest), a report-level "Lab Comment" filing comment,
-// and an optional "GP Filing Comment" per test group — all filing comments
-// are Comment Note Observations (SNOMED 37331000000100), has-member linked
-// at whichever level they were added. Result-level comments still ride
-// inline (the same non-standard `.comment` convention already used
-// elsewhere in this generator) since GP Connect has no guidance calling for
-// a separate filing-comment resource that granular.
+// and an optional "Lab Comment" and/or "GP Filing Comment" per test group —
+// all filing comments are Comment Note Observations (SNOMED 37331000000100),
+// has-member linked at whichever level they were added. Result-level
+// comments still ride inline (the same non-standard `.comment` convention
+// already used elsewhere in this generator) since GP Connect has no
+// guidance calling for a separate filing-comment resource that granular.
 // https://simplifier.net/guide/gp-connect-access-record-structured/Home/Design/Investigations-guidance
 // ---------------------------------------------------------------------------
 
@@ -236,10 +236,19 @@ export function generateInvestigations(
       for (const { entry } of groupResults) entries.push(entry)
       memberRefs.push(...groupResults.map(r => r.ref))
 
-      // "GP Filing Comment" — its own Comment Note Observation, has-member
-      // linked into this group alongside its results (not inline on the
-      // group's own Observation, so it stays a genuine filing-comment
-      // resource per GP Connect guidance).
+      // "Lab Comment" and "GP Filing Comment" — each its own Comment Note
+      // Observation, has-member linked into this group alongside its
+      // results (not inline on the group's own Observation, so they stay
+      // genuine filing-comment resources per GP Connect guidance). The two
+      // are independent: the lab's comment on the results vs. the GP's
+      // comment on filing them.
+      if (group.labComment) {
+        const { entry, ref } = makeFilingCommentObservation(
+          `${group._tempId}::labcomment`, group.labComment, map, patientRef, issuedDate, inv.notForPfs,
+        )
+        entries.push(entry)
+        memberRefs.push(ref)
+      }
       if (group.comment) {
         const { entry, ref } = makeFilingCommentObservation(
           `${group._tempId}::comment`, group.comment, map, patientRef, issuedDate, inv.notForPfs,
