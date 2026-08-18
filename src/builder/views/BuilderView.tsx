@@ -47,7 +47,7 @@ function downloadJson(json: string, filename: string) {
 // ---------------------------------------------------------------------------
 
 export interface BuilderViewProps {
-  onLoad: (json: string, filename: string) => void
+  onLoad: (json: string, filename: string, initialTab?: 'inspector' | 'raw') => void
   onDirtyChange?: (isDirty: boolean) => void
   pendingDraft?: DraftRecord | null
   onPendingDraftConsumed?: () => void
@@ -166,29 +166,22 @@ export function BuilderView({
     }
   }, [draft])
 
+  // "Preview FHIR" used to open a split-pane truncated to the first 200
+  // lines of the bundle — since Patient/Practitioner/Organisation resources
+  // are emitted first, that pane was almost always showing nothing but the
+  // admin-level resources. Now it just loads the full bundle straight into
+  // the Raw Source tab, same mechanism as "Load into viewer" (which already
+  // runs the SNOMED degrade-and-mutate pass on load) but landing on Raw
+  // Source instead of Inspector.
   const handlePreview = useCallback(() => {
     setBuildError(null)
     try {
-      const { bundle, json, issues } = generateBundle()
-      setPreviewJson(json)
-      setPreviewIssues(issues)
-      setShowPreview(true)
-
-      setCheckingSnomedPreview(true)
-      checkAndDegradeSnomedCodes(bundle, { mutate: true })
-        .then(result => {
-          setCheckingSnomedPreview(false)
-          if (result.issues.length === 0) return
-          setPreviewIssues([...issues, ...result.issues])
-          if (result.degradedCount > 0) {
-            setPreviewJson(JSON.stringify(bundle, null, 2))
-          }
-        })
-        .catch(() => setCheckingSnomedPreview(false))
+      const { json } = generateBundle()
+      onLoad(json, 'built-record.json', 'raw')
     } catch (err) {
       setBuildError(err instanceof Error ? err.message : String(err))
     }
-  }, [generateBundle])
+  }, [generateBundle, onLoad])
 
   const handleLoadIntoViewer = useCallback(() => {
     setBuildError(null)
