@@ -396,16 +396,17 @@ export function validateBundle(bundle: fhir3.Bundle): ValidationResult {
     }
   }
 
-  // Encounters should carry a plain-text "Clinical" entry in type[] — this is
-  // what marks the Encounter as a GP Connect consultation record. Confirmed
+  // Encounters should carry a plain-text entry in type[] — this is what
+  // marks the Encounter as a GP Connect consultation record. Confirmed
   // against a real GP Connect Encounter (TPP): { "type": [{ "text": "Clinical" }] } —
-  // no coding, no dedicated codesystem, just text.
+  // no coding, no dedicated codesystem. The text value itself isn't fixed
+  // by the spec, so any non-empty text entry satisfies this.
   for (const e of encounters) {
-    const hasConsultationType = (e.type ?? []).some(t => t.text === 'Clinical')
+    const hasConsultationType = (e.type ?? []).some(t => !!t.text)
     req(tracker, issues, hasConsultationType, 'info',
-      'Encounter.type does not include a "Clinical" record type entry',
+      'Encounter.type does not include a text record type entry',
       `Encounter/${e.id}`, e.id,
-      'Encounter.type includes a "Clinical" record type entry')
+      'Encounter.type includes a text record type entry')
   }
 
   // Lists should have a code; primary Lists should use a known GP Connect SNOMED code
