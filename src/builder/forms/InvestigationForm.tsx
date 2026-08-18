@@ -171,11 +171,18 @@ function TestGroupCard({
             <TrashIcon className="w-3.5 h-3.5" />
           </button>
         </div>
-        <Field
-          label="GP Filing Comment"
-          value={group.comment ?? ''}
-          onChange={v => upd({ comment: v })}
-        />
+        <div className="grid grid-cols-2 gap-2">
+          <Field
+            label="Lab Comment"
+            value={group.labComment ?? ''}
+            onChange={v => upd({ labComment: v })}
+          />
+          <Field
+            label="GP Filing Comment"
+            value={group.comment ?? ''}
+            onChange={v => upd({ comment: v })}
+          />
+        </div>
       </div>
 
       <div className="p-3 bg-white dark:bg-gray-900">
