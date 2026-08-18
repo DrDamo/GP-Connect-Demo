@@ -110,7 +110,7 @@ function SnomedInfoModal({ serverUrl, onClose }: { serverUrl: string; onClose: (
           <h2 className="text-sm font-semibold text-nhs-grey-1 dark:text-gray-100">
             SNOMED CT — Connection Status
           </h2>
-          <button onClick={onClose} className="text-nhs-grey-3 hover:text-nhs-grey-1 dark:hover:text-gray-200">
+          <button type="button" onClick={onClose} className="text-nhs-grey-3 hover:text-nhs-grey-1 dark:hover:text-gray-200">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -140,6 +140,7 @@ function SnomedInfoModal({ serverUrl, onClose }: { serverUrl: string; onClose: (
         </div>
 
         <button
+          type="button"
           onClick={onClose}
           className="mt-4 w-full py-1.5 bg-nhs-blue text-white rounded text-sm font-medium hover:opacity-90 transition-opacity"
         >
@@ -217,7 +218,7 @@ function ConfigModal({ onClose, onSaved }: ConfigModalProps) {
           <h2 className="text-sm font-semibold text-nhs-grey-1">
             Connect to Terminology Server
           </h2>
-          <button onClick={onClose} className="text-nhs-grey-3 hover:text-nhs-grey-1">
+          <button type="button" onClick={onClose} className="text-nhs-grey-3 hover:text-nhs-grey-1">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -238,12 +239,14 @@ function ConfigModal({ onClose, onSaved }: ConfigModalProps) {
 
         <div className="flex gap-2 mb-3">
           <button
+            type="button"
             onClick={() => setMode('proxy')}
             className={`flex-1 py-1.5 rounded text-sm font-medium transition-colors ${mode === 'proxy' ? 'bg-nhs-blue text-white' : 'border border-nhs-grey-4 text-nhs-grey-2 hover:border-nhs-blue hover:text-nhs-blue'}`}
           >
             NHS Proxy
           </button>
           <button
+            type="button"
             onClick={() => setMode('token')}
             className={`flex-1 py-1.5 rounded text-sm font-medium transition-colors ${mode === 'token' ? 'bg-nhs-blue text-white' : 'border border-nhs-grey-4 text-nhs-grey-2 hover:border-nhs-blue hover:text-nhs-blue'}`}
           >
@@ -257,6 +260,7 @@ function ConfigModal({ onClose, onSaved }: ConfigModalProps) {
               Use this mode when connecting to the NHS Terminology Proxy (<code>server/</code>). Credentials are managed server-side — no token needed here.
             </p>
             <button
+              type="button"
               onClick={handleProxyConnect}
               disabled={busy || !url}
               className="w-full py-1.5 bg-nhs-blue text-white rounded text-sm font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
@@ -277,6 +281,7 @@ function ConfigModal({ onClose, onSaved }: ConfigModalProps) {
               />
             </div>
             <button
+              type="button"
               onClick={handleTokenConnect}
               disabled={busy || !pastedToken}
               className="w-full py-1.5 bg-nhs-blue text-white rounded text-sm font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
