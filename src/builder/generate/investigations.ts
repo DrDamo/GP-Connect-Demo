@@ -1,15 +1,18 @@
-import type { DraftRecord, DraftInvestigation, DraftInvestigationResult, DraftTestGroup } from '../types'
+import type { DraftRecord, DraftInvestigationResult, DraftTestGroup, DraftSpecimen, DraftTestRequest } from '../types'
 import type { TempIdMap } from '../idMap'
 import { excludeConfidential, nopatMeta } from './security'
 
 // ---------------------------------------------------------------------------
 // GP Connect Investigations model — Test Report (DiagnosticReport) contains
 // one or more Test Groups (Observation, linked via `related` has-member to
-// their child Test Results), plus an optional linked Specimen and Test
-// Request (ProcedureRequest), and an optional report-level filing comment
-// (a Comment Note Observation, SNOMED 37331000000100). Comments at group and
-// result level ride inline on those Observations (the same non-standard
-// `.comment` convention already used elsewhere in this generator).
+// their child Test Results), plus zero or more linked Specimens and Test
+// Requests (ProcedureRequest), a report-level "Lab Comment" filing comment,
+// and an optional "GP Filing Comment" per test group — all filing comments
+// are Comment Note Observations (SNOMED 37331000000100), has-member linked
+// at whichever level they were added. Result-level comments still ride
+// inline (the same non-standard `.comment` convention already used
+// elsewhere in this generator) since GP Connect has no guidance calling for
+// a separate filing-comment resource that granular.
 // https://simplifier.net/guide/gp-connect-access-record-structured/Home/Design/Investigations-guidance
 // ---------------------------------------------------------------------------
 
@@ -84,7 +87,7 @@ function makeGroupObservation(
 ): { entry: fhir3.BundleEntry; ref: string } {
   const { id, fullUrl } = map.entry(group._tempId)
 
-  const resource: fhir3.Observation & { comment?: string } = {
+  const resource: fhir3.Observation = {
     resourceType: 'Observation',
     id,
     ...nopatMeta(notForPfs),
@@ -101,7 +104,6 @@ function makeGroupObservation(
     },
     subject: { reference: patientRef },
     effectiveDateTime: issuedDate,
-    ...(group.comment ? { comment: group.comment } : {}),
     ...(memberRefs.length > 0
       ? { related: memberRefs.map(ref => ({ type: 'has-member', target: { reference: ref } })) }
       : {}),
@@ -110,97 +112,101 @@ function makeGroupObservation(
   return { entry: { fullUrl, resource }, ref: `Observation/${id}` }
 }
 
-// Report-level "filing comment" — a Comment Note Observation with no
-// has-member/derived-from link, referenced directly in DiagnosticReport.result[].
+// A filing comment — a Comment Note Observation with no derived-from link of
+// its own, has-member linked in wherever it was added (report-level: listed
+// directly in DiagnosticReport.result[]; group-level: has-member linked into
+// that group's own Observation, alongside its results).
 function makeFilingCommentObservation(
-  inv: DraftInvestigation,
+  tempIdKey: string,
+  comment: string,
   map: TempIdMap,
   patientRef: string,
   issuedDate: string,
+  notForPfs: boolean | undefined,
 ): { entry: fhir3.BundleEntry; ref: string } {
-  const { id, fullUrl } = map.entry(`${inv._tempId}::comment`)
+  const { id, fullUrl } = map.entry(tempIdKey)
 
   const resource: fhir3.Observation & { comment?: string } = {
     resourceType: 'Observation',
     id,
-    ...nopatMeta(inv.notForPfs),
+    ...nopatMeta(notForPfs),
     status: 'final',
     code: {
       coding: [{ system: SNOMED, code: COMMENT_NOTE_CODE, display: 'Comment note' }],
     },
     subject: { reference: patientRef },
     effectiveDateTime: issuedDate,
-    comment: inv.comment,
+    comment,
   }
 
   return { entry: { fullUrl, resource }, ref: `Observation/${id}` }
 }
 
 function makeSpecimen(
-  inv: DraftInvestigation,
+  specimen: DraftSpecimen,
   map: TempIdMap,
   patientRef: string,
 ): { entry: fhir3.BundleEntry; ref: string } | undefined {
-  const hasSpecimen = inv.specimenType || inv.specimenSnomedCode || inv.specimenCollectedDate
-    || inv.specimenReceivedDate || inv.specimenStatus || inv.specimenNote
-  if (!hasSpecimen) return undefined
+  const hasContent = specimen.type || specimen.snomedCode || specimen.collectedDate
+    || specimen.receivedDate || specimen.status || specimen.note
+  if (!hasContent) return undefined
 
-  const { id, fullUrl } = map.entry(`${inv._tempId}::specimen`)
+  const { id, fullUrl } = map.entry(specimen._tempId)
 
   const resource: fhir3.Specimen = {
     resourceType: 'Specimen',
     id,
     subject: { reference: patientRef },
-    ...(inv.specimenType || inv.specimenSnomedCode
+    ...(specimen.type || specimen.snomedCode
       ? {
           type: {
             coding: [
               {
                 system: SNOMED,
-                ...(inv.specimenSnomedCode ? { code: inv.specimenSnomedCode } : {}),
-                ...(inv.specimenType ? { display: inv.specimenType } : {}),
+                ...(specimen.snomedCode ? { code: specimen.snomedCode } : {}),
+                ...(specimen.type ? { display: specimen.type } : {}),
               },
             ],
-            ...(inv.specimenType ? { text: inv.specimenType } : {}),
+            ...(specimen.type ? { text: specimen.type } : {}),
           },
         }
       : {}),
-    ...(inv.specimenStatus ? { status: inv.specimenStatus } : {}),
-    ...(inv.specimenCollectedDate ? { collection: { collectedDateTime: inv.specimenCollectedDate } } : {}),
-    ...(inv.specimenReceivedDate ? { receivedTime: inv.specimenReceivedDate } : {}),
-    ...(inv.specimenNote ? { note: [{ text: inv.specimenNote }] } : {}),
+    ...(specimen.status ? { status: specimen.status } : {}),
+    ...(specimen.collectedDate ? { collection: { collectedDateTime: specimen.collectedDate } } : {}),
+    ...(specimen.receivedDate ? { receivedTime: specimen.receivedDate } : {}),
+    ...(specimen.note ? { note: [{ text: specimen.note }] } : {}),
   }
 
   return { entry: { fullUrl, resource }, ref: `Specimen/${id}` }
 }
 
 function makeTestRequest(
-  inv: DraftInvestigation,
+  request: DraftTestRequest,
   map: TempIdMap,
   patientRef: string,
 ): { entry: fhir3.BundleEntry; ref: string } | undefined {
-  if (!inv.testRequestName && !inv.testRequestSnomedCode) return undefined
+  if (!request.name && !request.snomedCode) return undefined
 
-  const { id, fullUrl } = map.entry(`${inv._tempId}::testrequest`)
+  const { id, fullUrl } = map.entry(request._tempId)
 
   const resource: fhir3.ProcedureRequest = {
     resourceType: 'ProcedureRequest',
     id,
-    status: (inv.testRequestStatus as fhir3.ProcedureRequest['status']) ?? 'active',
-    intent: (inv.testRequestIntent as fhir3.ProcedureRequest['intent']) ?? 'order',
+    status: (request.status as fhir3.ProcedureRequest['status']) ?? 'active',
+    intent: (request.intent as fhir3.ProcedureRequest['intent']) ?? 'order',
     subject: { reference: patientRef },
     code: {
       coding: [
         {
           system: SNOMED,
-          ...(inv.testRequestSnomedCode ? { code: inv.testRequestSnomedCode } : {}),
-          ...(inv.testRequestName ? { display: inv.testRequestName } : {}),
+          ...(request.snomedCode ? { code: request.snomedCode } : {}),
+          ...(request.name ? { display: request.name } : {}),
         },
       ],
-      ...(inv.testRequestName ? { text: inv.testRequestName } : {}),
+      ...(request.name ? { text: request.name } : {}),
     },
-    ...(inv.testRequestRequesterTempId
-      ? { requester: { agent: { reference: map.ref(inv.testRequestRequesterTempId, 'Practitioner') } } }
+    ...(request.requesterTempId
+      ? { requester: { agent: { reference: map.ref(request.requesterTempId, 'Practitioner') } } }
       : {}),
   }
 
@@ -224,27 +230,49 @@ export function generateInvestigations(
     const resultRefs: string[] = []
 
     for (const group of inv.testGroups) {
+      const memberRefs: string[] = []
+
       const groupResults = group.results.map(r => makeResultObservation(r, map, patientRef, inv.notForPfs))
       for (const { entry } of groupResults) entries.push(entry)
+      memberRefs.push(...groupResults.map(r => r.ref))
+
+      // "GP Filing Comment" — its own Comment Note Observation, has-member
+      // linked into this group alongside its results (not inline on the
+      // group's own Observation, so it stays a genuine filing-comment
+      // resource per GP Connect guidance).
+      if (group.comment) {
+        const { entry, ref } = makeFilingCommentObservation(
+          `${group._tempId}::comment`, group.comment, map, patientRef, issuedDate, inv.notForPfs,
+        )
+        entries.push(entry)
+        memberRefs.push(ref)
+      }
 
       const { entry: groupEntry, ref: groupRef } = makeGroupObservation(
-        group, groupResults.map(r => r.ref), map, patientRef, issuedDate, inv.notForPfs,
+        group, memberRefs, map, patientRef, issuedDate, inv.notForPfs,
       )
       entries.push(groupEntry)
       resultRefs.push(groupRef)
     }
 
+    // Report-level "Lab Comment"
     if (inv.comment) {
-      const { entry, ref } = makeFilingCommentObservation(inv, map, patientRef, issuedDate)
+      const { entry, ref } = makeFilingCommentObservation(
+        `${inv._tempId}::comment`, inv.comment, map, patientRef, issuedDate, inv.notForPfs,
+      )
       entries.push(entry)
       resultRefs.push(ref)
     }
 
-    const specimen = makeSpecimen(inv, map, patientRef)
-    if (specimen) entries.push(specimen.entry)
+    const specimens = inv.specimens
+      .map(s => makeSpecimen(s, map, patientRef))
+      .filter((s): s is { entry: fhir3.BundleEntry; ref: string } => s !== undefined)
+    for (const { entry } of specimens) entries.push(entry)
 
-    const testRequest = makeTestRequest(inv, map, patientRef)
-    if (testRequest) entries.push(testRequest.entry)
+    const testRequests = inv.testRequests
+      .map(r => makeTestRequest(r, map, patientRef))
+      .filter((r): r is { entry: fhir3.BundleEntry; ref: string } => r !== undefined)
+    for (const { entry } of testRequests) entries.push(entry)
 
     const report: fhir3.DiagnosticReport = {
       resourceType: 'DiagnosticReport',
@@ -267,8 +295,8 @@ export function generateInvestigations(
         ? { performer: [{ actor: { reference: map.ref(inv.performerTempId, 'Practitioner') } }] }
         : {}),
       ...(resultRefs.length > 0 ? { result: resultRefs.map(ref => ({ reference: ref })) } : {}),
-      ...(specimen ? { specimen: [{ reference: specimen.ref }] } : {}),
-      ...(testRequest ? { basedOn: [{ reference: testRequest.ref }] } : {}),
+      ...(specimens.length > 0 ? { specimen: specimens.map(s => ({ reference: s.ref })) } : {}),
+      ...(testRequests.length > 0 ? { basedOn: testRequests.map(r => ({ reference: r.ref })) } : {}),
     }
 
     entries.push({ fullUrl, resource: report })

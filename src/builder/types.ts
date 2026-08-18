@@ -273,8 +273,34 @@ export interface DraftTestGroup {
   _tempId: string
   name?: string
   snomedCode?: string
+  /** "GP Filing Comment" — generated as its own Comment Note Observation
+   * has-member linked to this group, same mechanism as the report-level
+   * comment but scoped to just this group's results. */
   comment?: string
   results: DraftInvestigationResult[]
+}
+
+// A specimen linked to a Test Report — a report can have more than one
+// (e.g. blood + urine on the same request), so these are a repeatable list.
+export interface DraftSpecimen {
+  _tempId: string
+  type?: string
+  snomedCode?: string
+  collectedDate?: string
+  receivedDate?: string
+  status?: string
+  note?: string
+}
+
+// A test request linked to a Test Report — also repeatable, for a report
+// that was raised against more than one requested test/procedure.
+export interface DraftTestRequest {
+  _tempId: string
+  name?: string
+  snomedCode?: string
+  status?: string
+  intent?: string
+  requesterTempId?: string
 }
 
 export interface DraftInvestigation {
@@ -284,23 +310,10 @@ export interface DraftInvestigation {
   date?: string
   status?: string
   performerTempId?: string
-  // Report-level filing comment
+  // Report-level "Lab Comment" filing comment
   comment?: string
-  // Linked specimen — all optional; a Specimen resource is only generated
-  // when at least one of these is set
-  specimenType?: string
-  specimenSnomedCode?: string
-  specimenCollectedDate?: string
-  specimenReceivedDate?: string
-  specimenStatus?: string
-  specimenNote?: string
-  // Linked test request — all optional; a ProcedureRequest resource is only
-  // generated when a name is set
-  testRequestName?: string
-  testRequestSnomedCode?: string
-  testRequestStatus?: string
-  testRequestIntent?: string
-  testRequestRequesterTempId?: string
+  specimens: DraftSpecimen[]
+  testRequests: DraftTestRequest[]
   testGroups: DraftTestGroup[]
   linkedProblemTempIds?: string[]
   linkedConsultationTempId?: string
