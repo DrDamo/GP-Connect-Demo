@@ -18,6 +18,8 @@ import type {
   DraftInvestigation,
   DraftTestGroup,
   DraftInvestigationResult,
+  DraftSpecimen,
+  DraftTestRequest,
   DraftReferral,
   DraftDiaryEntry,
   DraftCodedDataItem,
@@ -58,7 +60,7 @@ function defaultAllergy(id: string): DraftAllergy {
   return { _tempId: id, status: 'active', assertedDate: today(), onsetDate: today() }
 }
 function defaultInvestigation(id: string): DraftInvestigation {
-  return { _tempId: id, date: today(), testGroups: [] }
+  return { _tempId: id, date: today(), specimens: [], testRequests: [], testGroups: [] }
 }
 function defaultReferral(id: string): DraftReferral {
   return { _tempId: id, date: today() }
@@ -80,18 +82,68 @@ function defaultDocument(id: string): DraftDocument {
 
 // Pre-Investigations-restructure shape: results sat directly on the
 // investigation instead of being nested under testGroups.
-interface LegacyDraftInvestigation extends Omit<DraftInvestigation, 'testGroups'> {
+interface LegacyDraftInvestigation extends Omit<DraftInvestigation, 'testGroups' | 'specimens' | 'testRequests'> {
   testGroups?: DraftTestGroup[]
   results?: DraftInvestigationResult[]
+  specimens?: DraftSpecimen[]
+  testRequests?: DraftTestRequest[]
+  // Pre-multiple-specimen/request shape: a single specimen/test request sat
+  // directly on the investigation as flat fields instead of a list.
+  specimenType?: string
+  specimenSnomedCode?: string
+  specimenCollectedDate?: string
+  specimenReceivedDate?: string
+  specimenStatus?: string
+  specimenNote?: string
+  testRequestName?: string
+  testRequestSnomedCode?: string
+  testRequestStatus?: string
+  testRequestIntent?: string
+  testRequestRequesterTempId?: string
 }
 
 function migrateInvestigation(inv: LegacyDraftInvestigation): DraftInvestigation {
-  if (Array.isArray(inv.testGroups)) return inv as DraftInvestigation
-  const { results, ...rest } = inv
+  const {
+    results, testGroups,
+    specimens, specimenType, specimenSnomedCode, specimenCollectedDate, specimenReceivedDate, specimenStatus, specimenNote,
+    testRequests, testRequestName, testRequestSnomedCode, testRequestStatus, testRequestIntent, testRequestRequesterTempId,
+    ...rest
+  } = inv
+
+  const hasLegacySpecimen = specimenType || specimenSnomedCode || specimenCollectedDate || specimenReceivedDate || specimenStatus || specimenNote
+  const hasLegacyTestRequest = testRequestName || testRequestSnomedCode
+
   return {
     ...rest,
-    testGroups: results && results.length > 0
+    testGroups: Array.isArray(testGroups)
+      ? testGroups
+      : results && results.length > 0
       ? [{ _tempId: newTempId(), name: inv.name, snomedCode: inv.snomedCode, results }]
+      : [],
+    specimens: Array.isArray(specimens)
+      ? specimens
+      : hasLegacySpecimen
+      ? [{
+          _tempId: newTempId(),
+          type: specimenType,
+          snomedCode: specimenSnomedCode,
+          collectedDate: specimenCollectedDate,
+          receivedDate: specimenReceivedDate,
+          status: specimenStatus,
+          note: specimenNote,
+        }]
+      : [],
+    testRequests: Array.isArray(testRequests)
+      ? testRequests
+      : hasLegacyTestRequest
+      ? [{
+          _tempId: newTempId(),
+          name: testRequestName,
+          snomedCode: testRequestSnomedCode,
+          status: testRequestStatus,
+          intent: testRequestIntent,
+          requesterTempId: testRequestRequesterTempId,
+        }]
       : [],
   }
 }
@@ -216,6 +268,12 @@ export type DraftAction =
   | { type: 'ADD_TEST_GROUP'; payload: string }
   | { type: 'UPDATE_TEST_GROUP'; payload: { invTempId: string; groupTempId: string; updates: Partial<DraftTestGroup> } }
   | { type: 'REMOVE_TEST_GROUP'; payload: { invTempId: string; groupTempId: string } }
+  | { type: 'ADD_SPECIMEN'; payload: string }
+  | { type: 'UPDATE_SPECIMEN'; payload: { invTempId: string; specimenTempId: string; updates: Partial<DraftSpecimen> } }
+  | { type: 'REMOVE_SPECIMEN'; payload: { invTempId: string; specimenTempId: string } }
+  | { type: 'ADD_TEST_REQUEST'; payload: string }
+  | { type: 'UPDATE_TEST_REQUEST'; payload: { invTempId: string; requestTempId: string; updates: Partial<DraftTestRequest> } }
+  | { type: 'REMOVE_TEST_REQUEST'; payload: { invTempId: string; requestTempId: string } }
   | { type: 'ADD_TEST_RESULT'; payload: { invTempId: string; groupTempId: string } }
   | { type: 'UPDATE_TEST_RESULT'; payload: { invTempId: string; groupTempId: string; resultTempId: string; updates: Partial<DraftInvestigationResult> } }
   | { type: 'REMOVE_TEST_RESULT'; payload: { invTempId: string; groupTempId: string; resultTempId: string } }
@@ -896,7 +954,7 @@ function draftReducer(state: DraftRecord, action: DraftAction): DraftRecord {
     case 'ADD_INVESTIGATION':
       return {
         ...state,
-        investigations: [...state.investigations, { _tempId: newTempId(), testGroups: [] }],
+        investigations: [...state.investigations, defaultInvestigation(newTempId())],
       }
 
     case 'UPDATE_INVESTIGATION':
@@ -942,6 +1000,78 @@ function draftReducer(state: DraftRecord, action: DraftAction): DraftRecord {
         investigations: state.investigations.map(inv =>
           inv._tempId === invTempId
             ? { ...inv, testGroups: removeById(inv.testGroups, groupTempId) }
+            : inv,
+        ),
+      }
+    }
+
+    case 'ADD_SPECIMEN': {
+      const invTempId = action.payload
+      return {
+        ...state,
+        investigations: state.investigations.map(inv =>
+          inv._tempId === invTempId
+            ? { ...inv, specimens: [...inv.specimens, { _tempId: newTempId() }] }
+            : inv,
+        ),
+      }
+    }
+
+    case 'UPDATE_SPECIMEN': {
+      const { invTempId, specimenTempId, updates } = action.payload
+      return {
+        ...state,
+        investigations: state.investigations.map(inv =>
+          inv._tempId === invTempId
+            ? { ...inv, specimens: updateById(inv.specimens, specimenTempId, updates) }
+            : inv,
+        ),
+      }
+    }
+
+    case 'REMOVE_SPECIMEN': {
+      const { invTempId, specimenTempId } = action.payload
+      return {
+        ...state,
+        investigations: state.investigations.map(inv =>
+          inv._tempId === invTempId
+            ? { ...inv, specimens: removeById(inv.specimens, specimenTempId) }
+            : inv,
+        ),
+      }
+    }
+
+    case 'ADD_TEST_REQUEST': {
+      const invTempId = action.payload
+      return {
+        ...state,
+        investigations: state.investigations.map(inv =>
+          inv._tempId === invTempId
+            ? { ...inv, testRequests: [...inv.testRequests, { _tempId: newTempId() }] }
+            : inv,
+        ),
+      }
+    }
+
+    case 'UPDATE_TEST_REQUEST': {
+      const { invTempId, requestTempId, updates } = action.payload
+      return {
+        ...state,
+        investigations: state.investigations.map(inv =>
+          inv._tempId === invTempId
+            ? { ...inv, testRequests: updateById(inv.testRequests, requestTempId, updates) }
+            : inv,
+        ),
+      }
+    }
+
+    case 'REMOVE_TEST_REQUEST': {
+      const { invTempId, requestTempId } = action.payload
+      return {
+        ...state,
+        investigations: state.investigations.map(inv =>
+          inv._tempId === invTempId
+            ? { ...inv, testRequests: removeById(inv.testRequests, requestTempId) }
             : inv,
         ),
       }

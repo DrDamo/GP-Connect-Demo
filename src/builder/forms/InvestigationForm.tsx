@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { DraftRecord, DraftInvestigation, DraftTestGroup, DraftInvestigationResult } from '../types'
+import type { DraftRecord, DraftInvestigation, DraftTestGroup, DraftInvestigationResult, DraftSpecimen, DraftTestRequest } from '../types'
 import type { DraftAction } from '../hooks/useDraftRecord'
 import { newTempId } from '../hooks/useDraftRecord'
 import { Field } from './shared/FormField'
@@ -171,7 +171,11 @@ function TestGroupCard({
             <TrashIcon className="w-3.5 h-3.5" />
           </button>
         </div>
-        <Field label="Comment" value={group.comment ?? ''} onChange={v => upd({ comment: v })} />
+        <Field
+          label="GP Filing Comment"
+          value={group.comment ?? ''}
+          onChange={v => upd({ comment: v })}
+        />
       </div>
 
       <div className="p-3 bg-white dark:bg-gray-900">
@@ -199,7 +203,132 @@ function TestGroupCard({
         {group.results.length === 0 && (
           <p className="text-xs text-nhs-grey-3">No results added yet.</p>
         )}
+        <div className="flex justify-end mt-1">
+          <button
+            type="button"
+            onClick={() => dispatch({ type: 'ADD_TEST_RESULT', payload: { invTempId, groupTempId: group._tempId } })}
+            className="text-xs text-nhs-blue hover:underline"
+          >
+            + Add result
+          </button>
+        </div>
       </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// SpecimenRow — one Specimen linked to the Test Report (a report can have
+// more than one, e.g. blood + urine on the same request)
+// ---------------------------------------------------------------------------
+
+function SpecimenRow({
+  specimen,
+  invTempId,
+  dispatch,
+}: {
+  specimen: DraftSpecimen
+  invTempId: string
+  dispatch: React.Dispatch<DraftAction>
+}) {
+  const upd = (updates: Partial<DraftSpecimen>) =>
+    dispatch({ type: 'UPDATE_SPECIMEN', payload: { invTempId, specimenTempId: specimen._tempId, updates } })
+
+  return (
+    <div className="border border-nhs-grey-5 dark:border-nhs-grey-4 rounded p-2 mb-2 bg-white dark:bg-gray-900 space-y-2">
+      <div className="flex items-start gap-2">
+        <SnomedPicker
+          label="Specimen type"
+          value={specimen.type ?? ''}
+          code={specimen.snomedCode}
+          semanticTag="specimen"
+          onChange={({ value, code }) => upd({ type: value, snomedCode: code })}
+        />
+        <button
+          type="button"
+          onClick={() => dispatch({ type: 'REMOVE_SPECIMEN', payload: { invTempId, specimenTempId: specimen._tempId } })}
+          className="text-nhs-red hover:opacity-70 p-1.5 mt-4 shrink-0"
+          title="Remove specimen"
+        >
+          <TrashIcon className="w-3.5 h-3.5" />
+        </button>
+      </div>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <DateField label="Collected" value={specimen.collectedDate ?? ''} onChange={v => upd({ collectedDate: v })} />
+        <DateField label="Received" value={specimen.receivedDate ?? ''} onChange={v => upd({ receivedDate: v })} />
+        <SelectField
+          label="Status"
+          value={specimen.status ?? ''}
+          onChange={v => upd({ status: v })}
+          options={SPECIMEN_STATUS_OPTS}
+          placeholder="— Select —"
+        />
+      </div>
+      <Field label="Note" value={specimen.note ?? ''} onChange={v => upd({ note: v })} />
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// TestRequestRow — one Test Request linked to the Test Report (a report can
+// have been raised against more than one requested test/procedure)
+// ---------------------------------------------------------------------------
+
+function TestRequestRow({
+  request,
+  invTempId,
+  draft,
+  dispatch,
+}: {
+  request: DraftTestRequest
+  invTempId: string
+  draft: DraftRecord
+  dispatch: React.Dispatch<DraftAction>
+}) {
+  const upd = (updates: Partial<DraftTestRequest>) =>
+    dispatch({ type: 'UPDATE_TEST_REQUEST', payload: { invTempId, requestTempId: request._tempId, updates } })
+
+  return (
+    <div className="border border-nhs-grey-5 dark:border-nhs-grey-4 rounded p-2 mb-2 bg-white dark:bg-gray-900 space-y-2">
+      <div className="flex items-start gap-2">
+        <SnomedPicker
+          label="Test requested"
+          value={request.name ?? ''}
+          code={request.snomedCode}
+          semanticTag="procedure,observable entity"
+          onChange={({ value, code }) => upd({ name: value, snomedCode: code })}
+        />
+        <button
+          type="button"
+          onClick={() => dispatch({ type: 'REMOVE_TEST_REQUEST', payload: { invTempId, requestTempId: request._tempId } })}
+          className="text-nhs-red hover:opacity-70 p-1.5 mt-4 shrink-0"
+          title="Remove test request"
+        >
+          <TrashIcon className="w-3.5 h-3.5" />
+        </button>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <SelectField
+          label="Status"
+          value={request.status ?? ''}
+          onChange={v => upd({ status: v })}
+          options={REQUEST_STATUS_OPTS}
+          placeholder="— Select —"
+        />
+        <SelectField
+          label="Intent"
+          value={request.intent ?? ''}
+          onChange={v => upd({ intent: v })}
+          options={REQUEST_INTENT_OPTS}
+          placeholder="— Select —"
+        />
+      </div>
+      <PractitionerSelect
+        label="Requester"
+        draft={draft}
+        value={request.requesterTempId}
+        onChange={v => upd({ requesterTempId: v })}
+      />
     </div>
   )
 }
@@ -256,64 +385,38 @@ export function InvestigationCard({
         />
       </div>
 
-      <Field label="Comment" value={inv.comment ?? ''} onChange={v => upd({ comment: v })} />
+      <Field label="Lab Comment" value={inv.comment ?? ''} onChange={v => upd({ comment: v })} />
 
-      <FormSection title="Specimen" defaultOpen={false}>
-        <div className="space-y-2">
-          <SnomedPicker
-            label="Specimen type"
-            value={inv.specimenType ?? ''}
-            code={inv.specimenSnomedCode}
-            semanticTag="specimen"
-            onChange={({ value, code }) => upd({ specimenType: value, specimenSnomedCode: code })}
-          />
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            <DateField label="Collected" value={inv.specimenCollectedDate ?? ''} onChange={v => upd({ specimenCollectedDate: v })} />
-            <DateField label="Received" value={inv.specimenReceivedDate ?? ''} onChange={v => upd({ specimenReceivedDate: v })} />
-            <SelectField
-              label="Status"
-              value={inv.specimenStatus ?? ''}
-              onChange={v => upd({ specimenStatus: v })}
-              options={SPECIMEN_STATUS_OPTS}
-              placeholder="— Select —"
-            />
-          </div>
-          <Field label="Note" value={inv.specimenNote ?? ''} onChange={v => upd({ specimenNote: v })} />
-        </div>
+      <FormSection title="Specimens" count={inv.specimens.length} defaultOpen={false}>
+        {inv.specimens.map(specimen => (
+          <SpecimenRow key={specimen._tempId} specimen={specimen} invTempId={inv._tempId} dispatch={dispatch} />
+        ))}
+        {inv.specimens.length === 0 && (
+          <p className="text-xs text-nhs-grey-3 mb-2">No specimens added yet.</p>
+        )}
+        <button
+          type="button"
+          onClick={() => dispatch({ type: 'ADD_SPECIMEN', payload: inv._tempId })}
+          className="text-xs text-nhs-blue hover:underline"
+        >
+          + Add specimen
+        </button>
       </FormSection>
 
-      <FormSection title="Test Request" defaultOpen={false}>
-        <div className="space-y-2">
-          <SnomedPicker
-            label="Test requested"
-            value={inv.testRequestName ?? ''}
-            code={inv.testRequestSnomedCode}
-            semanticTag="procedure,observable entity"
-            onChange={({ value, code }) => upd({ testRequestName: value, testRequestSnomedCode: code })}
-          />
-          <div className="grid grid-cols-2 gap-2">
-            <SelectField
-              label="Status"
-              value={inv.testRequestStatus ?? ''}
-              onChange={v => upd({ testRequestStatus: v })}
-              options={REQUEST_STATUS_OPTS}
-              placeholder="— Select —"
-            />
-            <SelectField
-              label="Intent"
-              value={inv.testRequestIntent ?? ''}
-              onChange={v => upd({ testRequestIntent: v })}
-              options={REQUEST_INTENT_OPTS}
-              placeholder="— Select —"
-            />
-          </div>
-          <PractitionerSelect
-            label="Requester"
-            draft={draft}
-            value={inv.testRequestRequesterTempId}
-            onChange={v => upd({ testRequestRequesterTempId: v })}
-          />
-        </div>
+      <FormSection title="Test Requests" count={inv.testRequests.length} defaultOpen={false}>
+        {inv.testRequests.map(request => (
+          <TestRequestRow key={request._tempId} request={request} invTempId={inv._tempId} draft={draft} dispatch={dispatch} />
+        ))}
+        {inv.testRequests.length === 0 && (
+          <p className="text-xs text-nhs-grey-3 mb-2">No test requests added yet.</p>
+        )}
+        <button
+          type="button"
+          onClick={() => dispatch({ type: 'ADD_TEST_REQUEST', payload: inv._tempId })}
+          className="text-xs text-nhs-blue hover:underline"
+        >
+          + Add test request
+        </button>
       </FormSection>
 
       {/* Test groups */}
