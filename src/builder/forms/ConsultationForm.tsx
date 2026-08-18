@@ -47,7 +47,14 @@ const ENCOUNTER_CLASS_OPTS = [
 
 // SNOMED CT consultation/encounter type concepts — the set GP Connect vendors
 // actually use for Encounter.type, per NHS Digital's Category (EHR) guidance.
+// Encounter.type is generated as plain text only (see generate/consultations.ts),
+// so `code` here just drives this dropdown's own matched/free-text logic — it
+// never reaches the output JSON. 'Consultation' uses the well-known SNOMED
+// root concept; 'GP Surgery' has no single canonical SNOMED binding, so its
+// code is a placeholder for list-matching purposes only.
 const CONSULTATION_TYPE_OPTS: { code: string; display: string }[] = [
+  { code: '11429006', display: 'Consultation' },
+  { code: 'gp-surgery', display: 'GP Surgery' },
   { code: '1258986006', display: 'Face-to-face encounter' },
   { code: '1269515004', display: 'Face to face consultation with patient' },
   { code: '1237136005', display: 'Consultation with patient' },

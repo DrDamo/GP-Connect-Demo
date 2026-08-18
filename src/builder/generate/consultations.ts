@@ -188,24 +188,12 @@ function makeEncounter(
     ...nopatMeta(draft.notForPfs),
     status: 'finished',
     class: encounterClass,
-    // type[] always carries a plain-text "Clinical" entry — confirmed against
-    // a real GP Connect Encounter (TPP): { "type": [{ "text": "Clinical" }] },
-    // no coding, no dedicated codesystem. That's what marks this as a GP
-    // Connect consultation record. The user's own selected consultation type
-    // (e.g. "Face-to-face encounter") rides as a separate entry alongside it,
-    // since CodeableConcept.coding/.text are each 0..1 within one entry but
-    // type[] itself is repeatable.
-    type: [
-      ...(draft.typeCode || draft.typeDisplay
-        ? [{
-            ...(draft.typeCode
-              ? { coding: [{ system: SNOMED, code: draft.typeCode, ...(draft.typeDisplay ? { display: draft.typeDisplay } : {}) }] }
-              : {}),
-            ...(draft.typeDisplay ? { text: draft.typeDisplay } : {}),
-          }]
-        : []),
-      { text: 'Clinical' },
-    ],
+    // type[] carries a single plain-text entry — confirmed against a real
+    // GP Connect Encounter (TPP): { "type": [{ "text": "Clinical" }] }, no
+    // coding, no dedicated codesystem. The text value itself isn't fixed by
+    // the spec, so it's set to whatever consultation type the user picked
+    // (e.g. "Face-to-face encounter") rather than a hardcoded marker.
+    type: [{ text: draft.typeDisplay ?? 'Clinical' }],
     subject: { reference: patientRef },
     period: {
       ...(draft.date ? { start: draft.date } : {}),
