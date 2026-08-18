@@ -177,7 +177,7 @@ function AppContent() {
     lists: extractLists(data),
   }), [])
 
-  const handleLoad = useCallback((text: string, filename: string, label?: string) => {
+  const handleLoad = useCallback((text: string, filename: string, label?: string, initialTab: ActiveTab = 'inspector') => {
     setParseError(null)
     const parsed = parseBundle(text)
     if (!parsed.ok) {
@@ -188,7 +188,7 @@ function AppContent() {
     const record = buildRecordFromBundle(parsed.data)
     setLoaded({ source: text, filename, label: label ?? filename, format: parsed.format, validation, record })
     setShowOriginalSource(false)
-    setTab('inspector')
+    setTab(initialTab)
 
     const loadToken = ++snomedCheckTokenRef.current
     setCheckingSnomed(true)
@@ -388,7 +388,7 @@ function AppContent() {
           </div>
           <div className="flex-1 min-h-0 bg-white rounded-lg border border-nhs-grey-4 overflow-hidden">
             <BuilderView
-              onLoad={(json, filename) => { handleLoad(json, filename, 'Built Patient Record') }}
+              onLoad={(json, filename, initialTab) => { handleLoad(json, filename, 'Built Patient Record', initialTab) }}
               onDirtyChange={handleBuilderDirtyChange}
               pendingDraft={pendingSharedDraft}
               pendingDraftId={pendingSharedDraftId}
