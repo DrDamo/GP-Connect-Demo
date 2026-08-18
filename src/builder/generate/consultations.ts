@@ -1,4 +1,4 @@
-import type { DraftRecord, DraftConsultation, DraftConsultationItem } from '../types'
+import type { DraftRecord, DraftConsultation, DraftConsultationItem, ConsultationLinkKind } from '../types'
 import type { TempIdMap } from '../idMap'
 import { excludeConfidential, nopatMeta } from './security'
 
@@ -7,6 +7,17 @@ const COMMENT_NOTE_CODE = '37331000000100'
 const CONSULTATION_WRAPPER_CODE = '325851000000107'
 const CONSULTATION_TOPIC_CODE = '25851000000105'
 const CONSULTATION_CATEGORY_CODE = '24781000000107'
+
+// Resource type each linked-category kind resolves to, for building the
+// category List's entry references (see DraftConsultationCategory.linkedRefs).
+const LINK_KIND_RESOURCE_TYPE: Record<ConsultationLinkKind, string> = {
+  allergy: 'AllergyIntolerance',
+  document: 'DocumentReference',
+  investigation: 'DiagnosticReport',
+  diaryEntry: 'ProcedureRequest',
+  medication: 'MedicationStatement',
+  referral: 'ReferralRequest',
+}
 
 function makeListBase(
   id: string,
@@ -28,7 +39,11 @@ function makeListBase(
     },
     subject: { reference: patientRef },
     date: date ?? new Date().toISOString(),
-    entry: itemRefs.map(ref => ({ item: { reference: ref } })),
+    // FHIR forbids an empty array where one is present at all — every caller
+    // here is expected to have already skipped List generation when there's
+    // nothing to reference, but this is the last line of defence against
+    // ever emitting the structurally-invalid `"entry": []`.
+    ...(itemRefs.length > 0 ? { entry: itemRefs.map(ref => ({ item: { reference: ref } })) } : {}),
   }
   if (title) list.title = title
   // encounter is a GP Connect extension field not in base fhir3.List type
@@ -255,6 +270,12 @@ function processConsultation(
       for (const item of catItems) {
         catItemRefs.push(processItem(item, map, patientRef, encRef, entries))
       }
+      // A linked-kind category (Allergy/Document/Investigation/Diary Entry/
+      // Medication/Referral) has no items of its own — its content is these
+      // references to records created in their own top-level section.
+      for (const linked of cat.linkedRefs ?? []) {
+        catItemRefs.push(map.ref(linked.tempId, LINK_KIND_RESOURCE_TYPE[linked.kind]))
+      }
 
       const catListId = map.resolve(cat._tempId)
       const catList = makeListBase(
@@ -297,18 +318,24 @@ function processConsultation(
     topicListRefs.push(`List/${topicListId}`)
   }
 
-  const wrapperListId = crypto.randomUUID()
-  const wrapperList = makeListBase(
-    wrapperListId,
-    patientRef,
-    draft.date,
-    encRef,
-    CONSULTATION_WRAPPER_CODE,
-    'Consultation',
-    undefined,
-    topicListRefs,
-  )
-  entries.push({ fullUrl: `urn:uuid:${wrapperListId}`, resource: wrapperList })
+  // A consultation with no non-empty topics has nothing to wrap — skip the
+  // top-level "Consultation" List rather than emitting one with no entries
+  // (same rule as categories/topics above; also avoids the structurally
+  // invalid `"entry": []` a wrapper with nothing to reference would produce).
+  if (topicListRefs.length > 0) {
+    const wrapperListId = crypto.randomUUID()
+    const wrapperList = makeListBase(
+      wrapperListId,
+      patientRef,
+      draft.date,
+      encRef,
+      CONSULTATION_WRAPPER_CODE,
+      'Consultation',
+      undefined,
+      topicListRefs,
+    )
+    entries.push({ fullUrl: `urn:uuid:${wrapperListId}`, resource: wrapperList })
+  }
 
   return entries
 }
