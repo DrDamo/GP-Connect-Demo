@@ -57,11 +57,17 @@ export function extractProblems(bundle: fhir3.Bundle): GpConnectProblem[] {
     const encounterId = extractId(contextRef)
     const notes = (resource.note ?? []).map(n => n.text ?? '').filter(Boolean)
 
-    // Linked items: ActualProblem (the backing resource) + RelatedClinicalContent
+    // Linked items: ActualProblem (the backing resource) + RelatedClinicalContent.
+    // Match on the bare extension name (not the full "Extension-CareConnect-…"
+    // prefix) — confirmed against real bundles (Sep 2026) that vendors vary the
+    // rest of the URL: real TPP uses .../Extension-CareConnect-ActualProblem-1
+    // (hl7.org.uk host) while real EMIS uses
+    // .../Extension-CareConnect-GPC-ActualProblem-1 (nhs.uk host, "GPC" infix) —
+    // the longer match previously used here silently missed EMIS's variant.
     const linkedItems: GpConnectLinkedItem[] = []
     for (const ext of resource.extension ?? []) {
-      const isActual  = ext.url?.endsWith('Extension-CareConnect-ActualProblem-1')
-      const isRelated = ext.url?.endsWith('Extension-CareConnect-RelatedClinicalContent-1')
+      const isActual  = ext.url?.endsWith('ActualProblem-1')
+      const isRelated = ext.url?.endsWith('RelatedClinicalContent-1')
       if (!isActual && !isRelated) continue
       const ref = (ext.valueReference as fhir3.Reference | undefined)?.reference
       if (!ref) continue

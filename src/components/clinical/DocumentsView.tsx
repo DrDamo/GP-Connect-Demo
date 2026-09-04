@@ -90,6 +90,9 @@ function DocumentDetail({ document, bundle, onJumpToSource, onJumpToRecord }: { 
           <DetailRow label="MIME type" value={<span className="font-mono text-xs">{document.mimeType}</span>} />
         )}
         <DetailRow label="File size" value={formatFileSize(document.attachmentSize)} />
+        {document.masterIdentifier && (
+          <DetailRow label="Master identifier" value={<span className="font-mono text-xs">{document.masterIdentifier}</span>} />
+        )}
         {document.description && (
           <div className="col-span-2 flex gap-2 min-w-0">
             <span className="text-xs text-nhs-grey-3 shrink-0 w-36">Description</span>

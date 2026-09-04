@@ -15,6 +15,7 @@ import {
   extractOriginalTermText,
   fhirDateKey,
   hasNopatSecurity,
+  getExtensionValue,
 } from './utils'
 
 // SNOMED codes for consultation structure lists
@@ -88,11 +89,22 @@ function buildTopic(
     items.push(itemFromRef(bundle, entry.item))
   }
 
+  // Extension-CareConnect-RelatedProblemHeader-1 on the topic List itself —
+  // files this topic under a Problem (confirmed real, EMIS-only so far,
+  // Sep 2026). Shape: extension.extension[url=target].valueReference → Condition.
+  const relatedProblemExt = getExtensionValue(topicList.extension, 'RelatedProblemHeader-1')
+  const relatedProblemRef = (relatedProblemExt as unknown as { extension?: fhir3.Extension[] } | undefined)
+    ?.extension?.find(e => e.url === 'target')?.valueReference?.reference
+  const relatedProblemId = extractId(relatedProblemRef)
+  const relatedProblemDisplay = relatedProblemRef ? resolveItemDisplay(bundle, relatedProblemRef) : undefined
+
   return {
     id: topicList.id ?? '',
     title: topicList.title,
     categories,
     items,
+    relatedProblemId,
+    relatedProblemDisplay,
   }
 }
 
@@ -116,6 +128,15 @@ export function extractConsultations(bundle: fhir3.Bundle): GpConnectConsultatio
     const resolvedOrg = resolveReference(bundle, serviceProviderRef) as fhir3.Organization | undefined
     const organisation = resolvedOrg?.name ?? getOrganisationName(bundle)
     const organisationId = resolvedOrg?.id ?? extractId(serviceProviderRef)
+
+    // Encounter.location[] — present in real data (confirmed Sep 2026: 100%
+    // of real TPP Encounters, 13% of real EMIS ones) but was previously left
+    // unextracted entirely.
+    const locationRef = (enc as unknown as { location?: Array<{ location?: { reference?: string } }> })
+      .location?.[0]?.location?.reference
+    const resolvedLocation = resolveReference(bundle, locationRef) as { name?: string } | undefined
+    const location = resolvedLocation?.name
+    const locationId = extractId(locationRef)
 
     const typeEntry = enc.type?.[0]
     const type = extractOriginalTermText(typeEntry)
@@ -151,6 +172,8 @@ export function extractConsultations(bundle: fhir3.Bundle): GpConnectConsultatio
       clinicianId,
       organisation,
       organisationId,
+      location,
+      locationId,
       encounterClass,
       encounterStatus,
       topics,

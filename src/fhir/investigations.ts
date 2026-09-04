@@ -1,5 +1,5 @@
 import type { GpConnectInvestigation, GpConnectInvestigationResult, GpConnectTestGroup, GpConnectObservationComponent, GpConnectSpecimen, GpConnectProcedureRequest } from './types'
-import { getEntries, formatDate, resolvePractitionerRef, resolvePractitionerName, resolveReference, extractSnomedCode, extractOriginalTermText, extractId, fhirDateKey, hasNopatSecurity } from './utils'
+import { getEntries, formatDate, resolvePractitionerRef, resolvePractitionerName, resolveReference, extractSnomedCode, extractOriginalTermText, extractId, fhirDateKey, hasNopatSecurity, getExtensionValue } from './utils'
 
 const PERFORMER_ACTOR_TYPE: Record<string, 'Practitioner' | 'Organisation' | 'HealthcareService'> = {
   Practitioner: 'Practitioner',
@@ -201,7 +201,7 @@ function obsHasValue(obs: ObsLike): boolean {
 }
 
 function extractObsResult(obs: ObsLike): Pick<GpConnectInvestigationResult,
-  'value' | 'unit' | 'referenceRange' | 'interpretation' | 'comment' | 'components'> {
+  'value' | 'unit' | 'referenceRange' | 'interpretation' | 'comment' | 'components' | 'isApproximate'> {
   const vq = obs.valueQuantity
   const cast = obs as unknown as { valueString?: string }
   let value: string | undefined = vq?.value !== undefined
@@ -210,6 +210,10 @@ function extractObsResult(obs: ObsLike): Pick<GpConnectInvestigationResult,
   let unit = vq?.unit
   let referenceRange = formatRange(obs.referenceRange?.[0])
   let interpretation = extractOriginalTermText(obs.interpretation)
+  // Extension-CareConnect-ValueApproximation-1 (valueBoolean) — flags an
+  // estimated/approximate result. Confirmed against a real TPP bundle
+  // (Sep 2026); not yet observed from EMIS.
+  const isApproximate = getExtensionValue(vq?.extension, 'ValueApproximation-1')?.valueBoolean === true
 
   const rawComment = obs.comment || undefined
   if (!value && rawComment) {
@@ -231,7 +235,7 @@ function extractObsResult(obs: ObsLike): Pick<GpConnectInvestigationResult,
       }))
     : undefined
 
-  return { value, unit, referenceRange, interpretation, comment, components }
+  return { value, unit, referenceRange, interpretation, comment, components, isApproximate: isApproximate || undefined }
 }
 
 export function extractInvestigations(bundle: fhir3.Bundle): GpConnectInvestigation[] {

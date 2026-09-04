@@ -10,6 +10,32 @@ best guess (usually carried over from the prior audit note or from sample-data e
 
 ---
 
+## Fixes applied to the record viewer (Sep 2026)
+
+Acting on the real-bundle verification above, the following were found to be either bugs (a rule
+silently not firing against real data) or genuine gaps (real, confirmed fields left unextracted)
+and have now been implemented. Each was re-verified by running the actual extractor code against
+both real bundles after the change.
+
+| Fix | Kind | What changed | Verified effect |
+|---|---|---|---|
+| `ActualProblem`/`RelatedClinicalContent` extension matching | **Bug** | `src/fhir/problems.ts` matched the full `Extension-CareConnect-ActualProblem-1` string, which real TPP data satisfies but real EMIS's `Extension-CareConnect-GPC-ActualProblem-1` (GPC infix) never did — silently dropping the linked-problem reference for every real EMIS problem. Now matches on the bare `ActualProblem-1`/`RelatedClinicalContent-1` suffix instead. | Real EMIS bundle: `actual` linked item went from 0/15 to 15/15 problems. |
+| `detectIsTpp()` vendor detection | **Bug (high impact)** | `src/fhir/medications.ts` only checked for a `Medication.code.coding[].system` containing `"tpp"` — real TPP `Medication.code` is plain SNOMED, so this never fired, meaning a genuine TPP bundle was silently classified with EMIS's current/past heuristics. Added a second, real-data-confirmed signal: any MedicationRequest/MedicationStatement `identifier[].system` containing `tpp-uk.com`. | Real TPP bundle: medications now correctly follow the trust-the-status TPP rule (confirmed via status→isCurrent distribution — `completed` now maps to `isCurrent:false` except where the vendor-agnostic "prescribed elsewhere" rule legitimately overrides it). |
+| `Extension-CareConnect-RelatedProblemHeader-1` | **Gap** | Real, EMIS-only extension found on a consultation *topic* `List` (not `Condition`) linking that topic to the Problem it's filed under — previously unextracted. `consultations.ts` now reads it and exposes `relatedProblemId`/`relatedProblemDisplay` on the topic; `ConsultationsView` shows "(Problem: …)" next to the topic title, clickable through to the Problems record. | Real EMIS bundle: 1 consultation topic resolved to its related problem. |
+| `Encounter.location` | **Gap** | Real data has this ~100% of the time in the TPP bundle (13% in EMIS) but it was never read. `consultations.ts` now resolves it to the `Location` resource; shown as a "Location" field/chip in the consultation detail view (reusing the existing `ReferencedResources` Location support). | Real TPP bundle: 256/317 encounters now resolve a location. |
+| `DocumentReference.masterIdentifier` | **Gap** | Confirmed real and TPP-specific (`https://tpp-uk.com/Id/document-master-identifier`); still unextracted. `documents.ts` now reads `masterIdentifier.value`; shown in the Documents detail view. | Real TPP bundle: 2/2 documents now show a master identifier. |
+| `MedicationRequest.priorPrescription` | **Gap** | EMIS uses this to link a reauthorised prescription back to the one it replaces; unextracted. `medications.ts` now reads it off the plan-level request as `priorPrescriptionId`; `MedicationsView` shows a "Reissued from" chip linking to the prior record when it can be resolved in-bundle. | Real EMIS bundle: 23/86 medications now carry a resolved prior-prescription link. |
+| `Extension-CareConnect-ValueApproximation-1` | **Gap** | New finding from the real TPP bundle (2 occurrences) — a `valueBoolean` extension on `Observation.valueQuantity` flagging an estimated/approximate result; unextracted. `investigations.ts` now reads it as `isApproximate`; `InvestigationsView` prefixes the value with "≈" and a tooltip. | Real TPP bundle: 1 top-level result now flagged approximate (the extension's other real occurrence is on a `component[]`-level quantity, not yet wired up — see Open questions). |
+
+Not changed: the Read v2/Egton coding-order handling (`utils.ts`) was left in place even though it
+wasn't observed in either real bundle — it's cheap, harmless if it never fires, and may still be
+correct for older/other real exports this doc's authors haven't seen. `alternativeCodeLabel()`'s
+`tpp`-substring check (`supportingResources.ts`) was likewise left alone — it never fires against
+real TPP `Medication.code` data, but doing no harm, and a plain `tpp` substring match is too broad
+to safely retarget at the identifier namespace without more real examples.
+
+---
+
 ## 1. Problems (Condition)
 
 | Aspect | EMIS | TPP | Medicus | Source |

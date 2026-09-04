@@ -98,6 +98,12 @@ function MedicationRow({ med, record, selected, selectedIssueId, onSelect, onSel
     med.medicationResourceId     ? { type: 'Medication'   as const, id: med.medicationResourceId,     label: 'Medication' } : null,
   ].filter((r): r is NonNullable<typeof r> => r !== null)
 
+  // Reissue/reauthorisation chain link (FHIR MedicationRequest.priorPrescription) —
+  // seen used by EMIS (confirmed against a real bundle, Sep 2026).
+  const priorMed = med.priorPrescriptionId
+    ? record.medications.find(m => m.medicationRequestIds.includes(med.priorPrescriptionId!))
+    : undefined
+
   return (
     <>
       {/* Summary row */}
@@ -241,6 +247,18 @@ function MedicationRow({ med, record, selected, selectedIssueId, onSelect, onSel
                       }
                     </p>
                   </div>
+                  {priorMed && (
+                    <div>
+                      <span className="text-nhs-grey-3 text-xs uppercase tracking-wide">Reissued from</span>
+                      <p className="mt-0.5">
+                        <ReferenceChip
+                          label={priorMed.drugName}
+                          onClick={onJumpToRecord ? () => onJumpToRecord('medications', priorMed.id) : () => {}}
+                          active={false}
+                        />
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Status reason / additional information (conditional) */}

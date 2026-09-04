@@ -125,7 +125,7 @@ function ResultsTable({
                 </tr>
               )
             }
-            const valueText = [r.value, r.unit].filter(Boolean).join(' ') || '—'
+            const valueText = [r.isApproximate ? '≈' : undefined, r.value, r.unit].filter(Boolean).join(' ') || '—'
             const intClass = interpretationClass(r.interpretation)
             return (
               <>
@@ -148,7 +148,7 @@ function ResultsTable({
                       </button>
                     )}
                   </td>
-                  <td className={`py-1.5 pr-4 font-medium ${intClass}`}>{valueText}</td>
+                  <td className={`py-1.5 pr-4 font-medium ${intClass}`} title={r.isApproximate ? 'Approximate/estimated result' : undefined}>{valueText}</td>
                   <td className="py-1.5 pr-4 text-nhs-grey-2">{r.referenceRange ?? '—'}</td>
                   <td className={`py-1.5 ${intClass}`}>{r.interpretation ?? '—'}</td>
                 </tr>

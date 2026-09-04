@@ -31,6 +31,10 @@ export function extractDocuments(bundle: fhir3.Bundle): GpConnectDocument[] {
     const contextEncounterRef = (resource as unknown as { context?: { encounter?: { reference?: string } } }).context?.encounter?.reference
     const encounterId = contextEncounterRef ? extractId(contextEncounterRef) : undefined
 
+    // Confirmed TPP-specific against a real bundle (Sep 2026) —
+    // system https://tpp-uk.com/Id/document-master-identifier, absent in EMIS.
+    const masterIdentifier = (resource as unknown as { masterIdentifier?: fhir3.Identifier }).masterIdentifier?.value
+
     return {
       id: resource.id ?? crypto.randomUUID(),
       date: formatDate(resource.created ?? attachment?.creation),
@@ -46,6 +50,7 @@ export function extractDocuments(bundle: fhir3.Bundle): GpConnectDocument[] {
       custodianId,
       status: resource.status ?? 'unknown',
       attachmentSize,
+      masterIdentifier,
       notForPfs: hasNopatSecurity(resource),
     }
   })
