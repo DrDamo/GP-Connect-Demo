@@ -1,5 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { FileUpload } from './components/FileUpload'
+import { FileHistoryPanel } from './components/FileHistoryPanel'
+import { addFileHistoryEntry } from './lib/fileHistory'
 import { ValidationPanel } from './components/ValidationPanel'
 import { TrainingView } from './components/training/TrainingView'
 import { RawSourceViewer } from './components/RawSourceViewer'
@@ -245,6 +247,14 @@ function AppContent() {
       })
   }, [buildRecordFromBundle])
 
+  // Records a real File System Access handle (where the browser provided one)
+  // alongside a cached copy of the text, so this file can reappear in the
+  // "Recent files" list and be reopened either from cache or re-read from disk.
+  const handleFileUploadLoad = useCallback((text: string, filename: string, fileHandle?: FileSystemFileHandle) => {
+    handleLoad(text, filename)
+    void addFileHistoryEntry({ filename, label: filename, source: 'file', content: text, fileHandle })
+  }, [handleLoad])
+
   const handleLoadSample = useCallback(() => {
     const text = JSON.stringify(sampleBundle, null, 2)
     handleLoad(text, 'medications-bundle.json', 'Sample Data')
@@ -270,7 +280,10 @@ function AppContent() {
       setParseError(normalized.error)
       return
     }
-    handleLoad(JSON.stringify(normalized.data, null, 2), 'pasted-bundle.json', 'Pasted JSON')
+    const text = JSON.stringify(normalized.data, null, 2)
+    handleLoad(text, 'pasted-bundle.json', 'Pasted JSON')
+    const pastedAt = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+    void addFileHistoryEntry({ filename: 'pasted-bundle.json', label: `Pasted JSON — ${pastedAt}`, source: 'paste', content: text })
     setPasteText('')
     setShowPaste(false)
   }, [pasteText, handleLoad])
@@ -519,7 +532,7 @@ function AppContent() {
                 </div>
 
                 <div data-tour="home-file-upload">
-                  <FileUpload onLoad={handleLoad} />
+                  <FileUpload onLoad={handleFileUploadLoad} />
                 </div>
 
                 <div data-tour="home-paste-json">
@@ -648,6 +661,8 @@ function AppContent() {
                 </section>
               </div>
             </div>
+
+            <FileHistoryPanel onOpen={handleLoad} />
           </div>
         </main>
       ) : (
