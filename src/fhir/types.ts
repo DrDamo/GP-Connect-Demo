@@ -165,6 +165,17 @@ export interface GpConnectLinkedItem {
   linkType: 'actual' | 'related'
 }
 
+// From Extension-CareConnect-RelatedProblemHeader-1 — records EMIS/TPP problem
+// linking (group/combine/evolve). A problem carries one "parent" entry (if it
+// is a child), any number of "child" entries (if it is a parent), and
+// "sibling" entries between children of the same parent. Sibling links are
+// captured for completeness but aren't used to build the display tree — the
+// parent/child links alone are enough to reconstruct it.
+export interface GpConnectRelatedProblem {
+  type: 'parent' | 'child' | 'sibling'
+  targetId: string
+}
+
 export interface GpConnectProblem {
   id: string
   problem: string
@@ -181,6 +192,7 @@ export interface GpConnectProblem {
   notes: string[]
   linkedItems: GpConnectLinkedItem[]
   notForPfs?: boolean
+  relatedProblems: GpConnectRelatedProblem[]
 }
 
 export interface GpConnectConsultationItem {

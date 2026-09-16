@@ -165,6 +165,23 @@ export function hasDegradeMarker(text?: string): boolean {
   return !!text && DEGRADED_TEXT_PATTERN.test(text)
 }
 
+// Flattens a possibly-nested item list (via getChildren) into a single array
+// — used only to check for cross-row concerns (like the NOPAT column) that
+// must account for every row that could ever render, not just the top level.
+function collectWithDescendants<T>(items: T[], getChildren?: (item: T) => T[] | undefined): T[] {
+  if (!getChildren) return items
+  const all: T[] = []
+  const visit = (list: T[]) => {
+    for (const item of list) {
+      all.push(item)
+      const children = getChildren(item)
+      if (children?.length) visit(children)
+    }
+  }
+  visit(items)
+  return all
+}
+
 export function DomainTable<T extends { id: string; notForPfs?: boolean }>({
   columns,
   items,
@@ -172,6 +189,9 @@ export function DomainTable<T extends { id: string; notForPfs?: boolean }>({
   onSelect,
   emptyMessage = 'No records found',
   expandedContent,
+  getChildren,
+  treeColumnIndex = 0,
+  forceExpandIds,
 }: {
   columns: DomainColumn<T>[]
   items: T[]
@@ -179,8 +199,38 @@ export function DomainTable<T extends { id: string; notForPfs?: boolean }>({
   onSelect?: (id: string) => void
   emptyMessage?: string
   expandedContent?: (item: T) => React.ReactNode
+  /** Returns an item's children (e.g. EMIS/TPP grouped/combined/evolved problems). When
+   * supplied, `items` should be top-level (root) entries only — children are rendered
+   * nested underneath, indented, behind a collapsed-by-default toggle. */
+  getChildren?: (item: T) => T[] | undefined
+  /** Column index (into `columns`, before any auto-added NOPAT column) that carries the
+   * tree toggle and indentation for nested rows. Defaults to the first column. */
+  treeColumnIndex?: number
+  /** Parent ids to force open (merged into the internal expanded-tree state whenever this
+   * changes) — lets a caller navigating to a nested child (e.g. a "Go to item" link onto a
+   * grouped/combined/evolved problem) make sure its ancestor row is actually rendered first. */
+  forceExpandIds?: string[]
 }) {
   const selectedRowRef = useRef<HTMLTableRowElement | null>(null)
+  const [expandedTreeIds, setExpandedTreeIds] = useState<Set<string>>(() => new Set())
+  const toggleTree = (id: string) => setExpandedTreeIds(prev => {
+    const next = new Set(prev)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    return next
+  })
+
+  useEffect(() => {
+    if (!forceExpandIds || forceExpandIds.length === 0) return
+    setExpandedTreeIds(prev => {
+      const next = new Set(prev)
+      let changed = false
+      for (const id of forceExpandIds) {
+        if (!next.has(id)) { next.add(id); changed = true }
+      }
+      return changed ? next : prev
+    })
+  }, [forceExpandIds])
 
   useEffect(() => {
     if (selectedId && selectedRowRef.current) {
@@ -199,10 +249,66 @@ export function DomainTable<T extends { id: string; notForPfs?: boolean }>({
   // Auto-added to every domain table (rather than each view defining its own)
   // so "Not for PFS" tagging stays consistent — only shown when at least one
   // row actually has it, so tables with no NOPAT items are unaffected.
-  const showNotForPfsColumn = items.some(item => item.notForPfs)
+  const showNotForPfsColumn = collectWithDescendants(items, getChildren).some(item => item.notForPfs)
   const effectiveColumns: DomainColumn<T>[] = showNotForPfsColumn
     ? [...columns, { label: '', className: 'w-px whitespace-nowrap', render: item => item.notForPfs ? <NotForPfsBadge /> : null }]
     : columns
+
+  const renderRow = (item: T, depth: number): React.ReactNode => {
+    const isSelected = item.id === selectedId
+    const children = getChildren?.(item)
+    const hasChildren = !!children?.length
+    const isTreeExpanded = expandedTreeIds.has(item.id)
+    return (
+      <Fragment key={item.id}>
+        <tr
+          ref={isSelected ? selectedRowRef : undefined}
+          onClick={() => onSelect?.(item.id)}
+          className={`transition-colors ${
+            isSelected && expandedContent ? '' : 'border-b border-nhs-grey-5'
+          } ${
+            onSelect ? 'cursor-pointer' : ''
+          } ${
+            isSelected
+              ? 'bg-blue-50'
+              : onSelect
+                ? 'hover:bg-blue-50'
+                : ''
+          }`}
+        >
+          {effectiveColumns.map((col, idx) => (
+            <td key={col.label || `col-${idx}`} className={`py-2.5 px-3 text-sm text-nhs-grey-2 ${col.className ?? ''}`}>
+              {idx === treeColumnIndex && (depth > 0 || hasChildren) ? (
+                <div className="flex items-center gap-1" style={{ paddingLeft: depth * 20 }}>
+                  {hasChildren ? (
+                    <button
+                      onClick={e => { e.stopPropagation(); toggleTree(item.id) }}
+                      className="shrink-0 w-4 h-4 flex items-center justify-center text-nhs-grey-3 hover:text-nhs-grey-1"
+                      aria-label={isTreeExpanded ? 'Collapse related problems' : 'Expand related problems'}
+                      title={isTreeExpanded ? 'Collapse related problems' : `Show ${children!.length} related problem${children!.length !== 1 ? 's' : ''}`}
+                    >
+                      {isTreeExpanded ? '▾' : '▸'}
+                    </button>
+                  ) : (
+                    <span className="shrink-0 w-4 h-4 flex items-center justify-center text-nhs-grey-4 text-xs">└</span>
+                  )}
+                  {col.render(item)}
+                </div>
+              ) : col.render(item)}
+            </td>
+          ))}
+        </tr>
+        {isSelected && expandedContent && (
+          <tr className="border-b border-nhs-grey-5">
+            <td colSpan={effectiveColumns.length} className="px-3 pb-3 pt-0">
+              {expandedContent(item)}
+            </td>
+          </tr>
+        )}
+        {hasChildren && isTreeExpanded && children!.map(child => renderRow(child, depth + 1))}
+      </Fragment>
+    )
+  }
 
   return (
     <div className="border border-nhs-grey-5 rounded-lg">
@@ -220,41 +326,7 @@ export function DomainTable<T extends { id: string; notForPfs?: boolean }>({
           </tr>
         </thead>
         <tbody>
-          {items.map(item => {
-            const isSelected = item.id === selectedId
-            return (
-              <Fragment key={item.id}>
-                <tr
-                  ref={isSelected ? selectedRowRef : undefined}
-                  onClick={() => onSelect?.(item.id)}
-                  className={`transition-colors ${
-                    isSelected && expandedContent ? '' : 'border-b border-nhs-grey-5'
-                  } ${
-                    onSelect ? 'cursor-pointer' : ''
-                  } ${
-                    isSelected
-                      ? 'bg-blue-50'
-                      : onSelect
-                        ? 'hover:bg-blue-50'
-                        : ''
-                  }`}
-                >
-                  {effectiveColumns.map((col, idx) => (
-                    <td key={col.label || `col-${idx}`} className={`py-2.5 px-3 text-sm text-nhs-grey-2 ${col.className ?? ''}`}>
-                      {col.render(item)}
-                    </td>
-                  ))}
-                </tr>
-                {isSelected && expandedContent && (
-                  <tr className="border-b border-nhs-grey-5">
-                    <td colSpan={effectiveColumns.length} className="px-3 pb-3 pt-0">
-                      {expandedContent(item)}
-                    </td>
-                  </tr>
-                )}
-              </Fragment>
-            )
-          })}
+          {items.map(item => renderRow(item, 0))}
         </tbody>
       </table>
     </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { GpConnectBundle, GpConnectProblem } from '../../fhir/types'
 import { DomainTable, StatusBadge, DegradedTermText, CodeStatusBadge } from './DomainTable'
 import type { DomainColumn } from './DomainTable'
@@ -12,6 +12,58 @@ function problemSearchText(p: GpConnectProblem): string {
     p.problem, p.significance, p.clinicalStatus, p.startDate, p.endDate, p.snomedCode, p.snomedDisplay,
     p.assertedDate, p.asserter, ...p.notes, ...p.linkedItems.map(li => li.description),
   ].filter(Boolean).join(' ').toLowerCase()
+}
+
+// EMIS/TPP group/combine/evolve events (Extension-CareConnect-RelatedProblemHeader-1)
+// link problems into a parent + children tree — see [[docs/emis-tpp-medicus-variations]].
+// A problem is a "root" if nothing declares it a child, or if the problem it names as
+// parent isn't actually present in this bundle (defensive: don't silently drop it).
+function buildProblemChildrenMap(allProblems: GpConnectProblem[]): Map<string, GpConnectProblem[]> {
+  const byId = new Map(allProblems.map(p => [p.id, p]))
+  const map = new Map<string, GpConnectProblem[]>()
+  for (const p of allProblems) {
+    const childIds = p.relatedProblems.filter(r => r.type === 'child').map(r => r.targetId)
+    const children = childIds.map(id => byId.get(id)).filter((c): c is GpConnectProblem => !!c)
+    if (children.length > 0) map.set(p.id, children)
+  }
+  return map
+}
+
+function getParentId(p: GpConnectProblem): string | undefined {
+  return p.relatedProblems.find(r => r.type === 'parent')?.targetId
+}
+
+function isRootProblem(p: GpConnectProblem, byId: Map<string, GpConnectProblem>): boolean {
+  const parentId = getParentId(p)
+  return !parentId || !byId.has(parentId)
+}
+
+// Walks parent pointers up from a problem to collect every ancestor id above it (in practice
+// at most one, since RelatedProblemHeader is a flat parent+children tree) — used to force those
+// ancestors' tree toggles open when navigating straight to a nested child.
+function getAncestorIds(id: string, byId: Map<string, GpConnectProblem>): string[] {
+  const ancestors: string[] = []
+  let current = byId.get(id)
+  const seen = new Set<string>()
+  while (current) {
+    const parentId = getParentId(current)
+    if (!parentId || !byId.has(parentId) || seen.has(parentId)) break
+    seen.add(parentId)
+    ancestors.push(parentId)
+    current = byId.get(parentId)
+  }
+  return ancestors
+}
+
+const RELATED_PROBLEM_LABELS: Record<GpConnectProblem['relatedProblems'][number]['type'], string> = {
+  parent: 'Parent', child: 'Child', sibling: 'Sibling',
+}
+
+// A root matches a search if it matches itself, or any of its (nested) children do —
+// otherwise searching for a term that's only in a collapsed child would hide the whole group.
+function rootMatchesQuery(root: GpConnectProblem, query: string, childrenMap: Map<string, GpConnectProblem[]>): boolean {
+  if (problemSearchText(root).includes(query)) return true
+  return (childrenMap.get(root.id) ?? []).some(child => rootMatchesQuery(child, query, childrenMap))
 }
 
 interface Props {
@@ -80,9 +132,12 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
   )
 }
 
-function ProblemDetail({ problem, bundle, onJumpToSource, onJumpToRecord }: {
-  problem: GpConnectProblem; bundle: GpConnectBundle
+function ProblemDetail({ problem, bundle, byId, onJumpToSource, onJumpToRecord, onJumpToProblem }: {
+  problem: GpConnectProblem; bundle: GpConnectBundle; byId: Map<string, GpConnectProblem>
   onJumpToSource?: (id: string) => void; onJumpToRecord?: (domain: DomainId, id: string) => void
+  /** Same-domain navigation to another problem — expands its ancestor tree first if it's a
+   * collapsed grouped/combined/evolved child, then selects it. */
+  onJumpToProblem?: (id: string) => void
 }) {
   const [openResourceId, setOpenResourceId] = useState<string | null>(null)
   const toggle = (id: string) => setOpenResourceId(prev => prev === id ? null : id)
@@ -179,6 +234,51 @@ function ProblemDetail({ problem, bundle, onJumpToSource, onJumpToRecord }: {
           </div>
         </div>
       )}
+      {problem.relatedProblems.length > 0 && (
+        <div className="space-y-2 pt-1 border-t border-nhs-blue/20">
+          <span className="text-xs text-nhs-grey-3 uppercase tracking-wide">Related Problems</span>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+            {problem.relatedProblems.map((rel, i) => {
+              const target = byId.get(rel.targetId)
+              return (
+                <div key={i} className="flex flex-col gap-0.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                      rel.type === 'parent'
+                        ? 'bg-nhs-blue/10 text-nhs-blue border border-nhs-blue/20'
+                        : 'bg-nhs-grey-5 text-nhs-grey-2 border border-nhs-grey-4'
+                    }`}>
+                      {RELATED_PROBLEM_LABELS[rel.type]}
+                    </span>
+                    <span className="text-xs text-nhs-grey-1 min-w-0 truncate">
+                      {target ? <DegradedTermText text={target.problem} /> : <span className="text-nhs-grey-3 font-mono text-[10px]">{rel.targetId}</span>}
+                    </span>
+                    {target && <StatusBadge value={target.clinicalStatus} />}
+                  </div>
+                  <div className="flex gap-2 pl-px">
+                    {onJumpToProblem && (
+                      <button
+                        onClick={() => onJumpToProblem(rel.targetId)}
+                        className="text-[11px] text-nhs-blue hover:underline"
+                      >
+                        Go to item →
+                      </button>
+                    )}
+                    {onJumpToSource && (
+                      <button
+                        onClick={() => onJumpToSource(rel.targetId)}
+                        className="text-[11px] text-nhs-grey-3 hover:text-nhs-grey-1 hover:underline"
+                      >
+                        View FHIR ↗
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
       <ReferencedResources
         refs={refs}
         practitioners={bundle.practitioners}
@@ -194,13 +294,18 @@ function ProblemDetail({ problem, bundle, onJumpToSource, onJumpToRecord }: {
 }
 
 function ProblemSection({
-  title, description, problems, columns, selectedId, onSelect, onJumpToSource, onJumpToRecord, bundle,
+  title, description, problems, columns, selectedId, onSelect, onJumpToSource, onJumpToRecord, onJumpToProblem,
+  bundle, byId, childrenMap, forceExpandIds,
 }: {
   title: string; description: string; problems: GpConnectProblem[]
   columns: DomainColumn<GpConnectProblem>[]
   selectedId?: string; onSelect?: (id: string) => void; onJumpToSource?: (id: string) => void
   onJumpToRecord?: (domain: DomainId, id: string) => void
+  onJumpToProblem: (id: string) => void
   bundle: GpConnectBundle
+  byId: Map<string, GpConnectProblem>
+  childrenMap: Map<string, GpConnectProblem[]>
+  forceExpandIds: string[]
 }) {
   if (problems.length === 0) return null
   return (
@@ -215,7 +320,15 @@ function ProblemSection({
         selectedId={selectedId}
         onSelect={onSelect}
         emptyMessage="No records in this section"
-        expandedContent={problem => <ProblemDetail problem={problem} bundle={bundle} onJumpToSource={onJumpToSource} onJumpToRecord={onJumpToRecord} />}
+        expandedContent={problem => (
+          <ProblemDetail
+            problem={problem} bundle={bundle} byId={byId}
+            onJumpToSource={onJumpToSource} onJumpToRecord={onJumpToRecord} onJumpToProblem={onJumpToProblem}
+          />
+        )}
+        getChildren={problem => childrenMap.get(problem.id)}
+        treeColumnIndex={1}
+        forceExpandIds={forceExpandIds}
       />
     </div>
   )
@@ -225,20 +338,40 @@ export function ProblemsView({ bundle, selectedId, onSelect, onJumpToSource, onJ
   const { problems } = bundle
   const [searchQuery, setSearchQuery] = useState('')
   const trimmedQuery = searchQuery.trim().toLowerCase()
-  const filteredProblems = trimmedQuery
-    ? problems.filter(p => problemSearchText(p).includes(trimmedQuery))
-    : problems
 
-  const active          = filteredProblems
+  // Grouped/combined/evolved problems (EMIS/TPP RelatedProblemHeader) are displayed as a
+  // single parent row with its children nested underneath, collapsed by default — never as
+  // separate top-level rows. Sections and counts below are built from roots only.
+  const childrenMap = useMemo(() => buildProblemChildrenMap(problems), [problems])
+  const byId = useMemo(() => new Map(problems.map(p => [p.id, p])), [problems])
+  const rootProblems = useMemo(() => problems.filter(p => isRootProblem(p, byId)), [problems, byId])
+
+  // Ids force-opened by a "Go to item →" jump onto a related problem (Parent/Child/Sibling,
+  // from ProblemDetail's Related Problems section) that landed on a currently-collapsed child —
+  // its ancestor row(s) must be expanded before the target can actually be selected/scrolled to.
+  const [forceExpandIds, setForceExpandIds] = useState<string[]>([])
+  const handleJumpToProblem = (targetId: string) => {
+    const ancestorIds = getAncestorIds(targetId, byId)
+    if (ancestorIds.length > 0) {
+      setForceExpandIds(prev => Array.from(new Set([...prev, ...ancestorIds])))
+    }
+    onJumpToRecord?.('problems', targetId)
+  }
+
+  const filteredRoots = trimmedQuery
+    ? rootProblems.filter(root => rootMatchesQuery(root, trimmedQuery, childrenMap))
+    : rootProblems
+
+  const active          = filteredRoots
     .filter(p => p.clinicalStatus === 'active')
     .sort((a, b) => {
       const order = (s?: string) => s?.toLowerCase() === 'major' ? 0 : 1
       return order(a.significance) - order(b.significance)
     })
-  const significantPast = filteredProblems.filter(p => p.clinicalStatus !== 'active' && p.significance?.toLowerCase() === 'major')
-  const minorPast       = filteredProblems.filter(p => p.clinicalStatus !== 'active' && p.significance?.toLowerCase() !== 'major')
+  const significantPast = filteredRoots.filter(p => p.clinicalStatus !== 'active' && p.significance?.toLowerCase() === 'major')
+  const minorPast       = filteredRoots.filter(p => p.clinicalStatus !== 'active' && p.significance?.toLowerCase() !== 'major')
 
-  const total = problems.length
+  const total = rootProblems.length
 
   return (
     <div className="space-y-6">
@@ -258,24 +391,27 @@ export function ProblemsView({ bundle, selectedId, onSelect, onJumpToSource, onJ
         value={searchQuery}
         onChange={setSearchQuery}
         placeholder="Search problems…"
-        matchCount={filteredProblems.length}
+        matchCount={filteredRoots.length}
         totalCount={total}
       />
 
       <ProblemSection
         title="Active" description="Current ongoing problems"
         problems={active} columns={ACTIVE_COLUMNS}
-        selectedId={selectedId} onSelect={onSelect} onJumpToSource={onJumpToSource} onJumpToRecord={onJumpToRecord} bundle={bundle}
+        selectedId={selectedId} onSelect={onSelect} onJumpToSource={onJumpToSource} onJumpToRecord={onJumpToRecord}
+        onJumpToProblem={handleJumpToProblem} bundle={bundle} byId={byId} childrenMap={childrenMap} forceExpandIds={forceExpandIds}
       />
       <ProblemSection
         title="Significant Past" description="Resolved problems of major clinical significance"
         problems={significantPast} columns={PAST_COLUMNS}
-        selectedId={selectedId} onSelect={onSelect} onJumpToSource={onJumpToSource} onJumpToRecord={onJumpToRecord} bundle={bundle}
+        selectedId={selectedId} onSelect={onSelect} onJumpToSource={onJumpToSource} onJumpToRecord={onJumpToRecord}
+        onJumpToProblem={handleJumpToProblem} bundle={bundle} byId={byId} childrenMap={childrenMap} forceExpandIds={forceExpandIds}
       />
       <ProblemSection
         title="Minor Past" description="Resolved problems of minor clinical significance"
         problems={minorPast} columns={PAST_COLUMNS}
-        selectedId={selectedId} onSelect={onSelect} onJumpToSource={onJumpToSource} onJumpToRecord={onJumpToRecord} bundle={bundle}
+        selectedId={selectedId} onSelect={onSelect} onJumpToSource={onJumpToSource} onJumpToRecord={onJumpToRecord}
+        onJumpToProblem={handleJumpToProblem} bundle={bundle} byId={byId} childrenMap={childrenMap} forceExpandIds={forceExpandIds}
       />
 
       {total === 0 && (

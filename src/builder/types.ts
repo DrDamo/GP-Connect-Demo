@@ -159,6 +159,14 @@ export interface DraftProblem {
   linkedConsultationTempId?: string
   confidential?: boolean
   notForPfs?: boolean
+  /** Set on a "child" problem after a Group/Combine/Evolve action in the Problems list —
+   * references the parent problem's _tempId. Drives the Extension-CareConnect-
+   * RelatedProblemHeader-1 parent/child/sibling links and the EMIS-style descriptive notes
+   * generated in builder/generate/problems.ts. Distinct from linkedProblemTempIds, which
+   * produces the generic RelatedClinicalContent link, not a problem hierarchy. */
+  relatedProblemParentTempId?: string
+  /** How this child became related to its parent — only meaningful alongside relatedProblemParentTempId. */
+  relatedProblemEventType?: 'group' | 'combine' | 'evolve'
 }
 
 export type DraftConsultationItemType = 'note' | 'coded'
