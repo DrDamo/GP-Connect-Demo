@@ -13,6 +13,7 @@ dist-ssr
 *.local
 .env
 .env.*
+!.env.example
 server/.env
 
 # Claude Code internal files
