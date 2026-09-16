@@ -1,5 +1,6 @@
 import type { ValidationIssue, SnomedStatusMap } from './types'
 import { extractOriginalTermText } from './utils'
+import { getAppAccessToken } from '../lib/apiAuth'
 
 // ---------------------------------------------------------------------------
 // SNOMED CT concept ID validation + GP2GP transfer-degrade conversion.
@@ -138,7 +139,11 @@ async function validateCodesBatch(codes: string[]): Promise<Record<string, boole
   if (codes.length === 0) return {}
   const { serverUrl, token } = getServerConfig()
   const headers: HeadersInit = { 'Content-Type': 'application/json' }
-  if (token) headers['Authorization'] = `Bearer ${token}`
+  // A manually-configured token (dev only) always wins; otherwise send the
+  // signed-in user's own Supabase session token, which api/_lib/requireUser.ts
+  // requires on this app's own /api/snomed and /api/dmd endpoints.
+  const authToken = token || await getAppAccessToken()
+  if (authToken) headers['Authorization'] = `Bearer ${authToken}`
 
   const res = await fetch(`${serverUrl}/api/snomed/validate-batch`, {
     method: 'POST',
@@ -158,7 +163,11 @@ async function validateDmdCodesBatch(codes: string[]): Promise<Record<string, bo
   if (codes.length === 0) return {}
   const { serverUrl, token } = getServerConfig()
   const headers: HeadersInit = { 'Content-Type': 'application/json' }
-  if (token) headers['Authorization'] = `Bearer ${token}`
+  // A manually-configured token (dev only) always wins; otherwise send the
+  // signed-in user's own Supabase session token, which api/_lib/requireUser.ts
+  // requires on this app's own /api/snomed and /api/dmd endpoints.
+  const authToken = token || await getAppAccessToken()
+  if (authToken) headers['Authorization'] = `Bearer ${authToken}`
 
   const res = await fetch(`${serverUrl}/api/dmd/validate-batch`, {
     method: 'POST',
@@ -193,7 +202,11 @@ export async function checkSnomedStatuses(bundle: fhir3.Bundle): Promise<SnomedS
 
   const { serverUrl, token } = getServerConfig()
   const headers: HeadersInit = { 'Content-Type': 'application/json' }
-  if (token) headers['Authorization'] = `Bearer ${token}`
+  // A manually-configured token (dev only) always wins; otherwise send the
+  // signed-in user's own Supabase session token, which api/_lib/requireUser.ts
+  // requires on this app's own /api/snomed and /api/dmd endpoints.
+  const authToken = token || await getAppAccessToken()
+  if (authToken) headers['Authorization'] = `Bearer ${authToken}`
 
   const [statusResult, dmdResult] = await Promise.all([
     fetch(`${serverUrl}/api/snomed/status-batch`, {

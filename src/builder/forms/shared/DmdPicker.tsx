@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { FormField } from './FormField'
 import { useAnchoredDropdown, widenDropdown } from '../../../hooks/useAnchoredDropdown'
 import { InfoHint } from '../../../onboarding/InfoHint'
+import { getAppAccessToken } from '../../../lib/apiAuth'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -146,7 +147,8 @@ export function DmdPicker({ value, onChange, code, dmdType = 'VMP', label = 'dm+
       const params = new URLSearchParams({ q, type: type.toLowerCase(), limit: '25' })
       const url = `${cfg.serverUrl}/api/dmd/search?${params}`
       const headers: HeadersInit = {}
-      if (cfg.token) headers['Authorization'] = `Bearer ${cfg.token}`
+      const authToken = cfg.token || await getAppAccessToken()
+      if (authToken) headers['Authorization'] = `Bearer ${authToken}`
       const res = await fetch(url, { headers })
       if (import.meta.env.DEV) {
         const cloned = res.clone()
@@ -209,7 +211,8 @@ export function DmdPicker({ value, onChange, code, dmdType = 'VMP', label = 'dm+
       const params = new URLSearchParams({ code, type: dmdType.toLowerCase() })
       const url = `${config.serverUrl}/api/dmd/lookup?${params}`
       const headers: HeadersInit = {}
-      if (config.token) headers['Authorization'] = `Bearer ${config.token}`
+      const authToken = config.token || await getAppAccessToken()
+      if (authToken) headers['Authorization'] = `Bearer ${authToken}`
       const res = await fetch(url, { headers })
       const body = await res.json() as { raw: unknown; detail?: DmdDetail }
       setDebugInfo({ url, status: res.status, raw: body })

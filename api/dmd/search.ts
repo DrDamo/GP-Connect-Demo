@@ -1,10 +1,14 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { expandValueSet } from '../_lib/expand'
 import { dmdValueSetUrl, toDmdResult } from '../_lib/mappers'
+import { setCors } from '../_lib/cors'
+import { requireUser } from '../_lib/requireUser'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  res.setHeader('Access-Control-Allow-Origin', '*')
+  setCors(res)
   if (req.method === 'OPTIONS') { res.status(204).end(); return }
+
+  if (!(await requireUser(req))) { res.status(401).json({ error: 'Sign in required' }); return }
 
   const q = typeof req.query.q === 'string' ? req.query.q.trim() : ''
   const limit = Math.min(parseInt(String(req.query.limit ?? '10'), 10), 50)
