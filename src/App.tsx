@@ -22,8 +22,10 @@ import { AppGuideView, type GuidePageId } from './onboarding/AppGuideView'
 import type { DraftRecord } from './builder/types'
 import { parseBundle, normalizePastedJson } from './fhir/parser'
 import { validateMedicationsBundle, cleanDanglingRefs } from './fhir/validator'
-import { checkAndDegradeSnomedCodes, checkSnomedStatuses } from './fhir/snomedDegrade'
+import { validateSnomedCodes, applyTransferDegrade, buildUnmutatedIssues, passedSnomedMessage, checkSnomedStatuses } from './fhir/snomedDegrade'
+import type { SnomedCodingRef } from './fhir/snomedDegrade'
 import { SnomedCheckingBanner } from './components/SnomedCheckingBanner'
+import { SnomedDegradePrompt } from './components/SnomedDegradePrompt'
 import { extractMedications } from './fhir/medications'
 import { extractAllergies } from './fhir/allergies'
 import { extractProblems } from './fhir/problems'
@@ -52,6 +54,17 @@ interface LoadedBundle {
   format: 'json' | 'xml'
   validation: ValidationResult
   record: GpConnectMedicationsRecord
+  /** Set once the user has answered the transfer-degrade prompt (JSON bundles
+   * with unrecognised codes only) — drives the status badge in the header. */
+  degradeStatus?: 'degraded' | 'kept'
+  degradedCodeCount?: number
+}
+
+interface DegradePromptState {
+  bundle: fhir3.Bundle
+  invalidRefs: SnomedCodingRef[]
+  uniqueCodesChecked: number
+  loadToken: number
 }
 
 function AppContent() {
@@ -59,6 +72,7 @@ function AppContent() {
   const [loaded, setLoaded] = useState<LoadedBundle | null>(null)
   const [checkingSnomed, setCheckingSnomed] = useState(false)
   const [showOriginalSource, setShowOriginalSource] = useState(false)
+  const [degradePrompt, setDegradePrompt] = useState<DegradePromptState | null>(null)
   const snomedCheckTokenRef = useRef(0)
   const [tab, setTab] = useState<ActiveTab>('inspector')
   const [trainingPage, setTrainingPage] = useState<DomainId | null>(null)
@@ -198,34 +212,55 @@ function AppContent() {
     const record = buildRecordFromBundle(parsed.data)
     setLoaded({ source: text, filename, label: label ?? filename, format: parsed.format, validation, record })
     setShowOriginalSource(false)
+    setDegradePrompt(null)
     setTab(initialTab)
 
     const loadToken = ++snomedCheckTokenRef.current
     setCheckingSnomed(true)
-    checkAndDegradeSnomedCodes(parsed.data, { mutate: parsed.format === 'json' })
-      .then(result => {
+    // Only validates against the terminology server — never mutates. Invalid
+    // JSON-bundle codes go to the transfer-degrade prompt below instead of
+    // being degraded automatically; XML bundles (which can't be mutated
+    // anyway) and error/all-valid outcomes are handled inline as before.
+    validateSnomedCodes(parsed.data)
+      .then(validation => {
         if (snomedCheckTokenRef.current !== loadToken) return // a newer file was loaded meanwhile
         setCheckingSnomed(false)
-        if (result.issues.length === 0 && result.passed.length === 0) return
-        setLoaded(prev => {
-          if (!prev) return prev
-          const mergedValidation: ValidationResult = {
-            ...prev.validation,
-            issues: [...prev.validation.issues, ...result.issues],
-            passed: [...prev.validation.passed, ...result.passed],
-          }
-          if (result.degradedCount === 0) {
-            return { ...prev, validation: mergedValidation }
-          }
-          const updatedSource = JSON.stringify(parsed.data, null, 2)
-          return {
+
+        if (validation.checkFailed) {
+          setLoaded(prev => prev ? {
             ...prev,
-            source: updatedSource,
-            originalSource: prev.source,
-            record: { ...buildRecordFromBundle(parsed.data), snomedStatus: prev.record.snomedStatus },
-            validation: mergedValidation,
-          }
-        })
+            validation: {
+              ...prev.validation,
+              issues: [...prev.validation.issues, {
+                severity: 'info',
+                message: `Could not verify SNOMED CT codes — terminology server unavailable (${validation.errorMessage})`,
+                path: 'Bundle',
+              }],
+            },
+          } : prev)
+          return
+        }
+
+        if (validation.uniqueCodesChecked === 0) return
+
+        if (validation.invalidRefs.length === 0) {
+          const passed = passedSnomedMessage(validation.uniqueCodesChecked, 0)
+          setLoaded(prev => prev ? { ...prev, validation: { ...prev.validation, passed: [...prev.validation.passed, ...passed] } } : prev)
+          return
+        }
+
+        if (parsed.format !== 'json') {
+          // No serializer exists to write changes back to XML, so there's
+          // nothing to ask about — report the invalid codes as before.
+          const issues = buildUnmutatedIssues(validation.invalidRefs, 'xml')
+          setLoaded(prev => prev ? { ...prev, validation: { ...prev.validation, issues: [...prev.validation.issues, ...issues] } } : prev)
+          return
+        }
+
+        // JSON bundle with codes the terminology server doesn't recognise —
+        // ask the user whether to keep the file unchanged or transfer-degrade
+        // it, rather than degrading unconditionally.
+        setDegradePrompt({ bundle: parsed.data, invalidRefs: validation.invalidRefs, uniqueCodesChecked: validation.uniqueCodesChecked, loadToken })
       })
       .catch(() => {
         if (snomedCheckTokenRef.current !== loadToken) return
@@ -233,10 +268,11 @@ function AppContent() {
       })
 
     // Bulk active/inactive (+ dm+d "withdrawn") tagging — a separate, purely
-    // additive check alongside the degrade pass above. Runs concurrently
-    // against the same (not-yet-mutated) bundle; safe because the degrade
-    // pass only mutates after its own network round trip resolves, well
-    // after this has taken its own snapshot of the codings to check.
+    // additive check alongside the validate/degrade flow above. Runs
+    // concurrently against the same (not-yet-mutated) bundle; safe because
+    // any transfer-degrade mutation only happens later still, once the user
+    // has answered the prompt — well after this has taken its own snapshot
+    // of the codings to check.
     checkSnomedStatuses(parsed.data)
       .then(snomedStatus => {
         if (snomedCheckTokenRef.current !== loadToken) return
@@ -246,6 +282,41 @@ function AppContent() {
         // Best-effort UI tagging only — leave snomedStatus unset on failure.
       })
   }, [buildRecordFromBundle])
+
+  const handleKeepOriginalOnImport = useCallback(() => {
+    if (!degradePrompt) return
+    if (snomedCheckTokenRef.current === degradePrompt.loadToken) {
+      const issues = buildUnmutatedIssues(degradePrompt.invalidRefs, 'kept')
+      setLoaded(prev => prev ? {
+        ...prev,
+        degradeStatus: 'kept',
+        degradedCodeCount: degradePrompt.invalidRefs.length,
+        validation: { ...prev.validation, issues: [...prev.validation.issues, ...issues] },
+      } : prev)
+    }
+    setDegradePrompt(null)
+  }, [degradePrompt])
+
+  const handleTransferDegradeOnImport = useCallback(() => {
+    if (!degradePrompt) return
+    if (snomedCheckTokenRef.current === degradePrompt.loadToken) {
+      const { issues, degradedCount } = applyTransferDegrade(degradePrompt.bundle, degradePrompt.invalidRefs)
+      const updatedSource = JSON.stringify(degradePrompt.bundle, null, 2)
+      setLoaded(prev => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          source: updatedSource,
+          originalSource: prev.source,
+          record: { ...buildRecordFromBundle(degradePrompt.bundle), snomedStatus: prev.record.snomedStatus },
+          degradeStatus: 'degraded',
+          degradedCodeCount: degradedCount,
+          validation: { ...prev.validation, issues: [...prev.validation.issues, ...issues] },
+        }
+      })
+    }
+    setDegradePrompt(null)
+  }, [degradePrompt, buildRecordFromBundle])
 
   // Records a real File System Access handle (where the browser provided one)
   // alongside a cached copy of the text, so this file can reappear in the
@@ -283,7 +354,10 @@ function AppContent() {
     const text = JSON.stringify(normalized.data, null, 2)
     handleLoad(text, 'pasted-bundle.json', 'Pasted JSON')
     const pastedAt = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
-    void addFileHistoryEntry({ filename: 'pasted-bundle.json', label: `Pasted JSON — ${pastedAt}`, source: 'paste', content: text })
+    const patient = extractPatientInfo(normalized.data)
+    const patientName = [patient?.givenName, patient?.familyName].filter(Boolean).join(' ')
+    const label = patientName ? `${patientName} — Pasted JSON — ${pastedAt}` : `Pasted JSON — ${pastedAt}`
+    void addFileHistoryEntry({ filename: 'pasted-bundle.json', label, source: 'paste', content: text })
     setPasteText('')
     setShowPaste(false)
   }, [pasteText, handleLoad])
@@ -305,6 +379,7 @@ function AppContent() {
     setLoaded(null)
     setParseError(null)
     setLoadedFromBuilder(false)
+    setDegradePrompt(null)
   }, [])
 
   const handleLoadFromBuilder = useCallback((json: string, filename: string, initialTab?: 'inspector' | 'raw') => {
@@ -336,9 +411,25 @@ function AppContent() {
             <div className="bg-white text-nhs-blue font-extrabold text-sm px-2 py-1 rounded leading-tight">NHS</div>
             <div>
               <h1 className="text-base font-semibold leading-tight">GP Connect Demonstrator</h1>
-              <p className="text-xs opacity-75 leading-tight">
-                Access Record Structured · FHIR STU3
-                {loaded && <span className="ml-1 opacity-100 font-medium">· {loaded.label}</span>}
+              <p className="text-xs opacity-75 leading-tight flex items-center flex-wrap gap-x-1">
+                <span>Access Record Structured · FHIR STU3</span>
+                {loaded && <span className="opacity-100 font-medium">· {loaded.label}</span>}
+                {loaded?.degradeStatus === 'degraded' && (
+                  <span
+                    className="px-1.5 py-0.5 rounded-full bg-amber-400 text-nhs-grey-1 text-[10px] font-semibold leading-none"
+                    title={`${loaded.degradedCodeCount} unrecognised code${loaded.degradedCodeCount === 1 ? '' : 's'} transfer-degraded on import, as a consuming system would. Compare against the original in Inspector/Raw Source.`}
+                  >
+                    Transfer-degraded on import
+                  </span>
+                )}
+                {loaded?.degradeStatus === 'kept' && (
+                  <span
+                    className="px-1.5 py-0.5 rounded-full bg-white/20 border border-white/40 text-[10px] font-semibold leading-none"
+                    title={`${loaded.degradedCodeCount} unrecognised code${loaded.degradedCodeCount === 1 ? '' : 's'} found on import — kept unchanged at your choice. See Validation for details.`}
+                  >
+                    Original codes kept
+                  </span>
+                )}
               </p>
             </div>
           </div>
@@ -779,6 +870,14 @@ function AppContent() {
           GP Connect Demonstrator · FHIR STU3 · Not a clinical system · For testing and demonstration purposes only
         </p>
       </footer>
+
+      {degradePrompt && (
+        <SnomedDegradePrompt
+          invalidRefs={degradePrompt.invalidRefs}
+          onKeepOriginal={handleKeepOriginalOnImport}
+          onTransferDegrade={handleTransferDegradeOnImport}
+        />
+      )}
     </div>
     </GuideNavProvider>
   )

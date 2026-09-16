@@ -224,6 +224,111 @@ export interface SnomedCheckResult {
   passed: string[]
 }
 
+export interface SnomedValidationOutcome {
+  /** Every SNOMED CT coding found in the bundle, whether valid or not. */
+  refs: SnomedCodingRef[]
+  /** The subset of `refs` whose code the terminology server didn't recognise
+   * — candidates for transfer-degrade, but not yet mutated. */
+  invalidRefs: SnomedCodingRef[]
+  uniqueCodesChecked: number
+  checkFailed: boolean
+  errorMessage?: string
+}
+
+/**
+ * Validates every SNOMED CT coding in the bundle against the terminology
+ * server WITHOUT mutating anything. Used to find out whether transfer-degrade
+ * would be needed before committing to it, so the caller can ask the user
+ * first instead of degrading unconditionally.
+ */
+export async function validateSnomedCodes(bundle: fhir3.Bundle): Promise<SnomedValidationOutcome> {
+  const refs = findSnomedCodings(bundle)
+  const uniqueCodes = [...new Set(refs.map(r => r.coding.code).filter((c): c is string => !!c))]
+
+  if (uniqueCodes.length === 0) {
+    return { refs, invalidRefs: [], uniqueCodesChecked: 0, checkFailed: false }
+  }
+
+  let results: Record<string, boolean>
+  try {
+    results = await validateCodesBatch(uniqueCodes)
+  } catch (err) {
+    return {
+      refs,
+      invalidRefs: [],
+      uniqueCodesChecked: uniqueCodes.length,
+      checkFailed: true,
+      errorMessage: err instanceof Error ? err.message : String(err),
+    }
+  }
+
+  const invalidRefs = refs.filter(r => r.coding.code && results[r.coding.code] === false)
+  return { refs, invalidRefs, uniqueCodesChecked: uniqueCodes.length, checkFailed: false }
+}
+
+function findAllergyCategory(bundle: fhir3.Bundle, resourceId: string | undefined): string[] | undefined {
+  return (bundle.entry ?? [])
+    .map(e => e.resource as (fhir3.AllergyIntolerance & { id?: string }) | undefined)
+    .find(r => r?.resourceType === 'AllergyIntolerance' && r.id === resourceId)
+    ?.category as unknown as string[] | undefined
+}
+
+function termSuffixFor(ref: SnomedCodingRef): string {
+  const originalTerm = extractOriginalTermText(ref.codeableConcept as unknown as fhir3.CodeableConcept)
+  return originalTerm ? ` ("${originalTerm}")` : ''
+}
+
+/**
+ * Mutates the bundle to transfer-degrade every ref in `invalidRefs`, exactly
+ * as a real GP2GP-receiving consumer system would with codes it doesn't
+ * recognise, preserving the original code/term in CodeableConcept.text.
+ */
+export function applyTransferDegrade(bundle: fhir3.Bundle, invalidRefs: SnomedCodingRef[]): { issues: ValidationIssue[]; degradedCount: number } {
+  const issues: ValidationIssue[] = []
+  for (const ref of invalidRefs) {
+    const code = ref.coding.code
+    const originalTerm = extractOriginalTermText(ref.codeableConcept as unknown as fhir3.CodeableConcept)
+    const termSuffix = termSuffixFor(ref)
+    const allergyCategory = ref.resourceType === 'AllergyIntolerance' ? findAllergyCategory(bundle, ref.resourceId) : undefined
+    degradeCoding(ref, allergyCategory)
+    issues.push({
+      severity: 'warning',
+      message: `SNOMED CT code "${code}"${termSuffix} is not a valid concept — degraded to "${ref.coding.code} ${ref.coding.display}"`,
+      path: ref.path,
+      resourceId: ref.resourceId,
+      snomedDegrade: {
+        originalCode: code!,
+        originalDisplay: originalTerm,
+        degradedCode: ref.coding.code!,
+        degradedDisplay: ref.coding.display!,
+      },
+    })
+  }
+  return { issues, degradedCount: invalidRefs.length }
+}
+
+/**
+ * Builds report-only validation issues for invalid codes that were left
+ * unchanged rather than degraded — either because the user chose to keep the
+ * JSON as imported, or because the bundle is XML (no serializer exists to
+ * write changes back).
+ */
+export function buildUnmutatedIssues(invalidRefs: SnomedCodingRef[], reason: 'kept' | 'xml'): ValidationIssue[] {
+  return invalidRefs.map(ref => ({
+    severity: 'warning',
+    message: reason === 'kept'
+      ? `SNOMED CT code "${ref.coding.code}"${termSuffixFor(ref)} is not a valid concept — kept unchanged as imported (transfer-degrade was skipped)`
+      : `SNOMED CT code "${ref.coding.code}"${termSuffixFor(ref)} is not a valid concept. Automatic degradation is only available for JSON-format files.`,
+    path: ref.path,
+    resourceId: ref.resourceId,
+  }))
+}
+
+export function passedSnomedMessage(uniqueCodesChecked: number, invalidCount: number): string[] {
+  if (uniqueCodesChecked === 0 || invalidCount > 0) return []
+  return [`All ${uniqueCodesChecked} SNOMED CT concept ID${uniqueCodesChecked === 1 ? '' : 's'} verified against the terminology server`]
+}
+
 /**
  * Checks every SNOMED CT coding in the bundle. When `mutate` is true (JSON
  * bundles), invalid codes are rewritten to a transfer-degraded coding in
@@ -234,22 +339,13 @@ export async function checkAndDegradeSnomedCodes(
   bundle: fhir3.Bundle,
   { mutate }: { mutate: boolean },
 ): Promise<SnomedCheckResult> {
-  const refs = findSnomedCodings(bundle)
-  const uniqueCodes = [...new Set(refs.map(r => r.coding.code).filter((c): c is string => !!c))]
+  const validation = await validateSnomedCodes(bundle)
 
-  if (uniqueCodes.length === 0) {
-    return { issues: [], degradedCount: 0, checkFailed: false, passed: [] }
-  }
-
-  let results: Record<string, boolean>
-  try {
-    results = await validateCodesBatch(uniqueCodes)
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
+  if (validation.checkFailed) {
     return {
       issues: [{
         severity: 'info',
-        message: `Could not verify SNOMED CT codes — terminology server unavailable (${message})`,
+        message: `Could not verify SNOMED CT codes — terminology server unavailable (${validation.errorMessage})`,
         path: 'Bundle',
       }],
       degradedCount: 0,
@@ -258,51 +354,16 @@ export async function checkAndDegradeSnomedCodes(
     }
   }
 
-  const issues: ValidationIssue[] = []
-  let degradedCount = 0
-
-  for (const ref of refs) {
-    const code = ref.coding.code
-    if (!code || results[code] !== false) continue // valid, or not present in results (shouldn't happen)
-
-    const originalTerm = extractOriginalTermText(ref.codeableConcept as unknown as fhir3.CodeableConcept)
-    const termSuffix = originalTerm ? ` ("${originalTerm}")` : ''
-
-    if (mutate) {
-      const allergyCategory = ref.resourceType === 'AllergyIntolerance'
-        ? (bundle.entry ?? [])
-            .map(e => e.resource as (fhir3.AllergyIntolerance & { id?: string }) | undefined)
-            .find(r => r?.resourceType === 'AllergyIntolerance' && r.id === ref.resourceId)
-            ?.category as unknown as string[] | undefined
-        : undefined
-      degradeCoding(ref, allergyCategory)
-      degradedCount++
-      issues.push({
-        severity: 'warning',
-        message: `SNOMED CT code "${code}"${termSuffix} is not a valid concept — degraded to "${ref.coding.code} ${ref.coding.display}"`,
-        path: ref.path,
-        resourceId: ref.resourceId,
-        snomedDegrade: {
-          originalCode: code,
-          originalDisplay: originalTerm,
-          degradedCode: ref.coding.code!,
-          degradedDisplay: ref.coding.display!,
-        },
-      })
-    } else {
-      issues.push({
-        severity: 'warning',
-        message: `SNOMED CT code "${code}"${termSuffix} is not a valid concept. Automatic degradation is only available for JSON-format files.`,
-        path: ref.path,
-        resourceId: ref.resourceId,
-      })
-    }
+  if (validation.uniqueCodesChecked === 0) {
+    return { issues: [], degradedCount: 0, checkFailed: false, passed: [] }
   }
 
-  const invalidCount = uniqueCodes.filter(c => results[c] === false).length
-  const passed = invalidCount === 0
-    ? [`All ${uniqueCodes.length} SNOMED CT concept ID${uniqueCodes.length === 1 ? '' : 's'} verified against the terminology server`]
-    : []
+  const passed = passedSnomedMessage(validation.uniqueCodesChecked, validation.invalidRefs.length)
 
-  return { issues, degradedCount, checkFailed: false, passed }
+  if (mutate) {
+    const { issues, degradedCount } = applyTransferDegrade(bundle, validation.invalidRefs)
+    return { issues, degradedCount, checkFailed: false, passed }
+  }
+
+  return { issues: buildUnmutatedIssues(validation.invalidRefs, 'xml'), degradedCount: 0, checkFailed: false, passed }
 }
