@@ -22,7 +22,7 @@ alter table public.user_tour_progress enable row level security;
 alter table public.user_hint_dismissals enable row level security;
 
 create policy "own_tour_progress" on public.user_tour_progress
-  for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+  for all using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
 
 create policy "own_hint_dismissals" on public.user_hint_dismissals
-  for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+  for all using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
