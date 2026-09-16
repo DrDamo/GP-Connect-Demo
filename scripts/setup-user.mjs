@@ -1,5 +1,5 @@
 // One-time setup: creates the GP Connect Demo org and DrDamo user in Supabase.
-// Run with: node scripts/setup-user.mjs
+// Run with: SETUP_ADMIN_PASSWORD='a-strong-password' node scripts/setup-user.mjs
 // Reads VITE_SUPABASE_URL from .env.local and SUPABASE_SERVICE_ROLE_KEY from server/.env
 
 import { readFileSync } from 'fs'
@@ -21,9 +21,15 @@ const serverEnv = parseEnvFile(new URL('../server/.env', import.meta.url).pathna
 
 const supabaseUrl    = rootEnv.VITE_SUPABASE_URL    ?? serverEnv.VITE_SUPABASE_URL
 const serviceRoleKey = serverEnv.SUPABASE_SERVICE_ROLE_KEY ?? rootEnv.SUPABASE_SERVICE_ROLE_KEY
+const adminPassword  = process.env.SETUP_ADMIN_PASSWORD ?? rootEnv.SETUP_ADMIN_PASSWORD ?? serverEnv.SETUP_ADMIN_PASSWORD
 
 if (!supabaseUrl || !serviceRoleKey) {
   console.error('Missing env vars. Need VITE_SUPABASE_URL in .env.local and SUPABASE_SERVICE_ROLE_KEY in server/.env')
+  process.exit(1)
+}
+if (!adminPassword) {
+  console.error('Missing SETUP_ADMIN_PASSWORD. Pass it as an env var, e.g.:')
+  console.error("  SETUP_ADMIN_PASSWORD='a-strong-password' node scripts/setup-user.mjs")
   process.exit(1)
 }
 
@@ -47,7 +53,7 @@ console.log('Created org:', org.id)
 // Create auth user
 const { data: authData, error: authError } = await admin.auth.admin.createUser({
   email: 'drdamo@gpc-demo.local',
-  password: 'CopyCat-33',
+  password: adminPassword,
   email_confirm: true,
   user_metadata: { username: 'DrDamo' },
 })
@@ -64,4 +70,4 @@ const { error: profileError } = await admin.from('profiles').insert({
 })
 if (profileError) { console.error('Failed to create profile:', profileError.message); process.exit(1) }
 
-console.log('Setup complete. Sign in with username DrDamo / CopyCat-33')
+console.log('Setup complete. Sign in with username DrDamo and the password you set via SETUP_ADMIN_PASSWORD.')
