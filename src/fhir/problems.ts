@@ -1,4 +1,4 @@
-import type { GpConnectProblem, GpConnectLinkedItem } from './types'
+import type { GpConnectProblem, GpConnectLinkedItem, GpConnectRelatedProblem } from './types'
 import { getEntries, formatDate, getExtensionValue, resolvePractitionerRef, extractSnomedCode, extractOriginalTermText, extractId, fhirDateKey, hasNopatSecurity } from './utils'
 
 function resolveLinkedDescription(bundle: fhir3.Bundle, resourceType: string, id: string): string | undefined {
@@ -57,11 +57,17 @@ export function extractProblems(bundle: fhir3.Bundle): GpConnectProblem[] {
     const encounterId = extractId(contextRef)
     const notes = (resource.note ?? []).map(n => n.text ?? '').filter(Boolean)
 
-    // Linked items: ActualProblem (the backing resource) + RelatedClinicalContent
+    // Linked items: ActualProblem (the backing resource) + RelatedClinicalContent.
+    // Match on the bare extension name (not the full "Extension-CareConnect-…"
+    // prefix) — confirmed against real bundles (Sep 2026) that vendors vary the
+    // rest of the URL: real TPP uses .../Extension-CareConnect-ActualProblem-1
+    // (hl7.org.uk host) while real EMIS uses
+    // .../Extension-CareConnect-GPC-ActualProblem-1 (nhs.uk host, "GPC" infix) —
+    // the longer match previously used here silently missed EMIS's variant.
     const linkedItems: GpConnectLinkedItem[] = []
     for (const ext of resource.extension ?? []) {
-      const isActual  = ext.url?.endsWith('Extension-CareConnect-ActualProblem-1')
-      const isRelated = ext.url?.endsWith('Extension-CareConnect-RelatedClinicalContent-1')
+      const isActual  = ext.url?.endsWith('ActualProblem-1')
+      const isRelated = ext.url?.endsWith('RelatedClinicalContent-1')
       if (!isActual && !isRelated) continue
       const ref = (ext.valueReference as fhir3.Reference | undefined)?.reference
       if (!ref) continue
@@ -75,6 +81,23 @@ export function extractProblems(bundle: fhir3.Bundle): GpConnectProblem[] {
         description: resolveLinkedDescription(bundle, resourceType, id),
         linkType: isActual ? 'actual' : 'related',
       })
+    }
+
+    // Related-problem links (Extension-CareConnect-RelatedProblemHeader-1) —
+    // records EMIS "group"/"combine"/"evolve" events, where one problem
+    // becomes the parent of one or more others. Unlike ActualProblem/
+    // RelatedClinicalContent above, several of these can carry the *same*
+    // extension url (one per linked problem), so they're read directly here
+    // rather than via getExtensionValue (which only returns the first match).
+    const relatedProblems: GpConnectRelatedProblem[] = []
+    for (const ext of resource.extension ?? []) {
+      if (!ext.url?.endsWith('RelatedProblemHeader-1')) continue
+      const subExtensions = (ext as unknown as { extension?: fhir3.Extension[] }).extension ?? []
+      const type = subExtensions.find(e => e.url === 'type')?.valueCode as GpConnectRelatedProblem['type'] | undefined
+      const targetRef = (subExtensions.find(e => e.url === 'target')?.valueReference as fhir3.Reference | undefined)?.reference
+      const targetId = extractId(targetRef)
+      if (!type || !targetId) continue
+      relatedProblems.push({ type, targetId })
     }
 
     return {
@@ -93,6 +116,7 @@ export function extractProblems(bundle: fhir3.Bundle): GpConnectProblem[] {
       notes,
       linkedItems,
       notForPfs: hasNopatSecurity(resource),
+      relatedProblems,
     }
   })
 }

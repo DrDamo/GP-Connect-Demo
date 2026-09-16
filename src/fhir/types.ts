@@ -78,6 +78,11 @@ export interface GpConnectMedication {
   statusChangeDate?: string
   medicationStatementId: string
   medicationRequestIds: string[]
+  /** id of a prior MedicationRequest this one's authorising plan supersedes
+   * (FHIR `MedicationRequest.priorPrescription`) — seen used by EMIS to link
+   * reissue/reauthorisation chains; TPP relies on the
+   * MedicationStatementLastIssueDate extension instead. */
+  priorPrescriptionId?: string
   issues: GpConnectMedicationIssue[]
   /** Whether this belongs in "current drugs" vs "past drugs" — derived from
    * status plus supplier-specific date rules (see classifyIsCurrent in
@@ -160,6 +165,17 @@ export interface GpConnectLinkedItem {
   linkType: 'actual' | 'related'
 }
 
+// From Extension-CareConnect-RelatedProblemHeader-1 — records EMIS/TPP problem
+// linking (group/combine/evolve). A problem carries one "parent" entry (if it
+// is a child), any number of "child" entries (if it is a parent), and
+// "sibling" entries between children of the same parent. Sibling links are
+// captured for completeness but aren't used to build the display tree — the
+// parent/child links alone are enough to reconstruct it.
+export interface GpConnectRelatedProblem {
+  type: 'parent' | 'child' | 'sibling'
+  targetId: string
+}
+
 export interface GpConnectProblem {
   id: string
   problem: string
@@ -176,6 +192,7 @@ export interface GpConnectProblem {
   notes: string[]
   linkedItems: GpConnectLinkedItem[]
   notForPfs?: boolean
+  relatedProblems: GpConnectRelatedProblem[]
 }
 
 export interface GpConnectConsultationItem {
@@ -197,6 +214,11 @@ export interface GpConnectConsultationTopic {
   title?: string
   categories: GpConnectConsultationCategory[]
   items: GpConnectConsultationItem[]
+  /** Condition this topic is filed under (FHIR `List.extension`
+   * Extension-CareConnect-RelatedProblemHeader-1 → target), e.g. EMIS's
+   * problem-linked consultation navigation. */
+  relatedProblemId?: string
+  relatedProblemDisplay?: string
 }
 
 export interface GpConnectConsultation {
@@ -208,6 +230,8 @@ export interface GpConnectConsultation {
   clinicianId?: string
   organisation?: string
   organisationId?: string
+  location?: string
+  locationId?: string
   encounterClass?: string
   encounterStatus?: string
   topics: GpConnectConsultationTopic[]
@@ -299,6 +323,9 @@ export interface GpConnectInvestigationResult {
   commentObservationId?: string
   isSubHeader?: boolean
   isTransferDegraded?: boolean
+  /** FHIR `Observation.valueQuantity.extension` Extension-CareConnect-ValueApproximation-1
+   * (valueBoolean) — flags an estimated/approximate result. Confirmed real-TPP-only so far. */
+  isApproximate?: boolean
   components?: GpConnectObservationComponent[]
 }
 
@@ -434,6 +461,9 @@ export interface GpConnectDocument {
   custodianId?: string
   status: string
   attachmentSize?: number
+  /** FHIR `DocumentReference.masterIdentifier.value` — confirmed TPP-specific
+   * (system `https://tpp-uk.com/Id/document-master-identifier`); absent from EMIS. */
+  masterIdentifier?: string
   notForPfs?: boolean
 }
 

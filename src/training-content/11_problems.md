@@ -113,6 +113,57 @@ When `filterStatus = active` is requested:
 
 ---
 
+## EMIS/TPP Group, Combine & Evolve (RelatedProblemHeader)
+
+Real EMIS bundles carry a further problem-hierarchy extension on `Condition` that the GP Connect ARS spec above describes only generically as "parent/child/sibling":
+
+```
+Extension-CareConnect-RelatedProblemHeader-1
+```
+
+This is how EMIS/TPP represent a clinician **grouping**, **combining**, or **evolving** problems together on the source system — three distinct workflows that all produce the same underlying shape: one **parent** problem with one or more **child** problems nested under it, and every child carrying a **sibling** link to each of its co-children.
+
+| Event | What happened on the source system | Typical shape |
+|-------|-------------------------------------|---------------|
+| **Group** | Several separate problems are filed together under one heading, but stay distinct problems in their own right (e.g. *Cough*, *Dry cough* and *Moderate wheeze* all grouped under *Asthma*) | 1 parent, 2+ children |
+| **Combine** | Two or more problems are merged into one — closer to a re-code than a filing exercise (e.g. two separately-coded *Eczema* entries combined) | 1 parent, 1+ children |
+| **Evolve** | An earlier (often less certain) problem is recorded as having progressed into a later one (e.g. *Non-diabetic hyperglycaemia* evolved into *Type 2 diabetes mellitus*) | 1 parent, 1 child |
+
+### Extension shape
+
+Each `Condition` involved carries one `RelatedProblemHeader` extension per relationship:
+
+```json
+{
+  "url": "https://fhir.hl7.org.uk/STU3/StructureDefinition/Extension-CareConnect-RelatedProblemHeader-1",
+  "extension": [
+    { "url": "type", "valueCode": "child" },
+    { "url": "target", "valueReference": { "reference": "Condition/<parent-or-child-id>" } }
+  ]
+}
+```
+
+- The **parent** Condition carries one extension per child, each with `type: "child"`.
+- Each **child** Condition carries exactly one `type: "parent"` extension (pointing back), plus one `type: "sibling"` extension for every *other* child of the same parent.
+- There is only ever **one parent**, but a parent can have any number of children.
+
+### The descriptive note
+
+Alongside the structured extension, EMIS appends a free-text `Condition.note` describing what happened — this is cosmetic (it doesn't change how a consumer should interpret the structured links) but is preserved end-to-end because a clinician reading the record relies on it. Observed real-bundle wording:
+
+| Event | Parent-side note | Child-side note |
+|-------|-------------------|------------------|
+| Group | *"Cough, dry cough and moderate wheeze all GROUPED under Asthma"* | *"(Grouped with Asthma)"* |
+| Combine | *(none observed)* | *"(Combined with Eczema)"* |
+| Evolve | *"non-diabetic hyperglycaemia was evolved into type 2 diabetes"* | *"(Evolved into Type 2 diabetes mellitus 31-Aug-2026)"* — the date is the new problem's start date |
+
+### How this demonstrator handles it
+
+- **Reading a record:** `src/fhir/problems.ts` parses every `RelatedProblemHeader` extension into `GpConnectProblem.relatedProblems`. The **Problems** clinical view renders each parent as a single row with its children nested underneath, **collapsed by default** — click the ▸ toggle to expand. A problem's detail panel lists its Parent/Child/Sibling links under **Related Problems**, each with a "Go to item →" link that expands the right tree and jumps straight to it.
+- **Building a record:** In the Builder's **Problems** section, click **Combine / Group / Evolve…**, tick two or more problems, choose the event type, then pick which one is the parent. The generator (`src/builder/generate/problems.ts`) writes the matching `RelatedProblemHeader` extensions and reproduces the EMIS-style notes above.
+
+---
+
 ## Out of Scope Clinical Items Linked to Problems
 
 Some items linked to problems won't be in the response (complete diary entries, test requests). Where this occurs:

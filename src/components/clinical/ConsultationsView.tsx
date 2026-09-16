@@ -419,6 +419,15 @@ function TopicSection({
             </span>
           )}
           {topic.title || <span className="italic font-normal text-nhs-grey-3">{'< Untitled >'}</span>}
+          {topic.relatedProblemDisplay && (
+            <span
+              onClick={topic.relatedProblemId && onJumpToRecord ? () => onJumpToRecord('problems', topic.relatedProblemId!) : undefined}
+              className={`ml-1 text-[10px] font-normal normal-case tracking-normal text-nhs-grey-3 ${topic.relatedProblemId && onJumpToRecord ? 'cursor-pointer hover:text-nhs-blue hover:underline' : ''}`}
+              title={topic.relatedProblemId && onJumpToRecord ? 'Click to go to problem record' : undefined}
+            >
+              (Problem: {topic.relatedProblemDisplay})
+            </span>
+          )}
         </span>
         {onJumpToSource && topic.id && (
           <button
@@ -522,6 +531,7 @@ function ConsultationDetail({
   const refs = [
     consultation.clinicianId    ? { type: 'Practitioner' as const, id: consultation.clinicianId,    label: 'Clinician' }    : null,
     consultation.organisationId ? { type: 'Organisation' as const, id: consultation.organisationId, label: 'Organisation' } : null,
+    consultation.locationId     ? { type: 'Location'     as const, id: consultation.locationId,     label: 'Location' }     : null,
   ].filter((r): r is NonNullable<typeof r> => r !== null)
 
   const hasContent = consultation.topics.some(
@@ -554,12 +564,20 @@ function ConsultationDetail({
               : consultation.organisation
             : undefined
         } />
+        <DetailRow label="Location" value={
+          consultation.location
+            ? consultation.locationId
+              ? <ReferenceChip label={consultation.location} onClick={() => toggle(consultation.locationId!)} active={openResourceId === consultation.locationId} />
+              : consultation.location
+            : undefined
+        } />
       </div>
       <ReferencedResources
         refs={refs}
         practitioners={bundle.practitioners}
         organisations={bundle.organisations}
         healthcareServices={bundle.healthcareServices}
+        locations={bundle.locations}
         highlightedId={openResourceId ?? undefined}
         onJumpToSource={onJumpToSource}
         onJumpToRecord={onJumpToRecord}

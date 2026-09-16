@@ -59,6 +59,20 @@ function detectIsTpp(bundle: fhir3.Bundle): boolean {
   const systems = getEntries<fhir3.Medication>(bundle, 'Medication')
     .flatMap(m => m.code?.coding?.map(c => c.system ?? '') ?? [])
   if (systems.some(s => s.includes('tpp'))) return true
+
+  // The check above never fires against a real TPP export (confirmed Sep
+  // 2026): real TPP Medication.code.coding is plain SNOMED with no vendor
+  // string on it at all. TPP does, however, tag its own MedicationRequest/
+  // MedicationStatement resources (and nearly every other clinical resource)
+  // with a proprietary business-identifier namespace instead — use that as
+  // a second, real-data-confirmed signal.
+  const requests = getEntries<fhir3.MedicationRequest>(bundle, 'MedicationRequest')
+  const statements = getEntries<fhir3.MedicationStatement>(bundle, 'MedicationStatement')
+  const hasTppIdentifier = [...requests, ...statements].some(r =>
+    (r.identifier ?? []).some(id => id.system?.includes('tpp-uk.com'))
+  )
+  if (hasTppIdentifier) return true
+
   // Anything else (EMIS's 'emis-drug-codes', an unrecognised system, or no
   // Medication resources at all) defaults to the non-TPP branch — it
   // degrades to the same result as the TPP rule for active/stopped/etc.,
@@ -270,6 +284,14 @@ export function extractMedications(bundle: fhir3.Bundle): GpConnectMedication[] 
 
     const prescribingAgency = extractPrescribingAgency(stmt) ?? extractPrescribingAgency(planRequest ?? {})
 
+    // Reissue/reauthorisation chain link — seen used by EMIS (confirmed
+    // against a real bundle, Sep 2026); TPP relies on the
+    // MedicationStatementLastIssueDate extension instead.
+    const priorPrescriptionId = extractId(
+      (planRequest as unknown as { priorPrescription?: { reference?: string } } | undefined)
+        ?.priorPrescription?.reference
+    )
+
     // Order requests (individual issues) reference the plan via their own basedOn
     const planId = planRequest?.id
     const orderRequests = planId
@@ -388,6 +410,7 @@ export function extractMedications(bundle: fhir3.Bundle): GpConnectMedication[] 
       statusChangeDate,
       medicationStatementId: stmt.id ?? '',
       medicationRequestIds: requestIds,
+      priorPrescriptionId,
       issues,
       isCurrent,
       notForPfs: hasNopatSecurity(stmt) || hasNopatSecurity(linkedRequest),
@@ -465,6 +488,10 @@ export function extractMedications(bundle: fhir3.Bundle): GpConnectMedication[] 
       : undefined
 
     const prescribingAgency = extractPrescribingAgency(planReq)
+
+    const priorPrescriptionId = extractId(
+      (planReq as unknown as { priorPrescription?: { reference?: string } }).priorPrescription?.reference
+    )
 
     const isCurrent = classifyIsCurrent({
       status: planReq.status ?? 'unknown',
@@ -568,6 +595,7 @@ export function extractMedications(bundle: fhir3.Bundle): GpConnectMedication[] 
       statusChangeDate,
       medicationStatementId: '',
       medicationRequestIds: [planReq.id ?? ''],
+      priorPrescriptionId,
       issues,
       isCurrent,
       notForPfs: hasNopatSecurity(planReq),
