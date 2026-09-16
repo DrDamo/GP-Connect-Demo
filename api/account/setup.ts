@@ -1,19 +1,32 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
+import { timingSafeEqual } from 'crypto'
+
+function safeEqual(a: string, b: string): boolean {
+  const bufA = Buffer.from(a)
+  const bufB = Buffer.from(b)
+  // Compare a fixed-length digest first so a length mismatch never lets
+  // partial timing information about the real token leak.
+  if (bufA.length !== bufB.length) return false
+  return timingSafeEqual(bufA, bufB)
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   const { token } = req.body as { token?: string }
   const setupToken = process.env.SETUP_TOKEN
-  if (!setupToken || token !== setupToken) {
+  if (!setupToken || typeof token !== 'string' || !safeEqual(token, setupToken)) {
     return res.status(401).json({ error: 'Invalid setup token' })
   }
 
   const supabaseUrl = process.env.VITE_SUPABASE_URL
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!supabaseUrl || !serviceRoleKey) {
-    return res.status(500).json({ error: 'VITE_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY not set' })
+  const adminPassword = process.env.SETUP_ADMIN_PASSWORD
+  if (!supabaseUrl || !serviceRoleKey || !adminPassword) {
+    return res.status(500).json({
+      error: 'VITE_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, or SETUP_ADMIN_PASSWORD not set',
+    })
   }
 
   const admin = createClient(supabaseUrl, serviceRoleKey, {
@@ -45,7 +58,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Create auth user (email_confirm: true skips confirmation email)
   const { data: authData, error: authError } = await admin.auth.admin.createUser({
     email: 'drdamo@gpc-demo.local',
-    password: 'CopyCat-33',
+    password: adminPassword,
     email_confirm: true,
     user_metadata: { username: 'DrDamo' },
   })
