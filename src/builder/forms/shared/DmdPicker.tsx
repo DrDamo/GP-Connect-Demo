@@ -121,6 +121,10 @@ export function DmdPicker({ value, onChange, code, dmdType = 'VMP', label = 'dm+
   const inputRef = useRef<HTMLInputElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Aborts any still-in-flight search when a newer one starts, so a slow
+  // response for an earlier keystroke can never land after (and overwrite)
+  // a faster response for a later one.
+  const abortRef = useRef<AbortController | null>(null)
 
   const dropdownOpen = isOpen && results.length > 0
   const dropdownPos = useAnchoredDropdown(inputRef, dropdownOpen)
@@ -140,6 +144,9 @@ export function DmdPicker({ value, onChange, code, dmdType = 'VMP', label = 'dm+
       setIsOpen(false)
       return
     }
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
     setIsLoading(true)
     setError(null)
     try {
@@ -147,7 +154,7 @@ export function DmdPicker({ value, onChange, code, dmdType = 'VMP', label = 'dm+
       const url = `${cfg.serverUrl}/api/dmd/search?${params}`
       const headers: HeadersInit = {}
       if (cfg.token) headers['Authorization'] = `Bearer ${cfg.token}`
-      const res = await fetch(url, { headers })
+      const res = await fetch(url, { headers, signal: controller.signal })
       if (import.meta.env.DEV) {
         const cloned = res.clone()
         cloned.json().then(raw => { setDebugInfo({ url, status: res.status, raw }); setLookupDetail(null) }).catch(() => {})
@@ -158,10 +165,11 @@ export function DmdPicker({ value, onChange, code, dmdType = 'VMP', label = 'dm+
       setIsOpen(true)
       setActiveIdx(0)
     } catch (e) {
+      if ((e as Error).name === 'AbortError') return
       setError((e as Error).message)
       setResults([])
     } finally {
-      setIsLoading(false)
+      if (abortRef.current === controller) setIsLoading(false)
     }
   }, [])
 
@@ -173,7 +181,10 @@ export function DmdPicker({ value, onChange, code, dmdType = 'VMP', label = 'dm+
     debounceRef.current = setTimeout(() => search(text, config, type), 300)
   }
 
-  useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current) }, [])
+  useEffect(() => () => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    abortRef.current?.abort()
+  }, [])
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
