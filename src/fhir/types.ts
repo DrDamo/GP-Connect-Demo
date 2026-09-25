@@ -228,6 +228,8 @@ export interface GpConnectConsultation {
   type?: string
   clinician?: string
   clinicianId?: string
+  recorder?: string
+  recorderId?: string
   organisation?: string
   organisationId?: string
   location?: string
@@ -554,6 +556,38 @@ export interface CodeStatus {
 }
 
 export type SnomedStatusMap = Record<string, CodeStatus>
+
+// Mirrors api/_lib/mappers.ts SnomedDetail — generic CodeSystem/$lookup
+// detail for any SNOMED CT concept (dm+d VMP/AMP included, since those are
+// ordinary SNOMED CT concepts under the same system). Powers the "hover a
+// code" terminology detail popup — see src/fhir/snomedLookup.ts.
+export interface SnomedDesignation {
+  language?: string
+  use?: string
+  value: string
+}
+
+export interface SnomedAttribute {
+  attributeName: string
+  valueDisplay?: string
+  valueCode?: string
+  valueNumber?: number
+}
+
+export interface SnomedDetail {
+  code: string
+  display: string
+  inactive?: boolean
+  parentCodes: string[]
+  childCodes: string[]
+  designations: SnomedDesignation[]
+  attributes: SnomedAttribute[]
+  /** Set when the code looked up was actually a SNOMED CT description id
+   * (e.g. a Coding's `descriptionId` extension in a GP Connect/CareConnect
+   * record) rather than a concept id — `code`/`display`/etc. above are for
+   * the concept it was resolved to, not this original value. */
+  resolvedFromDescriptionId?: string
+}
 
 export interface GpConnectBundle {
   patient?: GpConnectPatient

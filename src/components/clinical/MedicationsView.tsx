@@ -54,7 +54,7 @@ function Detail({ label, value, mono = false }: { label: string; value?: string;
   return (
     <div>
       <span className="text-nhs-grey-3 text-xs uppercase tracking-wide">{label}</span>
-      <p className={`mt-0.5 ${value ? `text-nhs-grey-1 ${mono ? 'font-mono text-xs' : ''}` : 'text-nhs-grey-3 italic'}`}>
+      <p className={`mt-0.5 whitespace-pre-wrap break-words ${value ? `text-nhs-grey-1 ${mono ? 'font-mono text-xs' : ''}` : 'text-nhs-grey-3 italic'}`}>
         {value ?? '—'}
       </p>
     </div>
@@ -265,7 +265,7 @@ function MedicationRow({ med, record, selected, selectedIssueId, onSelect, onSel
                 {(med.statusReason || med.statusChangeDate) && (
                   <div className="text-sm">
                     <span className="text-nhs-grey-3 text-xs uppercase tracking-wide">Status reason</span>
-                    <p className="mt-0.5 text-nhs-grey-1">
+                    <p className="mt-0.5 text-nhs-grey-1 whitespace-pre-wrap break-words">
                       {[med.statusReason, med.statusChangeDate && `(${med.statusChangeDate})`].filter(Boolean).join(' ')}
                     </p>
                   </div>
@@ -273,7 +273,7 @@ function MedicationRow({ med, record, selected, selectedIssueId, onSelect, onSel
                 {med.additionalInformation && (
                   <div className="text-sm">
                     <span className="text-nhs-grey-3 text-xs uppercase tracking-wide">Additional information</span>
-                    <p className="mt-0.5 text-nhs-grey-1 italic">{med.additionalInformation}</p>
+                    <p className="mt-0.5 text-nhs-grey-1 italic whitespace-pre-wrap break-words">{med.additionalInformation}</p>
                   </div>
                 )}
 

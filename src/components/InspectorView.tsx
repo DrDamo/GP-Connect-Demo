@@ -20,6 +20,18 @@ import { PatientBanner } from './clinical/PatientBanner'
 import { type DomainId, DOMAIN_MAP } from './clinical/domains'
 import { useDomainWarnings, DomainWarningBanner } from './clinical/DomainWarningBanner'
 import { InfoHint } from '../onboarding/InfoHint'
+import { SnomedDetailContent } from './clinical/SnomedDetailPopup'
+import { fetchSnomedDetail } from '../fhir/snomedLookup'
+import type { SnomedDetail } from '../fhir/types'
+
+type SnomedLookupState =
+  | { status: 'loading' }
+  | { status: 'error'; message: string }
+  | { status: 'ready'; detail: SnomedDetail }
+
+// A highlighted selection offers "Lookup SNOMED Code" only when it's
+// digits-only — a plausible SNOMED CT concept ID, not arbitrary text.
+const NUMERIC_ONLY = /^\d+$/
 
 interface Props {
   record: GpConnectBundle
@@ -59,8 +71,13 @@ export function InspectorView({ record, source, format, jumpToId, onJumpHandled,
   const searchInputRef = useRef<HTMLInputElement>(null)
   const jumpTargetIdRef = useRef<string | null>(null)
   const popupRef = useRef<HTMLDivElement>(null)
+  const snomedPopupRef = useRef<HTMLDivElement>(null)
+  // Ignores a stale lookup response if the popup was closed/reopened (for a
+  // different code) before it resolved.
+  const lookupRequestIdRef = useRef(0)
 
   const [selectionPopup, setSelectionPopup] = useState<{ text: string; x: number; y: number } | null>(null)
+  const [snomedLookup, setSnomedLookup] = useState<{ code: string; x: number; y: number; state: SnomedLookupState } | null>(null)
 
   // Show action popup when text is selected inside the FHIR pane.
   useEffect(() => {
@@ -192,6 +209,34 @@ export function InspectorView({ record, source, format, jumpToId, onJumpHandled,
       setSelectionPopup(null)
     }
   }, [selectionPopup])
+
+  const handlePopupLookupSnomed = useCallback(() => {
+    if (!selectionPopup) return
+    const code = selectionPopup.text
+    const { x, y } = selectionPopup
+    setSelectionPopup(null)
+    setSnomedLookup({ code, x, y, state: { status: 'loading' } })
+
+    const requestId = ++lookupRequestIdRef.current
+    fetchSnomedDetail(code)
+      .then(detail => {
+        if (lookupRequestIdRef.current === requestId) setSnomedLookup(prev => prev && { ...prev, state: { status: 'ready', detail } })
+      })
+      .catch((e: Error) => {
+        if (lookupRequestIdRef.current === requestId) setSnomedLookup(prev => prev && { ...prev, state: { status: 'error', message: e.message } })
+      })
+  }, [selectionPopup])
+
+  useEffect(() => {
+    if (!snomedLookup) return
+    const handler = (e: MouseEvent) => {
+      if (snomedPopupRef.current && !snomedPopupRef.current.contains(e.target as Node)) {
+        setSnomedLookup(null)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [snomedLookup])
 
   const handleJumpToSource = useCallback((resourceId: string) => {
     const range = lineIndex.get(resourceId)
@@ -336,10 +381,33 @@ export function InspectorView({ record, source, format, jumpToId, onJumpHandled,
         <button
           onMouseDown={e => e.preventDefault()}
           onClick={handlePopupSearch}
-          className="px-2.5 py-1.5 text-nhs-blue hover:bg-nhs-grey-5 transition-colors whitespace-nowrap"
+          className="px-2.5 py-1.5 text-nhs-blue hover:bg-nhs-grey-5 transition-colors whitespace-nowrap border-r border-nhs-grey-4"
         >
           Search this text
         </button>
+        {NUMERIC_ONLY.test(selectionPopup.text) && (
+          <button
+            onMouseDown={e => e.preventDefault()}
+            onClick={handlePopupLookupSnomed}
+            className="px-2.5 py-1.5 text-nhs-blue hover:bg-nhs-grey-5 transition-colors whitespace-nowrap"
+          >
+            Lookup SNOMED Code
+          </button>
+        )}
+      </div>
+    )}
+    {snomedLookup && (
+      <div
+        ref={snomedPopupRef}
+        style={{
+          position: 'fixed',
+          left: Math.min(snomedLookup.x, window.innerWidth - 340),
+          top: Math.min(snomedLookup.y + 12, window.innerHeight - 60),
+          width: 320,
+        }}
+        className="z-50 rounded-md border border-nhs-grey-4 bg-white shadow-lg dark:border-nhs-grey-2 dark:bg-gray-800"
+      >
+        <SnomedDetailContent code={snomedLookup.code} state={snomedLookup.state} onClose={() => setSnomedLookup(null)} />
       </div>
     )}
     <div className="flex h-full gap-3 min-h-0">

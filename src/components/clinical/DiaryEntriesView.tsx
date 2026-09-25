@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { GpConnectBundle, GpConnectDiaryEntry } from '../../fhir/types'
-import { DomainTable, StatusBadge, DegradedTermText, CodeStatusBadge } from './DomainTable'
+import { DomainTable, StatusBadge, DegradedTermText } from './DomainTable'
+import { SnomedCodeChip } from './SnomedDetailPopup'
 import type { DomainColumn } from './DomainTable'
 import { ReferencedResources } from './ReferencedResources'
 import { ReferenceChip } from './ResourceCard'
@@ -41,7 +42,7 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
   return (
     <div className="flex gap-2 min-w-0">
       <span className="text-xs text-nhs-grey-3 shrink-0 w-36">{label}</span>
-      <span className="text-xs text-nhs-grey-1 min-w-0">{value}</span>
+      <span className="text-xs text-nhs-grey-1 min-w-0 whitespace-pre-wrap break-words">{value}</span>
     </div>
   )
 }
@@ -70,10 +71,7 @@ function DiaryEntryDetail({ entry, bundle, onJumpToSource, onJumpToRecord }: { e
       <div className="grid grid-cols-2 gap-x-8 gap-y-1.5">
         {entry.snomedCode && (
           <DetailRow label="SNOMED code" value={
-            <>
-              <span className="font-mono">{entry.snomedCode}</span>
-              <CodeStatusBadge status={bundle.snomedStatus?.[entry.snomedCode]} />
-            </>
+            <SnomedCodeChip code={entry.snomedCode} status={bundle.snomedStatus?.[entry.snomedCode]} />
           } />
         )}
         <DetailRow label="Recorded date" value={entry.date} />
@@ -103,7 +101,7 @@ function DiaryEntryDetail({ entry, bundle, onJumpToSource, onJumpToRecord }: { e
           <span className="text-xs text-nhs-grey-3 uppercase tracking-wide">Notes</span>
           {entry.notes.map((note, i) => (
             <div key={i} className="space-y-0.5">
-              <p className="text-xs text-nhs-grey-1">{note.text}</p>
+              <p className="text-xs text-nhs-grey-1 whitespace-pre-wrap break-words">{note.text}</p>
               <div className="flex gap-3 text-[11px] text-nhs-grey-3">
                 {note.author && (
                   note.authorId

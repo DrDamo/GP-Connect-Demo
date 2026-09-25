@@ -1,7 +1,9 @@
 import { Router } from 'express'
 import { expandValueSet } from '../fhir/expand.js'
-import { lookupCode, validateCodesBatch, lookupStatusBatch } from '../fhir/lookup.js'
+import { lookupCode, validateCodesBatch, lookupStatusBatch, checkCodesBatch, looksLikeDescriptionId, resolveDescriptionIdToConcept } from '../fhir/lookup.js'
 import { snomedValueSetUrl, toSnomedResult, toSnomedDetail } from '../fhir/mappers.js'
+
+const SNOMED_SYSTEM = 'http://snomed.info/sct'
 
 export const snomedRouter = Router()
 
@@ -49,6 +51,32 @@ snomedRouter.get('/lookup', async (req, res) => {
     const raw = await lookupCode(system, code)
     res.json({ raw, detail: toSnomedDetail(raw) })
   } catch (err) {
+    // $lookup only resolves concept ids — if this looks like a SNOMED CT
+    // description id instead (e.g. a Coding's `descriptionId` extension
+    // value from a GP Connect/CareConnect record), resolve it to its owning
+    // concept and look that up instead (see resolveDescriptionIdToConcept).
+    if (system === SNOMED_SYSTEM && looksLikeDescriptionId(code)) {
+      try {
+        const conceptCode = await resolveDescriptionIdToConcept(code)
+        if (conceptCode) {
+          const raw = await lookupCode(system, conceptCode)
+          res.json({ raw, detail: toSnomedDetail(raw), resolvedFromDescriptionId: code })
+          return
+        }
+        // Structurally a description id, but resolveDescriptionIdToConcept's
+        // $expand search found no match — confirmed live that this Ontoserver
+        // instance's search index only covers active descriptions, so this is
+        // almost always an inactive/historical description (e.g. a
+        // superseded synonym still referenced by an old clinical record),
+        // not a genuinely made-up number. There's no FHIR-standard operation
+        // to resolve those, so this is a real terminology-server limitation,
+        // not something retryable.
+        res.status(502).json({
+          error: `Could not resolve description ID ${code} to a concept — it looks like an inactive/historical SNOMED CT description, which this terminology server's search doesn't index.`,
+        })
+        return
+      } catch { /* resolution itself errored (network/server) — fall through to the original error below */ }
+    }
     const message = err instanceof Error ? err.message : String(err)
     console.error('[snomed/lookup]', message)
     res.status(502).json({ error: message })
@@ -104,6 +132,34 @@ snomedRouter.post('/status-batch', async (req, res) => {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     console.error('[snomed/status-batch]', message)
+    res.status(502).json({ error: message })
+  }
+})
+
+// POST /api/snomed/check-batch  { codes: string[] }
+// Response: { results: { [code]: { found, inactive?, display?, fsn? } } }
+// Powers the Tools → SNOMED CT Code Checker: existence, active/inactive
+// status and matched term for an arbitrary pasted/imported list of codes.
+const CHECK_BATCH_MAX_CODES = 5000
+
+snomedRouter.post('/check-batch', async (req, res) => {
+  const codes = req.body?.codes
+
+  if (!Array.isArray(codes) || !codes.every((c: unknown) => typeof c === 'string')) {
+    res.status(400).json({ error: 'codes must be an array of strings' })
+    return
+  }
+  if (codes.length > CHECK_BATCH_MAX_CODES) {
+    res.status(400).json({ error: `Too many codes — maximum ${CHECK_BATCH_MAX_CODES} per request` })
+    return
+  }
+
+  try {
+    const results = await checkCodesBatch(codes)
+    res.json({ results })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('[snomed/check-batch]', message)
     res.status(502).json({ error: message })
   }
 })

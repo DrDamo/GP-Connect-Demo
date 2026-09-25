@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { GpConnectBundle, GpConnectImmunisation } from '../../fhir/types'
-import { DomainTable, StatusBadge, DegradedTermText, CodeStatusBadge } from './DomainTable'
+import { DomainTable, StatusBadge, DegradedTermText } from './DomainTable'
+import { SnomedCodeChip } from './SnomedDetailPopup'
 import type { DomainColumn } from './DomainTable'
 import { ReferencedResources } from './ReferencedResources'
 import { ReferenceChip } from './ResourceCard'
@@ -62,7 +63,7 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
   return (
     <div className="flex gap-2 min-w-0">
       <span className="text-xs text-nhs-grey-3 shrink-0 w-36">{label}</span>
-      <span className="text-xs text-nhs-grey-1 min-w-0">{value}</span>
+      <span className="text-xs text-nhs-grey-1 min-w-0 whitespace-pre-wrap break-words">{value}</span>
     </div>
   )
 }
@@ -104,10 +105,7 @@ function ImmunisationDetail({ immunisation, bundle, onJumpToSource, onJumpToReco
         <div className="grid grid-cols-2 gap-x-8 gap-y-1.5">
           {immunisation.vaccinationProcedureCode && (
             <DetailRow label="SNOMED code" value={
-              <>
-                <span className="font-mono">{immunisation.vaccinationProcedureCode}</span>
-                <CodeStatusBadge status={bundle.snomedStatus?.[immunisation.vaccinationProcedureCode]} />
-              </>
+              <SnomedCodeChip code={immunisation.vaccinationProcedureCode} status={bundle.snomedStatus?.[immunisation.vaccinationProcedureCode]} />
             } />
           )}
           {immunisation.notGiven && (

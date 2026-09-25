@@ -293,7 +293,7 @@ function consultationSearchText(con: GpConnectConsultation, bundle: GpConnectBun
     ...t.categories.flatMap(c => [c.title, ...c.items.map(i => itemContentText(bundle, i))]),
   ])
   return [
-    con.type, con.clinician, con.organisation, con.date, con.endDate,
+    con.type, con.clinician, con.recorder, con.organisation, con.date, con.endDate,
     con.encounterClass, con.encounterStatus, ...itemTexts,
   ].filter(Boolean).join(' ').toLowerCase()
 }
@@ -333,7 +333,7 @@ function ConsultationItemCard({
             <span className="text-xs text-nhs-grey-1 min-w-0 block">
               <span className="font-medium">{content.label}</span>
               {content.value && <span className="font-semibold"> {content.value}</span>}
-              {content.comment && <span className="italic text-nhs-grey-3"> — {content.comment}</span>}
+              {content.comment && <span className="italic text-nhs-grey-3 whitespace-pre-wrap break-words"> — {content.comment}</span>}
             </span>
           )}
           {fields.length > 0 && (
@@ -509,7 +509,7 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
   return (
     <div className="flex gap-2 min-w-0">
       <span className="text-xs text-nhs-grey-3 shrink-0 w-36">{label}</span>
-      <span className="text-xs text-nhs-grey-1 min-w-0">{value}</span>
+      <span className="text-xs text-nhs-grey-1 min-w-0 whitespace-pre-wrap break-words">{value}</span>
     </div>
   )
 }
@@ -529,7 +529,8 @@ function ConsultationDetail({
   const toggle = (id: string) => setOpenResourceId(prev => (prev === id ? null : id))
 
   const refs = [
-    consultation.clinicianId    ? { type: 'Practitioner' as const, id: consultation.clinicianId,    label: 'Clinician' }    : null,
+    consultation.clinicianId    ? { type: 'Practitioner' as const, id: consultation.clinicianId,    label: 'Performer' }    : null,
+    consultation.recorderId     ? { type: 'Practitioner' as const, id: consultation.recorderId,     label: 'Recorder' }     : null,
     consultation.organisationId ? { type: 'Organisation' as const, id: consultation.organisationId, label: 'Organisation' } : null,
     consultation.locationId     ? { type: 'Location'     as const, id: consultation.locationId,     label: 'Location' }     : null,
   ].filter((r): r is NonNullable<typeof r> => r !== null)
@@ -550,11 +551,18 @@ function ConsultationDetail({
         <DetailRow label="Type"     value={consultation.type} />
         {consultation.encounterClass  && <DetailRow label="Class"  value={consultation.encounterClass} />}
         {consultation.encounterStatus && <DetailRow label="Status" value={consultation.encounterStatus} />}
-        <DetailRow label="Clinician" value={
+        <DetailRow label="Performer" value={
           consultation.clinician
             ? consultation.clinicianId
               ? <ReferenceChip label={consultation.clinician} onClick={() => toggle(consultation.clinicianId!)} active={openResourceId === consultation.clinicianId} />
               : consultation.clinician
+            : undefined
+        } />
+        <DetailRow label="Recorder" value={
+          consultation.recorder
+            ? consultation.recorderId
+              ? <ReferenceChip label={consultation.recorder} onClick={() => toggle(consultation.recorderId!)} active={openResourceId === consultation.recorderId} />
+              : consultation.recorder
             : undefined
         } />
         <DetailRow label="Organisation" value={

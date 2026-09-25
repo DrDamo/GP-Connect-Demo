@@ -136,3 +136,83 @@ export function extractCodeStatus(parameters: FhirParameters, checkWithdrawn: bo
 
   return { inactive, withdrawn: isDiscontinuedStatusText(statusText) }
 }
+
+// ---------------------------------------------------------------------------
+// SNOMED CT concept detail — generic CodeSystem/$lookup detail for any
+// concept (disorder, finding, procedure, substance, dm+d product, etc.), not
+// just dm+d. Unlike dm+d there's no fixed attribute set to target (a
+// disorder's normalForm carries different attributes than a procedure's), so
+// this exposes the parsed attributes generically rather than mapping named
+// fields — used to power the "hover a code" detail popup.
+// ---------------------------------------------------------------------------
+
+export interface SnomedDesignation {
+  language?: string
+  use?: string
+  value: string
+}
+
+export interface SnomedAttribute {
+  attributeName: string
+  valueDisplay?: string
+  valueCode?: string
+  valueNumber?: number
+}
+
+export interface SnomedDetail {
+  code: string
+  display: string
+  inactive?: boolean
+  parentCodes: string[]
+  childCodes: string[]
+  designations: SnomedDesignation[]
+  attributes: SnomedAttribute[]
+}
+
+function findParameter(parameters: FhirParameters, name: string) {
+  return parameters.parameter?.find(p => p.name === name)
+}
+
+function findPropertyValues(parameters: FhirParameters, propertyCode: string): string[] {
+  return (parameters.parameter ?? [])
+    .filter(p => p.name === 'property' && p.part?.some(part => part.name === 'code' && part.valueCode === propertyCode))
+    .flatMap(p => p.part?.find(part => part.name === 'value')?.valueCode ?? [])
+}
+
+export function toSnomedDetail(parameters: FhirParameters): SnomedDetail {
+  const code = findParameter(parameters, 'code')?.valueCode ?? ''
+  const display = findParameter(parameters, 'display')?.valueString ?? ''
+  const inactive = extractInactive(parameters)
+
+  const designations: SnomedDesignation[] = (parameters.parameter ?? [])
+    .filter(p => p.name === 'designation')
+    .map(p => {
+      const useCoding = p.part?.find(part => part.name === 'use')?.valueCoding
+      return {
+        language: p.part?.find(part => part.name === 'language')?.valueCode,
+        use: useCoding?.display ?? useCoding?.code,
+        value: p.part?.find(part => part.name === 'value')?.valueString ?? '',
+      }
+    })
+    .filter(d => d.value)
+
+  const normalForm = findNormalFormExpression(parameters)
+  const attributes: SnomedAttribute[] = normalForm
+    ? parseNormalFormAttributes(normalForm).map(a => ({
+        attributeName: a.attributeName,
+        valueDisplay: a.valueDisplay,
+        valueCode: a.valueCode,
+        valueNumber: a.valueNumber,
+      }))
+    : []
+
+  return {
+    code,
+    display,
+    inactive,
+    parentCodes: findPropertyValues(parameters, 'parent'),
+    childCodes: findPropertyValues(parameters, 'child'),
+    designations,
+    attributes,
+  }
+}

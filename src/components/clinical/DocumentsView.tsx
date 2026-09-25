@@ -41,7 +41,7 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
   return (
     <div className="flex gap-2 min-w-0">
       <span className="text-xs text-nhs-grey-3 shrink-0 w-36">{label}</span>
-      <span className="text-xs text-nhs-grey-1 min-w-0">{value}</span>
+      <span className="text-xs text-nhs-grey-1 min-w-0 whitespace-pre-wrap break-words">{value}</span>
     </div>
   )
 }
@@ -96,7 +96,7 @@ function DocumentDetail({ document, bundle, onJumpToSource, onJumpToRecord }: { 
         {document.description && (
           <div className="col-span-2 flex gap-2 min-w-0">
             <span className="text-xs text-nhs-grey-3 shrink-0 w-36">Description</span>
-            <span className="text-xs text-nhs-grey-1 min-w-0">{document.description}</span>
+            <span className="text-xs text-nhs-grey-1 min-w-0 whitespace-pre-wrap break-words">{document.description}</span>
           </div>
         )}
         {document.attachmentTitle && (

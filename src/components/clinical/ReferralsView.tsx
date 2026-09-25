@@ -41,7 +41,7 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
   return (
     <div className="flex gap-2 min-w-0">
       <span className="text-xs text-nhs-grey-3 shrink-0 w-36">{label}</span>
-      <span className="text-xs text-nhs-grey-1 min-w-0">{value}</span>
+      <span className="text-xs text-nhs-grey-1 min-w-0 whitespace-pre-wrap break-words">{value}</span>
     </div>
   )
 }
@@ -115,13 +115,13 @@ function ReferralDetail({ referral, bundle, onJumpToSource, onJumpToRecord }: { 
           {referral.description && (
             <div className="flex gap-2 min-w-0">
               <span className="text-xs text-nhs-grey-3 shrink-0 w-36">Description</span>
-              <span className="text-xs text-nhs-grey-1 min-w-0">{referral.description}</span>
+              <span className="text-xs text-nhs-grey-1 min-w-0 whitespace-pre-wrap break-words">{referral.description}</span>
             </div>
           )}
           {referral.reason && (
             <div className="flex gap-2 min-w-0">
               <span className="text-xs text-nhs-grey-3 shrink-0 w-36">Reason</span>
-              <span className="text-xs text-nhs-grey-1 min-w-0">{referral.reason}</span>
+              <span className="text-xs text-nhs-grey-1 min-w-0 whitespace-pre-wrap break-words">{referral.reason}</span>
             </div>
           )}
         </div>
@@ -134,7 +134,7 @@ function ReferralDetail({ referral, bundle, onJumpToSource, onJumpToRecord }: { 
               <span className="text-nhs-grey-3 mt-0.5">📄</span>
               <div className="min-w-0">
                 <span className="font-medium text-nhs-grey-1">{doc.title}</span>
-                {doc.description && <span className="text-nhs-grey-2 ml-2">— {doc.description}</span>}
+                {doc.description && <span className="text-nhs-grey-2 ml-2 whitespace-pre-wrap break-words">— {doc.description}</span>}
                 {doc.date && <span className="text-nhs-grey-3 ml-2">{doc.date}</span>}
                 {doc.status && <span className="ml-2 px-1.5 py-0.5 rounded text-[10px] bg-nhs-grey-5 text-nhs-grey-2 border border-nhs-grey-4">{doc.status}</span>}
               </div>

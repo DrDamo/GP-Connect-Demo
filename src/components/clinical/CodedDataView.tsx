@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import type { GpConnectBundle, GpConnectCodedDataItem } from '../../fhir/types'
 import { formatCodedDataValue } from '../../fhir/utils'
-import { DomainTable, DegradedTermText, hasDegradeMarker, CodeStatusBadge } from './DomainTable'
+import { DomainTable, DegradedTermText, hasDegradeMarker } from './DomainTable'
+import { SnomedCodeChip } from './SnomedDetailPopup'
 import type { DomainColumn } from './DomainTable'
 import { ReferencedResources } from './ReferencedResources'
 import { ReferenceChip } from './ResourceCard'
@@ -65,7 +66,7 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
   return (
     <div className="flex gap-2 min-w-0">
       <span className="text-xs text-nhs-grey-3 shrink-0 w-36">{label}</span>
-      <span className="text-xs text-nhs-grey-1 min-w-0">{value}</span>
+      <span className="text-xs text-nhs-grey-1 min-w-0 whitespace-pre-wrap break-words">{value}</span>
     </div>
   )
 }
@@ -94,10 +95,7 @@ function CodedDataDetail({ item, bundle, onJumpToSource, onJumpToRecord }: { ite
         )}
         {item.snomedCode && (
           <DetailRow label="SNOMED code" value={
-            <>
-              <span className="font-mono">{item.snomedCode}</span>
-              <CodeStatusBadge status={bundle.snomedStatus?.[item.snomedCode]} />
-            </>
+            <SnomedCodeChip code={item.snomedCode} status={bundle.snomedStatus?.[item.snomedCode]} />
           } />
         )}
         <DetailRow label="Date" value={item.date} />
@@ -122,7 +120,7 @@ function CodedDataDetail({ item, bundle, onJumpToSource, onJumpToRecord }: { ite
       {item.comment && (
         <div className="pt-1 border-t border-nhs-blue/20">
           <span className="text-xs text-nhs-grey-3 uppercase tracking-wide">Comment</span>
-          <p className="mt-0.5 text-xs text-nhs-grey-1 break-words">{item.comment}</p>
+          <p className="mt-0.5 text-xs text-nhs-grey-1 break-words whitespace-pre-wrap">{item.comment}</p>
         </div>
       )}
       {hasComponents && (

@@ -4,6 +4,7 @@ import { FileHistoryPanel } from './components/FileHistoryPanel'
 import { addFileHistoryEntry } from './lib/fileHistory'
 import { ValidationPanel } from './components/ValidationPanel'
 import { TrainingView } from './components/training/TrainingView'
+import { ToolsView } from './components/tools/ToolsView'
 import { RawSourceViewer } from './components/RawSourceViewer'
 import { ClinicalView } from './components/clinical/ClinicalView'
 import { InspectorView } from './components/InspectorView'
@@ -43,7 +44,7 @@ import type { ValidationResult, GpConnectMedicationsRecord } from './fhir/types'
 import type { DomainId } from './components/clinical/domains'
 import sampleBundle from './sample-data/medications-bundle.json'
 
-type ActiveTab = 'clinical' | 'raw' | 'validation' | 'inspector' | 'training' | 'builder' | 'patients' | 'account' | 'app-guide'
+type ActiveTab = 'clinical' | 'raw' | 'validation' | 'inspector' | 'training' | 'builder' | 'patients' | 'account' | 'app-guide' | 'tools'
 
 interface LoadedBundle {
   source: string
@@ -101,7 +102,7 @@ function AppContent() {
   // screen is shown, since that screen is gated on `!loaded` rather than a
   // tab value of its own — so the header help menu needs this derived value
   // instead of raw `tab` to know what's actually on screen.
-  const STANDALONE_TABS: ActiveTab[] = ['builder', 'account', 'patients', 'app-guide', 'training']
+  const STANDALONE_TABS: ActiveTab[] = ['builder', 'account', 'patients', 'app-guide', 'training', 'tools']
   const visibleTab: ActiveTab | 'home' =
     !loaded && !STANDALONE_TABS.includes(tab) ? 'home' : tab
 
@@ -596,6 +597,23 @@ function AppContent() {
             <TrainingView initialPage={trainingPage} onNavigate={setTrainingPage} onLoadExample={handleLoadExample} />
           </div>
         </main>
+      ) : tab === 'tools' ? (
+        <main className="flex-1 flex flex-col min-h-0 max-w-screen-2xl mx-auto w-full px-4 pt-3 pb-4 gap-3">
+          <div className="flex items-center gap-1 border-b border-nhs-grey-4">
+            <button
+              onClick={() => setTab(prevTabRef.current === 'tools' ? 'inspector' : prevTabRef.current)}
+              className="px-4 py-2 text-sm font-medium rounded-t transition-colors text-nhs-grey-2 hover:text-nhs-blue"
+            >
+              ← Back
+            </button>
+            <button className="px-4 py-2 text-sm font-medium rounded-t bg-white border border-b-white border-nhs-grey-4 text-nhs-blue -mb-px">
+              Tools
+            </button>
+          </div>
+          <div className="flex-1 min-h-0 bg-white rounded-lg border border-nhs-grey-4 overflow-hidden">
+            <ToolsView />
+          </div>
+        </main>
       ) : !loaded ? (
         /* Home screen */
         <main className="flex-1 overflow-y-auto p-6">
@@ -699,7 +717,7 @@ function AppContent() {
                 </div>
               </section>
 
-              {/* Create a record + Training */}
+              {/* Create a record + Training + Tools */}
               <div className="flex flex-col gap-5">
                 <section className="bg-white dark:bg-gray-900 rounded-xl border border-nhs-grey-4 dark:border-gray-700 p-6 space-y-3">
                   <div className="flex items-start gap-3">
@@ -748,6 +766,26 @@ function AppContent() {
                     className="w-full py-2.5 px-4 bg-nhs-blue text-white rounded-lg text-sm font-medium hover:bg-nhs-dark-blue transition-colors"
                   >
                     View training resources →
+                  </button>
+                </section>
+
+                <section className="bg-white dark:bg-gray-900 rounded-xl border border-nhs-grey-4 dark:border-gray-700 p-6 space-y-3">
+                  <div className="flex items-start gap-3">
+                    <div className="shrink-0 w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-950 text-nhs-blue flex items-center justify-center">
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437l1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-nhs-grey-1 dark:text-gray-100">Tools</h3>
+                      <p className="text-xs text-nhs-grey-3 dark:text-gray-500">Standalone utilities for working with FHIR data</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => { prevTabRef.current = 'inspector'; setTab('tools') }}
+                    className="w-full py-2.5 px-4 bg-nhs-blue text-white rounded-lg text-sm font-medium hover:bg-nhs-dark-blue transition-colors"
+                  >
+                    Open tools →
                   </button>
                 </section>
               </div>

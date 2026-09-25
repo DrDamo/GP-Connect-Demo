@@ -97,7 +97,7 @@ function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex gap-2 min-w-0">
       <span className="text-xs text-nhs-grey-3 shrink-0 w-28">{label}</span>
-      <span className="text-xs text-nhs-grey-1">{value}</span>
+      <span className="text-xs text-nhs-grey-1 whitespace-pre-wrap break-words">{value}</span>
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import type { GpConnectPractitioner, GpConnectOrganisation, GpConnectHealthcareService, GpConnectLocation, GpConnectConsultation, GpConnectFhirMedication, GpConnectDocument } from '../../fhir/types'
 import { type DomainId } from './domains'
+import { SnomedCodeChip } from './SnomedDetailPopup'
 
 export type ResourceRef = {
   type: 'Practitioner' | 'Organisation' | 'HealthcareService' | 'Location' | 'Encounter' | 'Medication' | 'Document'
@@ -32,12 +33,12 @@ interface ResourceCardProps {
   forceOpen?: boolean
 }
 
-function Row({ label, value }: { label: string; value: string | undefined }) {
+function Row({ label, value }: { label: string; value: React.ReactNode }) {
   if (!value) return null
   return (
     <div className="flex gap-2 text-xs">
       <span className="text-nhs-grey-3 w-32 shrink-0">{label}</span>
-      <span className="text-nhs-grey-1">{value}</span>
+      <span className="text-nhs-grey-1 whitespace-pre-wrap break-words">{value}</span>
     </div>
   )
 }
@@ -132,7 +133,7 @@ function MedicationResourceDetail({ data: m, onJumpToSource, onJumpToRecord }: D
   return (
     <div className="space-y-1">
       <Row label="Name"        value={m.name} />
-      <Row label="SNOMED code" value={m.snomedCode} />
+      <Row label="SNOMED code" value={m.snomedCode && <SnomedCodeChip code={m.snomedCode} />} />
       {m.alternativeCodes?.map(c => (
         <Row key={c.label} label={c.label} value={c.code} />
       ))}
@@ -147,7 +148,8 @@ function EncounterDetail({ data: c, onJumpToSource, onJumpToRecord }: DetailProp
     <div className="space-y-1">
       <Row label="Date"         value={c.date} />
       <Row label="Type"         value={c.type} />
-      <Row label="Clinician"    value={c.clinician} />
+      <Row label="Performer"    value={c.clinician} />
+      <Row label="Recorder"     value={c.recorder} />
       <Row label="Organisation" value={c.organisation} />
       <Row label="Resource ID"  value={c.id} />
       <RecordLinks id={`Encounter/${c.id}`} onJumpToSource={onJumpToSource} onJumpToRecord={onJumpToRecord} recordLabel="View in Consultations" />

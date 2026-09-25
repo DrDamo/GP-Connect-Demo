@@ -117,11 +117,17 @@ export function extractConsultations(bundle: fhir3.Bundle): GpConnectConsultatio
     const period = enc.period
 
     const participants = enc.participant ?? []
-    const primary = participants.find(p =>
-      (p.type ?? []).some(t => t.coding?.some(c => c.code === 'PPRF' || c.code === 'PRF'))
-    ) ?? participants[0]
+    const hasType = (p: fhir3.EncounterParticipant, ...codes: string[]) =>
+      (p.type ?? []).some(t => t.coding?.some(c => !!c.code && codes.includes(c.code)))
+    // Performer (PPRF/PRF) and recorder (REC) can be different people — e.g.
+    // one clinician sees the patient and another enters the record.
+    const primary = participants.find(p => hasType(p, 'PPRF', 'PRF'))
+      ?? participants.find(p => !hasType(p, 'REC'))
     const participantRef = (primary?.individual as fhir3.Reference | undefined)?.reference
     const { name: clinician, id: clinicianId } = resolvePractitionerRef(bundle, participantRef)
+    const recorderParticipant = participants.find(p => hasType(p, 'REC'))
+    const recorderRef = (recorderParticipant?.individual as fhir3.Reference | undefined)?.reference
+    const { name: recorder, id: recorderId } = resolvePractitionerRef(bundle, recorderRef)
 
     const serviceProviderRef = (enc as unknown as { serviceProvider?: { reference?: string } })
       .serviceProvider?.reference
@@ -170,6 +176,8 @@ export function extractConsultations(bundle: fhir3.Bundle): GpConnectConsultatio
       type,
       clinician,
       clinicianId,
+      recorder,
+      recorderId,
       organisation,
       organisationId,
       location,

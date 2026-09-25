@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { GpConnectBundle, GpConnectAllergy } from '../../fhir/types'
-import { DomainTable, StatusBadge, DegradedTermText, CodeStatusBadge } from './DomainTable'
+import { DomainTable, StatusBadge, DegradedTermText } from './DomainTable'
+import { SnomedCodeChip } from './SnomedDetailPopup'
 import type { DomainColumn } from './DomainTable'
 import { ReferencedResources } from './ReferencedResources'
 import { ReferenceChip } from './ResourceCard'
@@ -52,7 +53,7 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
   return (
     <div className="flex gap-2 min-w-0">
       <span className="text-xs text-nhs-grey-3 shrink-0 w-36">{label}</span>
-      <span className="text-xs text-nhs-grey-1 min-w-0">{value}</span>
+      <span className="text-xs text-nhs-grey-1 min-w-0 whitespace-pre-wrap break-words">{value}</span>
     </div>
   )
 }
@@ -88,10 +89,7 @@ function AllergyDetail({ allergy, bundle, onJumpToSource, onJumpToRecord }: { al
         {showSnomedTerm && <DetailRow label="SNOMED term" value={allergy.snomedDisplay} />}
         {allergy.snomedCode && (
           <DetailRow label="SNOMED code" value={
-            <>
-              <span className="font-mono">{allergy.snomedCode}</span>
-              <CodeStatusBadge status={bundle.snomedStatus?.[allergy.snomedCode]} />
-            </>
+            <SnomedCodeChip code={allergy.snomedCode} status={bundle.snomedStatus?.[allergy.snomedCode]} />
           } />
         )}
         <DetailRow label="Onset date"     value={allergy.onsetDate} />
@@ -123,7 +121,7 @@ function AllergyDetail({ allergy, bundle, onJumpToSource, onJumpToRecord }: { al
         <div className="space-y-2 pt-1 border-t border-nhs-blue/10">
           {allergy.notes.map((note, i) => (
             <div key={i} className="space-y-0.5">
-              <p className="text-xs text-nhs-grey-1 italic">"{note.text}"</p>
+              <p className="text-xs text-nhs-grey-1 italic whitespace-pre-wrap break-words">"{note.text}"</p>
               <div className="flex items-center gap-2 flex-wrap">
                 {(note.author || note.authorId) && (
                   note.authorId

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import type { GpConnectBundle, GpConnectPractitioner, GpConnectPractitionerRole, GpConnectOrganisation, GpConnectHealthcareService, GpConnectLocation, GpConnectFhirMedication, CodeStatus } from '../../fhir/types'
 import { SearchFilterBox } from './SearchFilterBox'
-import { CodeStatusBadge } from './DomainTable'
+import { SnomedCodeChip } from './SnomedDetailPopup'
 
 function practitionerSearchText(p: GpConnectPractitioner, roles: GpConnectPractitionerRole[], organisations: GpConnectOrganisation[]): string {
   const myRoles = roles.filter(r => r.practitionerId === p.id)
@@ -34,12 +34,12 @@ interface Props {
   onJumpToSource?: (id: string) => void
 }
 
-function Row({ label, value }: { label: string; value: string | undefined }) {
+function Row({ label, value }: { label: string; value: React.ReactNode }) {
   if (!value) return null
   return (
     <div className="flex gap-2 text-xs py-0.5">
       <span className="text-nhs-grey-3 w-40 shrink-0">{label}</span>
-      <span className="text-nhs-grey-1">{value}</span>
+      <span className="text-nhs-grey-1 whitespace-pre-wrap break-words">{value}</span>
     </div>
   )
 }
@@ -193,10 +193,7 @@ function MedicationResourceCard({ m, status, selected, onSelect, onJumpToSource 
         </div>
       </div>
       <div className="mt-2 space-y-0.5">
-        <div className="flex items-center gap-1.5">
-          <Row label="SNOMED / DM+D" value={m.snomedCode} />
-          <CodeStatusBadge status={status} />
-        </div>
+        <Row label="SNOMED / DM+D" value={m.snomedCode && <SnomedCodeChip code={m.snomedCode} status={status} />} />
         {m.alternativeCodes?.map(c => (
           <Row key={c.label} label={c.label} value={c.code} />
         ))}

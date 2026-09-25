@@ -1,6 +1,6 @@
 export type TourId = 'home' | 'clinical-view' | 'inspector' | 'builder'
 
-export type OnboardingTab = 'clinical' | 'raw' | 'validation' | 'inspector' | 'training' | 'builder' | 'patients' | 'account' | 'app-guide'
+export type OnboardingTab = 'clinical' | 'raw' | 'validation' | 'inspector' | 'training' | 'builder' | 'patients' | 'account' | 'app-guide' | 'tools'
 
 export interface TourStep {
   target: string
