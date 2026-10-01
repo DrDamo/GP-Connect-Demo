@@ -236,6 +236,9 @@ export interface GpConnectConsultation {
   locationId?: string
   encounterClass?: string
   encounterStatus?: string
+  /** id of the Consultation wrapper List (SNOMED 325851000000107) whose
+   * entries reference this encounter's Topic Lists. */
+  consultationListId?: string
   topics: GpConnectConsultationTopic[]
   notForPfs?: boolean
 }

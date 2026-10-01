@@ -298,6 +298,29 @@ function consultationSearchText(con: GpConnectConsultation, bundle: GpConnectBun
   ].filter(Boolean).join(' ').toLowerCase()
 }
 
+// Small monospace tag naming the FHIR resource behind a level of the
+// consultation structure; clicking it jumps to that resource's JSON.
+function FhirTag({ label, id, onJumpToSource }: {
+  label: string
+  id?: string
+  onJumpToSource?: (id: string) => void
+}) {
+  const canJump = !!(onJumpToSource && id)
+  return (
+    <button
+      type="button"
+      disabled={!canJump}
+      onClick={canJump ? e => { e.stopPropagation(); onJumpToSource!(id!) } : undefined}
+      className={`shrink-0 font-mono text-[10px] px-1.5 py-0.5 rounded border border-nhs-grey-4 text-nhs-grey-3 normal-case tracking-normal font-normal whitespace-nowrap ${
+        canJump ? 'cursor-pointer hover:border-nhs-blue/40 hover:text-nhs-blue' : 'cursor-default'
+      }`}
+      title={canJump ? `View ${label} in FHIR source` : undefined}
+    >
+      {label}{canJump && ' ↗'}
+    </button>
+  )
+}
+
 function ConsultationItemCard({
   item,
   bundle,
@@ -336,8 +359,13 @@ function ConsultationItemCard({
               {content.comment && <span className="italic text-nhs-grey-3 whitespace-pre-wrap break-words"> — {content.comment}</span>}
             </span>
           )}
-          {fields.length > 0 && (
-            <div className="flex flex-wrap gap-x-4 gap-y-0.5">
+          {(fields.length > 0 || item.resourceType) && (
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5">
+              <span className="font-mono text-[10px] text-nhs-grey-3 break-all" title="FHIR reference from the List entry">
+                {item.resourceType === 'Unsupported'
+                  ? 'entry.item.display (no reference)'
+                  : item.resourceId ? `${item.resourceType}/${item.resourceId}` : item.resourceType}
+              </span>
               {fields.map(f => (
                 <span key={f.key} className="text-[10px] text-nhs-grey-3">
                   {f.key}: <span className="text-nhs-grey-2">{f.value}</span>
@@ -360,12 +388,6 @@ function ConsultationItemCard({
       </div>
     </div>
   )
-}
-
-const CIRCLED_DIGITS = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩', '⑪', '⑫', '⑬', '⑭', '⑮', '⑯', '⑰', '⑱', '⑲', '⑳']
-
-function circledNumber(n: number): string {
-  return CIRCLED_DIGITS[n - 1] ?? `(${n})`
 }
 
 // Some source systems split a topic's categories across several List
@@ -391,14 +413,12 @@ function groupCategoriesByTitle(categories: GpConnectConsultationCategory[]): Gp
 
 function TopicSection({
   topic,
-  topicNumber,
   bundle,
   encounterDate,
   onJumpToSource,
   onJumpToRecord,
 }: {
   topic: GpConnectConsultationTopic
-  topicNumber?: number
   bundle: GpConnectBundle
   encounterDate?: string
   onJumpToSource?: (id: string) => void
@@ -408,16 +428,26 @@ function TopicSection({
   const hasDirectItems = topic.items.length > 0
   if (!hasCategories && !hasDirectItems) return null
 
+  const renderItems = (items: GpConnectConsultationItem[]) => (
+    <div className="flex-1 min-w-0 space-y-1.5">
+      {items.map((item, i) => (
+        <ConsultationItemCard
+          key={item.resourceId || i}
+          item={item}
+          bundle={bundle}
+          encounterDate={encounterDate}
+          onJumpToSource={onJumpToSource}
+          onJumpToRecord={onJumpToRecord}
+        />
+      ))}
+    </div>
+  )
+
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between gap-2 border-b border-nhs-grey-4 pb-1">
-        <span className="flex items-center gap-1.5 text-sm font-semibold text-nhs-grey-2">
-          {topicNumber && (
-            <span className="inline-flex items-center gap-1 text-nhs-blue" aria-label={`Topic ${topicNumber}`}>
-              {circledNumber(topicNumber)}
-              {topicNumber === 1 && <InfoHint topic="clinical.consultations.topic-numbers" />}
-            </span>
-          )}
+    <div className="rounded-md border border-nhs-grey-4 bg-white/60 overflow-hidden">
+      <div className="flex items-center justify-between gap-2 px-3 py-1.5 border-b border-nhs-grey-4">
+        <span className="flex items-center gap-1.5 text-sm font-semibold text-nhs-grey-2 min-w-0">
+          <span className="text-[10px] font-semibold text-nhs-grey-3 uppercase tracking-wide">Topic</span>
           {topic.title || <span className="italic font-normal text-nhs-grey-3">{'< Untitled >'}</span>}
           {topic.relatedProblemDisplay && (
             <span
@@ -429,59 +459,32 @@ function TopicSection({
             </span>
           )}
         </span>
-        {onJumpToSource && topic.id && (
-          <button
-            onClick={() => onJumpToSource(topic.id)}
-            className="text-[11px] text-nhs-grey-3 hover:text-nhs-grey-1 hover:underline shrink-0"
-          >
-            View FHIR ↗
-          </button>
+        <FhirTag label="List · Topic" id={topic.id} onJumpToSource={onJumpToSource} />
+      </div>
+      <div className="p-3 space-y-3">
+        {hasCategories && groupCategoriesByTitle(topic.categories).map(cat => (
+          <div key={cat.id} className="border-l-2 border-nhs-grey-4 pl-3 space-y-1.5">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[10px] font-semibold text-nhs-grey-2 uppercase tracking-wide">
+                {cat.title || <span className="italic normal-case font-normal text-nhs-grey-3">{'< Untitled category >'}</span>}
+                <span className="ml-1.5 font-normal normal-case tracking-normal text-nhs-grey-3">
+                  {cat.items.length} item{cat.items.length !== 1 ? 's' : ''}
+                </span>
+              </span>
+              <FhirTag label="List · Category" id={cat.id} onJumpToSource={onJumpToSource} />
+            </div>
+            {renderItems(cat.items)}
+          </div>
+        ))}
+        {hasDirectItems && (
+          <div className="border-l-2 border-dashed border-nhs-grey-4 pl-3 space-y-1.5">
+            <span className="block text-[10px] text-nhs-grey-3 italic">
+              No category — items referenced directly by the Topic List
+            </span>
+            {renderItems(topic.items)}
+          </div>
         )}
       </div>
-      {hasCategories ? (
-        groupCategoriesByTitle(topic.categories).map(cat => (
-          <div key={cat.id} className="flex gap-3">
-            {cat.title && (
-              <div className="shrink-0 w-28">
-                <span className="text-[10px] font-semibold text-nhs-grey-3 uppercase tracking-wide">{cat.title}</span>
-                {onJumpToSource && cat.id && (
-                  <button
-                    onClick={() => onJumpToSource(cat.id)}
-                    className="block mt-0.5 text-[11px] text-nhs-grey-3 hover:text-nhs-grey-1 hover:underline normal-case tracking-normal font-normal"
-                  >
-                    View FHIR ↗
-                  </button>
-                )}
-              </div>
-            )}
-            <div className="flex-1 min-w-0 space-y-1.5">
-              {cat.items.map((item, i) => (
-                <ConsultationItemCard
-                  key={item.resourceId || i}
-                  item={item}
-                  bundle={bundle}
-                  encounterDate={encounterDate}
-                  onJumpToSource={onJumpToSource}
-                  onJumpToRecord={onJumpToRecord}
-                />
-              ))}
-            </div>
-          </div>
-        ))
-      ) : (
-        <div className="space-y-1.5">
-          {topic.items.map((item, i) => (
-            <ConsultationItemCard
-              key={item.resourceId || i}
-              item={item}
-              bundle={bundle}
-              encounterDate={encounterDate}
-              onJumpToSource={onJumpToSource}
-              onJumpToRecord={onJumpToRecord}
-            />
-          ))}
-        </div>
-      )}
     </div>
   )
 }
@@ -491,6 +494,13 @@ const COLUMNS: DomainColumn<GpConnectConsultation>[] = [
   { label: 'Type',                            render: item => item.type ?? '—' },
   { label: 'Clinician',                       render: item => item.clinician ?? '—' },
   { label: 'Organisation',                    render: item => item.organisation ?? '—' },
+  {
+    label: 'Topics',
+    className: 'w-16',
+    render: item => item.topics.length > 0
+      ? <span className="text-nhs-grey-2">{item.topics.length}</span>
+      : <span className="text-nhs-grey-4">—</span>,
+  },
   {
     label: 'Items',
     className: 'w-16',
@@ -592,15 +602,28 @@ function ConsultationDetail({
       />
       {hasContent && (
         <div className="border-t border-nhs-blue/20 pt-3 space-y-4">
-          <h4 className="text-xs font-semibold text-nhs-grey-2 uppercase tracking-wide flex items-center gap-1">
-            Recorded content
-            <InfoHint topic="clinical.consultations.item-click-zones" />
-          </h4>
-          {consultation.topics.map((topic, i) => (
+          <div className="space-y-1.5">
+            <h4 className="text-xs font-semibold text-nhs-grey-2 uppercase tracking-wide flex items-center gap-1">
+              Recorded content
+              <InfoHint topic="clinical.consultations.item-click-zones" />
+            </h4>
+            <div className="flex flex-wrap items-center gap-1 text-[10px] text-nhs-grey-3">
+              <span className="mr-1">FHIR structure:</span>
+              <FhirTag label="Encounter" id={consultation.id} onJumpToSource={onJumpToSource} />
+              <span aria-hidden>←</span>
+              <FhirTag label="List · Consultation" id={consultation.consultationListId} onJumpToSource={onJumpToSource} />
+              <span aria-hidden>→</span>
+              <span className="font-mono">List · Topic</span>
+              <span aria-hidden>→</span>
+              <span className="font-mono">List · Category</span>
+              <span aria-hidden>→</span>
+              <span className="font-mono">clinical items</span>
+            </div>
+          </div>
+          {consultation.topics.map(topic => (
             <TopicSection
               key={topic.id}
               topic={topic}
-              topicNumber={consultation.topics.length > 1 ? i + 1 : undefined}
               bundle={bundle}
               encounterDate={consultation.date}
               onJumpToSource={onJumpToSource}

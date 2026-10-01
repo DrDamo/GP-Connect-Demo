@@ -31,11 +31,6 @@ export const HINTS: Record<string, HintContent> = {
     body: 'This is a computed total of every coded item recorded under the consultation’s topics — not a single FHIR field.',
     guideFile: 'clinical-view', guideAnchor: 'consultation-items-count',
   },
-  'clinical.consultations.topic-numbers': {
-    title: 'Circled topic numbers',
-    body: 'These numbers just distinguish multiple topics recorded in one consultation; they aren’t clinical codes.',
-    guideFile: 'clinical-view', guideAnchor: 'consultation-topics',
-  },
   'clinical.consultations.item-click-zones': {
     title: 'Two click zones, one card',
     body: 'Clicking an item’s coloured badge jumps to that record’s own domain tab. Clicking the rest of the card instead opens its raw FHIR source.',

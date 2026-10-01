@@ -184,6 +184,7 @@ export function extractConsultations(bundle: fhir3.Bundle): GpConnectConsultatio
       locationId,
       encounterClass,
       encounterStatus,
+      consultationListId: wrapperList?.id,
       topics,
       notForPfs: hasNopatSecurity(enc),
     }

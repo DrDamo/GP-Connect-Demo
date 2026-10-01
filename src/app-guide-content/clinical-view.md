@@ -36,7 +36,9 @@ The "Items" column on the Consultations table is a computed total of every coded
 
 ## Consultation topics
 
-Consultations can record more than one topic in a single encounter. When they do, each topic gets a small circled number (①②③...) purely to distinguish them from each other — these are not clinical codes.
+Consultations can record more than one topic in a single encounter; the "Topics" column on the Consultations table shows how many. Inside an expanded consultation, each topic is its own card, with its categories (e.g. History, Examination) indented beneath it and the clinical items under each category.
+
+The layout mirrors the FHIR structure: the `Encounter` is referenced by a Consultation `List`, whose entries point to one Topic `List` per topic, whose entries in turn point to Category `List`s, whose entries reference the clinical items. The small monospace tags (`List · Topic ↗`, `List · Category ↗`) jump to each List in the JSON, and each item shows the exact reference it was found by (e.g. `Observation/57B3…`).
 
 ## Two click zones, one card
 
