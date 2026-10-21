@@ -257,7 +257,7 @@ export function DmdPicker({ value, onChange, code, dmdType = 'VMP', label = 'dm+
               className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
                 activeType === t
                   ? typeCls(t)
-                  : 'border border-nhs-grey-4 dark:border-nhs-grey-2 text-nhs-grey-3 hover:border-nhs-blue hover:text-nhs-blue'
+                  : 'border border-nhs-grey-4 dark:border-line-strong text-nhs-grey-3 hover:border-nhs-blue hover:text-nhs-blue'
               }`}
               title={TYPE_LABELS[t]}
             >
@@ -284,8 +284,8 @@ export function DmdPicker({ value, onChange, code, dmdType = 'VMP', label = 'dm+
               required={required}
               title={value}
               className={
-                'w-full rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-2 py-1.5 text-sm truncate ' +
-                'text-nhs-grey-1 dark:bg-gray-800 ' +
+                'w-full rounded border border-nhs-grey-4 dark:border-line-strong px-2 py-1.5 text-sm truncate ' +
+                'text-nhs-grey-1 dark:bg-surface ' +
                 (code ? 'pr-16 ' : 'pr-8 ') +
                 'focus:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue'
               }
@@ -319,7 +319,7 @@ export function DmdPicker({ value, onChange, code, dmdType = 'VMP', label = 'dm+
           {error && <p className="mt-1 text-xs text-nhs-red">{error}</p>}
 
           {import.meta.env.DEV && debugInfo && (
-            <div className="mt-1 border border-dashed border-nhs-grey-4 dark:border-nhs-grey-2 rounded text-xs">
+            <div className="mt-1 border border-dashed border-nhs-grey-4 dark:border-line-strong rounded text-xs">
               <button
                 type="button"
                 onClick={() => setDebugOpen(o => !o)}
@@ -329,7 +329,7 @@ export function DmdPicker({ value, onChange, code, dmdType = 'VMP', label = 'dm+
                 <span>{debugOpen ? '▲' : '▼'}</span>
               </button>
               {debugOpen && (
-                <div className="border-t border-dashed border-nhs-grey-4 dark:border-nhs-grey-2 p-2 space-y-2">
+                <div className="border-t border-dashed border-nhs-grey-4 dark:border-line-strong p-2 space-y-2">
                   <p className="font-mono text-nhs-grey-3 break-all">{debugInfo.url}</p>
                   {lookupDetail && (
                     <table className="w-full text-[11px]">
@@ -337,7 +337,7 @@ export function DmdPicker({ value, onChange, code, dmdType = 'VMP', label = 'dm+
                         {lookupDetail.parentVmp && (
                           <tr>
                             <td className="pr-2 text-nhs-grey-3 align-top whitespace-nowrap">Note</td>
-                            <td className="text-nhs-grey-1 dark:text-gray-200">
+                            <td className="text-nhs-grey-1 dark:text-ink">
                               Fields marked <span className="italic">(from VMP)</span> below came from parent VMP-equivalent {lookupDetail.parentVmp.display} ({lookupDetail.parentVmp.code}), not this AMP directly
                             </td>
                           </tr>
@@ -345,13 +345,13 @@ export function DmdPicker({ value, onChange, code, dmdType = 'VMP', label = 'dm+
                         {lookupDetail.isCombinationProduct && (
                           <tr>
                             <td className="pr-2 text-nhs-grey-3 align-top whitespace-nowrap">Note</td>
-                            <td className="text-nhs-grey-1 dark:text-gray-200">Combination product — strength is per-ingredient in SNOMED CT, so it's omitted here</td>
+                            <td className="text-nhs-grey-1 dark:text-ink">Combination product — strength is per-ingredient in SNOMED CT, so it's omitted here</td>
                           </tr>
                         )}
                         {lookupDetail.strength?.numeratorValue !== undefined && (
                           <tr>
                             <td className="pr-2 text-nhs-grey-3 align-top whitespace-nowrap">Strength</td>
-                            <td className="text-nhs-grey-1 dark:text-gray-200">
+                            <td className="text-nhs-grey-1 dark:text-ink">
                               {lookupDetail.strength.numeratorValue}
                               {lookupDetail.strength.numeratorUnit?.display && ` ${lookupDetail.strength.numeratorUnit.display}`}
                               {lookupDetail.strength.denominatorValue !== undefined && ` / ${lookupDetail.strength.denominatorValue}`}
@@ -363,7 +363,7 @@ export function DmdPicker({ value, onChange, code, dmdType = 'VMP', label = 'dm+
                         {lookupDetail.basisOfStrengthSubstance && (
                           <tr>
                             <td className="pr-2 text-nhs-grey-3 align-top whitespace-nowrap">Basis of strength</td>
-                            <td className="text-nhs-grey-1 dark:text-gray-200">
+                            <td className="text-nhs-grey-1 dark:text-ink">
                               {lookupDetail.basisOfStrengthSubstance.display}
                               {lookupDetail.fromParentVmp?.includes('basisOfStrengthSubstance') && <span className="italic text-nhs-grey-3"> (from VMP)</span>}
                             </td>
@@ -372,7 +372,7 @@ export function DmdPicker({ value, onChange, code, dmdType = 'VMP', label = 'dm+
                         {lookupDetail.dispensedDoseForm && (
                           <tr>
                             <td className="pr-2 text-nhs-grey-3 align-top whitespace-nowrap">Dose form</td>
-                            <td className="text-nhs-grey-1 dark:text-gray-200">
+                            <td className="text-nhs-grey-1 dark:text-ink">
                               {lookupDetail.basicDoseForm?.display ?? lookupDetail.dispensedDoseForm.display}
                             </td>
                           </tr>
@@ -380,7 +380,7 @@ export function DmdPicker({ value, onChange, code, dmdType = 'VMP', label = 'dm+
                         {lookupDetail.route && (
                           <tr>
                             <td className="pr-2 text-nhs-grey-3 align-top whitespace-nowrap">Route</td>
-                            <td className="text-nhs-grey-1 dark:text-gray-200">
+                            <td className="text-nhs-grey-1 dark:text-ink">
                               {lookupDetail.route.display}
                               {lookupDetail.fromParentVmp?.includes('route') && <span className="italic text-nhs-grey-3"> (from VMP)</span>}
                             </td>
@@ -389,25 +389,25 @@ export function DmdPicker({ value, onChange, code, dmdType = 'VMP', label = 'dm+
                         {lookupDetail.supplier && (
                           <tr>
                             <td className="pr-2 text-nhs-grey-3 align-top whitespace-nowrap">Supplier</td>
-                            <td className="text-nhs-grey-1 dark:text-gray-200">{lookupDetail.supplier.display}</td>
+                            <td className="text-nhs-grey-1 dark:text-ink">{lookupDetail.supplier.display}</td>
                           </tr>
                         )}
                         {lookupDetail.controlledDrugCategory && (
                           <tr>
                             <td className="pr-2 text-nhs-grey-3 align-top whitespace-nowrap">Controlled drug</td>
-                            <td className="text-nhs-grey-1 dark:text-gray-200">{lookupDetail.controlledDrugCategory.display}</td>
+                            <td className="text-nhs-grey-1 dark:text-ink">{lookupDetail.controlledDrugCategory.display}</td>
                           </tr>
                         )}
                         {lookupDetail.inactive !== undefined && (
                           <tr>
                             <td className="pr-2 text-nhs-grey-3 align-top whitespace-nowrap">Inactive</td>
-                            <td className="text-nhs-grey-1 dark:text-gray-200">{String(lookupDetail.inactive)}</td>
+                            <td className="text-nhs-grey-1 dark:text-ink">{String(lookupDetail.inactive)}</td>
                           </tr>
                         )}
                       </tbody>
                     </table>
                   )}
-                  <pre className="max-h-64 overflow-auto bg-nhs-grey-5 dark:bg-gray-800 rounded p-2 font-mono text-[11px] text-nhs-grey-1 dark:text-gray-200">
+                  <pre className="max-h-64 overflow-auto bg-nhs-grey-5 dark:bg-surface rounded p-2 font-mono text-[11px] text-nhs-grey-1 dark:text-ink">
                     {JSON.stringify(debugInfo.raw, null, 2)}
                   </pre>
                 </div>
@@ -419,7 +419,7 @@ export function DmdPicker({ value, onChange, code, dmdType = 'VMP', label = 'dm+
             <div
               ref={dropdownRef}
               style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, width: widenDropdown(dropdownPos) }}
-              className="z-50 max-h-80 overflow-y-auto bg-white dark:bg-gray-900 border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg shadow-lg"
+              className="z-50 max-h-80 overflow-y-auto bg-white dark:bg-canvas border border-nhs-grey-4 dark:border-line-strong rounded-lg shadow-lg"
             >
               {results.map((r, idx) => (
                 <button
@@ -428,8 +428,8 @@ export function DmdPicker({ value, onChange, code, dmdType = 'VMP', label = 'dm+
                   onMouseDown={e => { e.preventDefault(); handleSelect(r) }}
                   onMouseEnter={() => setActiveIdx(idx)}
                   className={
-                    'w-full text-left px-3 py-2 text-sm flex items-start gap-2 border-b border-nhs-grey-5 dark:border-gray-700 last:border-0 transition-colors ' +
-                    (idx === activeIdx ? 'bg-nhs-grey-5 dark:bg-gray-800' : 'hover:bg-nhs-grey-5 dark:hover:bg-gray-800')
+                    'w-full text-left px-3 py-2 text-sm flex items-start gap-2 border-b border-nhs-grey-5 dark:border-line last:border-0 transition-colors ' +
+                    (idx === activeIdx ? 'bg-nhs-grey-5 dark:bg-surface' : 'hover:bg-nhs-grey-5 dark:hover:bg-raised')
                   }
                 >
                   <span className={`shrink-0 text-xs px-1.5 py-0.5 rounded font-medium mt-0.5 ${typeCls(r.type)}`}>{r.type}</span>

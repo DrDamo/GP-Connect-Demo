@@ -73,8 +73,8 @@ export function AllergyCard({
   )
 
   return (
-    <div className="border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg overflow-hidden mb-2">
-      <div className="flex items-center justify-between px-3 py-2 bg-nhs-grey-5 dark:bg-gray-800">
+    <div className="border border-nhs-grey-4 dark:border-line-strong rounded-lg overflow-hidden mb-2">
+      <div className="flex items-center justify-between px-3 py-2 bg-nhs-grey-5 dark:bg-surface">
         {isModal ? (
           <span className="text-sm font-medium text-nhs-grey-1 flex-1">
             {allergy.causativeAgent || 'New allergy'}
@@ -112,7 +112,7 @@ export function AllergyCard({
       </div>
 
       {expanded && (
-        <div className="p-3 bg-white dark:bg-gray-900 space-y-3">
+        <div className="p-3 bg-white dark:bg-canvas space-y-3">
           <SnomedPicker
             label="Causative agent"
             value={allergy.causativeAgent ?? ''}
@@ -158,7 +158,7 @@ export function AllergyCard({
               part of it (description, onset, severity) makes the coded
               Manifestation mandatory, since those details need something to
               describe. */}
-          <hr className="border-nhs-grey-4 dark:border-nhs-grey-2" />
+          <hr className="border-nhs-grey-4 dark:border-line-strong" />
           <h3 className="text-xs font-semibold text-nhs-grey-2 uppercase tracking-wide">Reaction</h3>
 
           <SnomedPicker
@@ -185,7 +185,7 @@ export function AllergyCard({
             />
           </div>
 
-          <hr className="border-nhs-grey-4 dark:border-nhs-grey-2" />
+          <hr className="border-nhs-grey-4 dark:border-line-strong" />
 
           {isResolved && (
             <div className="grid grid-cols-2 gap-2">
@@ -235,16 +235,16 @@ export function AllergyDisplayRow({
 
   const statusBadge = (
     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-      status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
-      'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+      status === 'active' ? 'bg-green-100 text-green-800 dark:bg-ok-bg dark:text-ok' :
+      'bg-gray-100 text-gray-600 dark:bg-raised dark:text-muted'
     }`}>{status || 'no status'}</span>
   )
 
   const criticalityBadge = criticality ? (
     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-      criticality === 'high' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
-      criticality === 'low' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
-      'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+      criticality === 'high' ? 'bg-red-100 text-red-800 dark:bg-bad-bg dark:text-bad' :
+      criticality === 'low' ? 'bg-green-100 text-green-800 dark:bg-ok-bg dark:text-ok' :
+      'bg-gray-100 text-gray-600 dark:bg-raised dark:text-muted'
     }`}>{criticality}</span>
   ) : null
 
@@ -255,10 +255,10 @@ export function AllergyDisplayRow({
     : null
 
   return (
-    <div className="bg-nhs-grey-5 dark:bg-gray-800 border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg mb-2 px-3 py-2 flex items-start justify-between gap-2">
+    <div className="bg-nhs-grey-5 dark:bg-surface border border-nhs-grey-4 dark:border-line-strong rounded-lg mb-2 px-3 py-2 flex items-start justify-between gap-2">
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-medium text-nhs-grey-1 dark:text-gray-100">
+          <span className="text-sm font-medium text-nhs-grey-1 dark:text-ink">
             {allergy.causativeAgent || 'Unnamed allergy'}
           </span>
           {statusBadge}
@@ -277,7 +277,7 @@ export function AllergyDisplayRow({
         </div>
       </div>
       <div className="flex items-center gap-2 shrink-0">
-        <button type="button" onClick={onEdit} className="text-xs border border-nhs-blue text-nhs-blue px-2 py-0.5 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20">Edit</button>
+        <button type="button" onClick={onEdit} className="text-xs border border-nhs-blue text-nhs-blue px-2 py-0.5 rounded hover:bg-blue-50 dark:hover:bg-accent-soft">Edit</button>
         <button type="button" onClick={onDelete} className="text-nhs-red hover:opacity-70 p-0.5" title="Delete">
           <TrashIcon />
         </button>

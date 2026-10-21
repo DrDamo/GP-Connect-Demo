@@ -50,26 +50,26 @@ export function TrainingNotesPanel({ pageId, notes, onAdd, onUpdate, onDelete }:
   }
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-lg border border-nhs-grey-4 dark:border-slate-600 p-6 space-y-4">
-      <h3 className="text-sm font-semibold text-nhs-grey-1 dark:text-slate-100">
+    <div className="bg-white dark:bg-surface rounded-lg border border-nhs-grey-4 dark:border-line-strong p-6 space-y-4">
+      <h3 className="text-sm font-semibold text-nhs-grey-1 dark:text-ink">
         Notes from your organisation
       </h3>
 
       {notes.length === 0 && (
-        <p className="text-xs text-nhs-grey-3 dark:text-slate-500">No notes yet.</p>
+        <p className="text-xs text-nhs-grey-3 dark:text-muted">No notes yet.</p>
       )}
 
       <div className="space-y-3">
         {notes.map(note => {
           const author = note.profiles?.display_name ?? note.profiles?.username ?? 'Unknown'
           return (
-            <div key={note.id} className="border-b border-nhs-grey-5 dark:border-slate-700 pb-3 last:border-0 last:pb-0">
+            <div key={note.id} className="border-b border-nhs-grey-5 dark:border-line pb-3 last:border-0 last:pb-0">
               {editingId === note.id ? (
                 <div className="space-y-2">
                   <textarea
                     value={editBody}
                     onChange={e => setEditBody(e.target.value)}
-                    className="w-full text-sm border border-nhs-grey-4 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-md p-2"
+                    className="w-full text-sm border border-nhs-grey-4 dark:border-line dark:bg-canvas dark:text-ink rounded-md p-2"
                     rows={3}
                   />
                   <div className="flex gap-2">
@@ -81,7 +81,7 @@ export function TrainingNotesPanel({ pageId, notes, onAdd, onUpdate, onDelete }:
                     </button>
                     <button
                       onClick={() => setEditingId(null)}
-                      className="text-xs px-3 py-1 rounded text-nhs-grey-2 hover:bg-gray-100 dark:hover:bg-gray-800"
+                      className="text-xs px-3 py-1 rounded text-nhs-grey-2 hover:bg-gray-100 dark:hover:bg-raised"
                     >
                       Cancel
                     </button>
@@ -90,7 +90,7 @@ export function TrainingNotesPanel({ pageId, notes, onAdd, onUpdate, onDelete }:
               ) : (
                 <>
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm text-nhs-grey-1 dark:text-slate-200 whitespace-pre-wrap flex-1">{note.body}</p>
+                    <p className="text-sm text-nhs-grey-1 dark:text-ink whitespace-pre-wrap flex-1">{note.body}</p>
                     {canModify(note) && (
                       <div className="flex items-center gap-1 shrink-0">
                         <button onClick={() => startEdit(note)} className="text-nhs-grey-3 hover:opacity-70 p-0.5" title="Edit note">
@@ -106,7 +106,7 @@ export function TrainingNotesPanel({ pageId, notes, onAdd, onUpdate, onDelete }:
                       </div>
                     )}
                   </div>
-                  <p className="text-xs text-nhs-grey-3 dark:text-slate-500 mt-1">
+                  <p className="text-xs text-nhs-grey-3 dark:text-muted mt-1">
                     {author} · {formatDate(note.created_at)}
                   </p>
                 </>
@@ -121,7 +121,7 @@ export function TrainingNotesPanel({ pageId, notes, onAdd, onUpdate, onDelete }:
           value={newBody}
           onChange={e => setNewBody(e.target.value)}
           placeholder="Add a note for your organisation…"
-          className="w-full text-sm border border-nhs-grey-4 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-md p-2"
+          className="w-full text-sm border border-nhs-grey-4 dark:border-line dark:bg-canvas dark:text-ink rounded-md p-2"
           rows={2}
         />
         <button

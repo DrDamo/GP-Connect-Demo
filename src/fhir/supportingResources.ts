@@ -1,5 +1,5 @@
 import type { GpConnectPractitioner, GpConnectPractitionerRole, GpConnectOrganisation, GpConnectHealthcareService, GpConnectLocation, GpConnectFhirMedication } from './types'
-import { getEntries, resolvePractitionerName, extractSnomedCode, extractOriginalTermText } from './utils'
+import { getEntries, resolvePractitionerName, extractSnomedCode, extractOriginalTermText, getExtensionValue, resolveReference, extractId } from './utils'
 
 export function extractPractitioners(bundle: fhir3.Bundle): GpConnectPractitioner[] {
   return getEntries<fhir3.Practitioner>(bundle, 'Practitioner').map(p => {
@@ -63,12 +63,17 @@ export function extractOrganisations(bundle: fhir3.Bundle): GpConnectOrganisatio
         ].filter(Boolean).join(', ')
       : undefined
 
+    const mainLocationRef = getExtensionValue(org.extension, 'Extension-CareConnect-GPC-MainLocation-1')?.valueReference
+    const mainLocation = resolveReference(bundle, mainLocationRef?.reference) as fhir3.Location | undefined
+
     return {
       id: org.id ?? '',
       name: org.name ?? 'Unknown',
       odsCode,
       phone,
       address: address || undefined,
+      mainLocationId: mainLocation?.id ?? extractId(mainLocationRef?.reference),
+      mainLocationName: mainLocation?.name ?? mainLocationRef?.display,
     }
   }).filter(o => o.id)
 }

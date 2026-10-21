@@ -4,6 +4,7 @@ import { DomainTable, StatusBadge, DegradedTermText } from './DomainTable'
 import { SnomedCodeChip } from './SnomedDetailPopup'
 import type { DomainColumn } from './DomainTable'
 import { ReferencedResources } from './ReferencedResources'
+import { ReferencedBy } from './ReferencedBy'
 import { ReferenceChip } from './ResourceCard'
 import { type DomainId } from './domains'
 import { InfoHint } from '../../onboarding/InfoHint'
@@ -102,7 +103,7 @@ function ImmunisationDetail({ immunisation, bundle, onJumpToSource, onJumpToReco
       {/* Procedure section */}
       <div className="space-y-1 pt-1 border-t border-nhs-blue/20">
         <span className="text-xs text-nhs-grey-3 uppercase tracking-wide">Procedure</span>
-        <div className="grid grid-cols-2 gap-x-8 gap-y-1.5">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,max(20rem,calc(50%_-_1rem))),1fr))] gap-x-8 gap-y-1.5">
           {immunisation.vaccinationProcedureCode && (
             <DetailRow label="SNOMED code" value={
               <SnomedCodeChip code={immunisation.vaccinationProcedureCode} status={bundle.snomedStatus?.[immunisation.vaccinationProcedureCode]} />
@@ -143,7 +144,7 @@ function ImmunisationDetail({ immunisation, bundle, onJumpToSource, onJumpToReco
           <span className="text-xs text-nhs-grey-3 uppercase tracking-wide">
             {immunisation.explanationIsReasonNotGiven ? 'Reason not given' : 'Explanation'}
           </span>
-          <div className="grid grid-cols-2 gap-x-8 gap-y-1.5">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,max(20rem,calc(50%_-_1rem))),1fr))] gap-x-8 gap-y-1.5">
             {immunisation.explanationText    && <DetailRow label="Text"    value={immunisation.explanationText} />}
             {immunisation.explanationDisplay && <DetailRow label="Display" value={immunisation.explanationDisplay} />}
             {immunisation.explanationCode    && <DetailRow label="Code"    value={<span className="font-mono">{immunisation.explanationCode}</span>} />}
@@ -155,7 +156,7 @@ function ImmunisationDetail({ immunisation, bundle, onJumpToSource, onJumpToReco
       {hasVaccineDetail && (
         <div className="space-y-1 pt-1 border-t border-nhs-blue/20">
           <span className="text-xs text-nhs-grey-3 uppercase tracking-wide">Vaccine</span>
-          <div className="grid grid-cols-2 gap-x-8 gap-y-1.5">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,max(20rem,calc(50%_-_1rem))),1fr))] gap-x-8 gap-y-1.5">
             {immunisation.vaccineCodeDisplay && <DetailRow label="Vaccine" value={immunisation.vaccineCodeDisplay} />}
             {immunisation.batchNumber && (
               <DetailRow label="Batch number" value={<span className="font-mono">{immunisation.batchNumber}</span>} />
@@ -183,6 +184,12 @@ function ImmunisationDetail({ immunisation, bundle, onJumpToSource, onJumpToReco
         locations={bundle.locations}
         consultations={bundle.consultations}
         highlightedId={openResourceId ?? undefined}
+        onJumpToSource={onJumpToSource}
+        onJumpToRecord={onJumpToRecord}
+      />
+      <ReferencedBy
+        record={bundle}
+        self={`${immunisation.entryType === 'observation' ? 'Observation' : 'Immunization'}/${immunisation.id}`}
         onJumpToSource={onJumpToSource}
         onJumpToRecord={onJumpToRecord}
       />

@@ -50,9 +50,9 @@ export function AppGuideView({ initialPage, initialAnchor }: Props) {
   const page = GUIDE_PAGES.find(p => p.id === pageId) ?? GUIDE_PAGES[0]
 
   return (
-    <div className="h-full overflow-hidden flex bg-nhs-grey-5 dark:bg-slate-900">
-      <nav className="w-48 shrink-0 border-r border-nhs-grey-4 dark:border-slate-700 overflow-y-auto p-3 space-y-1">
-        <p className="text-[10px] font-semibold text-nhs-grey-3 dark:text-slate-500 uppercase tracking-wide mb-2 px-2">
+    <div className="h-full overflow-hidden flex bg-nhs-grey-5 dark:bg-canvas">
+      <nav className="w-48 shrink-0 border-r border-nhs-grey-4 dark:border-line overflow-y-auto p-3 space-y-1">
+        <p className="text-[10px] font-semibold text-nhs-grey-3 dark:text-muted uppercase tracking-wide mb-2 px-2">
           App Guide
         </p>
         {GUIDE_PAGES.map(p => (
@@ -61,8 +61,8 @@ export function AppGuideView({ initialPage, initialAnchor }: Props) {
             onClick={() => setPageId(p.id)}
             className={`w-full text-left px-2 py-1.5 rounded text-xs ${
               pageId === p.id
-                ? 'bg-white dark:bg-slate-800 text-nhs-blue font-medium border border-nhs-grey-4 dark:border-slate-600'
-                : 'text-nhs-grey-2 dark:text-slate-300 hover:bg-white/60 dark:hover:bg-slate-800/60'
+                ? 'bg-white dark:bg-surface text-nhs-blue font-medium border border-nhs-grey-4 dark:border-line-strong'
+                : 'text-nhs-grey-2 dark:text-ink-2 hover:bg-white/60 dark:hover:bg-raised/60'
             }`}
           >
             {p.label}
@@ -70,7 +70,7 @@ export function AppGuideView({ initialPage, initialAnchor }: Props) {
         ))}
       </nav>
       <div className="flex-1 overflow-y-auto p-6">
-        <div className="max-w-3xl mx-auto bg-white dark:bg-slate-800 rounded-lg border border-nhs-grey-4 dark:border-slate-600 p-6">
+        <div className="max-w-3xl mx-auto bg-white dark:bg-surface rounded-lg border border-nhs-grey-4 dark:border-line-strong p-6">
           <MarkdownContent content={page.content} />
         </div>
       </div>

@@ -71,7 +71,7 @@ export function TrainingContentEditor({ pageId, title, initialContent, hasOverri
           <p className="text-sm text-[var(--nhs-red,#DA291C)]">{saveError}</p>
         )}
         {saveSuccess && (
-          <p className="text-sm text-green-700 dark:text-green-400">Saved.</p>
+          <p className="text-sm text-green-700 dark:text-ok">Saved.</p>
         )}
 
         <div className="flex items-center justify-between">
@@ -79,14 +79,14 @@ export function TrainingContentEditor({ pageId, title, initialContent, hasOverri
             <button
               type="button"
               onClick={() => setTab('edit')}
-              className={`px-3 py-1 rounded text-xs font-medium ${tab === 'edit' ? 'bg-nhs-blue text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'}`}
+              className={`px-3 py-1 rounded text-xs font-medium ${tab === 'edit' ? 'bg-nhs-blue text-white' : 'bg-gray-100 dark:bg-surface text-gray-700 dark:text-ink-2'}`}
             >
               Edit
             </button>
             <button
               type="button"
               onClick={() => setTab('preview')}
-              className={`px-3 py-1 rounded text-xs font-medium ${tab === 'preview' ? 'bg-nhs-blue text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'}`}
+              className={`px-3 py-1 rounded text-xs font-medium ${tab === 'preview' ? 'bg-nhs-blue text-white' : 'bg-gray-100 dark:bg-surface text-gray-700 dark:text-ink-2'}`}
             >
               Preview
             </button>
@@ -104,10 +104,10 @@ export function TrainingContentEditor({ pageId, title, initialContent, hasOverri
         </div>
 
         <div className="grid md:grid-cols-2 gap-4 h-[72vh]">
-          <div className={`${tab === 'edit' ? 'block' : 'hidden'} md:block border border-nhs-grey-4 dark:border-gray-700 rounded-md overflow-hidden h-full`}>
+          <div className={`${tab === 'edit' ? 'block' : 'hidden'} md:block border border-nhs-grey-4 dark:border-line rounded-md overflow-hidden h-full`}>
             <TrainingMarkdownEditor source={draftContent} onChange={setDraftContent} />
           </div>
-          <div className={`${tab === 'preview' ? 'block' : 'hidden'} md:block overflow-y-auto h-full border border-nhs-grey-4 dark:border-gray-700 rounded-md p-4`}>
+          <div className={`${tab === 'preview' ? 'block' : 'hidden'} md:block overflow-y-auto h-full border border-nhs-grey-4 dark:border-line rounded-md p-4`}>
             <MarkdownContent content={draftContent} />
           </div>
         </div>

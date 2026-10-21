@@ -1,6 +1,9 @@
 import { useState, Fragment } from 'react'
 import type { GpConnectMedication, GpConnectMedicationsRecord } from '../../fhir/types'
 import { ReferencedResources } from './ReferencedResources'
+import { ReferencedBy } from './ReferencedBy'
+import { VisualiseButton } from './VisualiseButton'
+import { buildMedicationGraph } from '../../fhir/relationshipGraph'
 import { ReferenceChip } from './ResourceCard'
 import { type DomainId } from './domains'
 import { InfoHint } from '../../onboarding/InfoHint'
@@ -169,6 +172,13 @@ function MedicationRow({ med, record, selected, selectedIssueId, onSelect, onSel
                   </div>
                 )}
               </div>
+              <div className="shrink-0 flex items-center gap-2" onClick={e => e.stopPropagation()}>
+              <VisualiseButton
+                record={record}
+                build={fhir => buildMedicationGraph(fhir, med)}
+                onJumpToSource={onJumpToSource}
+                onJumpToRecord={onJumpToRecord}
+              />
               <button
                 type="button"
                 onClick={e => { e.stopPropagation(); setShowDetail(d => !d) }}
@@ -180,6 +190,7 @@ function MedicationRow({ med, record, selected, selectedIssueId, onSelect, onSel
               >
                 {showDetail ? 'Hide detail' : 'Show detail'}
               </button>
+              </div>
             </div>
 
             {/* ── Full detail (expanded by Show detail) ── */}
@@ -205,7 +216,7 @@ function MedicationRow({ med, record, selected, selectedIssueId, onSelect, onSel
                 )}
 
                 {/* Dates + Repeats */}
-                <div className="grid grid-cols-2 gap-x-8 gap-y-1.5 text-sm">
+                <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,max(20rem,calc(50%_-_1rem))),1fr))] gap-x-8 gap-y-1.5 text-sm">
                   <Detail label="Date asserted"        value={med.dateAsserted} />
                   <Detail label="End date"             value={med.endDate} />
                   <Detail label="Authorisation expiry" value={med.authorisationExpiryDate} />
@@ -213,7 +224,7 @@ function MedicationRow({ med, record, selected, selectedIssueId, onSelect, onSel
                 </div>
 
                 {/* Prescriber / Recorder / Practice */}
-                <div className="grid grid-cols-2 gap-x-8 gap-y-1.5 text-sm">
+                <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,max(20rem,calc(50%_-_1rem))),1fr))] gap-x-8 gap-y-1.5 text-sm">
                   <div>
                     <span className="text-nhs-grey-3 text-xs uppercase tracking-wide">Prescriber</span>
                     <p className="mt-0.5">
@@ -278,30 +289,19 @@ function MedicationRow({ med, record, selected, selectedIssueId, onSelect, onSel
                 )}
 
                 {/* Structured Dose Syntax */}
-                {(med.dosageInstruction || med.dose || med.site || med.route || med.frequency) && (
+                {(med.dosageInstruction || med.dose || med.site || med.route || med.frequency || med.dosageLastChanged) && (
                   <div className="pt-2 border-t border-nhs-grey-5">
                     <p className="text-[10px] font-semibold text-nhs-grey-3 uppercase tracking-wide mb-1.5">Structured Dose Syntax</p>
-                    <div className="grid grid-cols-2 gap-x-8 gap-y-1.5 text-sm">
+                    <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,max(20rem,calc(50%_-_1rem))),1fr))] gap-x-8 gap-y-1.5 text-sm">
                       {med.dosageInstruction && <Detail label="Dosage"  value={med.dosageInstruction} />}
                       {med.dose             && <Detail label="Dose"    value={med.dose} />}
                       {med.site             && <Detail label="Site"    value={med.site} />}
                       {med.route            && <Detail label="Route"   value={med.route} />}
                       {med.frequency        && <Detail label="Timing"  value={med.frequency} />}
+                      {med.dosageLastChanged && <Detail label="Dosage last changed" value={med.dosageLastChanged} />}
                     </div>
                   </div>
                 )}
-
-                <ReferencedResources
-                  refs={refs}
-                  practitioners={record.practitioners}
-                  organisations={record.organisations}
-                  healthcareServices={record.healthcareServices}
-                  consultations={record.consultations}
-                  fhirMedications={record.fhirMedications}
-                  highlightedId={openResourceId ?? undefined}
-                  onJumpToSource={onJumpToSource}
-                  onJumpToRecord={onJumpToRecord}
-                />
               </div>
             )}
 
@@ -399,6 +399,29 @@ function MedicationRow({ med, record, selected, selectedIssueId, onSelect, onSel
                 <p className="text-xs text-nhs-grey-3 italic">No issues recorded for this authorisation.</p>
               )}
             </div>
+
+            {/* ── Referenced resources (shown with the full detail, below the issues) ── */}
+            {showDetail && (
+              <div onClick={e => e.stopPropagation()}>
+                  <ReferencedResources
+                    refs={refs}
+                    practitioners={record.practitioners}
+                    organisations={record.organisations}
+                    healthcareServices={record.healthcareServices}
+                    consultations={record.consultations}
+                    fhirMedications={record.fhirMedications}
+                    highlightedId={openResourceId ?? undefined}
+                    onJumpToSource={onJumpToSource}
+                    onJumpToRecord={onJumpToRecord}
+                  />
+                  <ReferencedBy
+                    record={record}
+                    self={med.medicationStatementId ? `MedicationStatement/${med.medicationStatementId}` : `MedicationRequest/${med.medicationRequestIds[0]?.split('/').pop()}`}
+                    onJumpToSource={onJumpToSource}
+                    onJumpToRecord={onJumpToRecord}
+                  />
+              </div>
+            )}
 
           </td>
         </tr>

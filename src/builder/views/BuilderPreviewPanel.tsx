@@ -9,7 +9,7 @@ const PREVIEW_LINE_LIMIT = 200
 
 const SEVERITY_CLS: Record<string, string> = {
   error: 'text-nhs-red',
-  warning: 'text-yellow-700 dark:text-yellow-400',
+  warning: 'text-yellow-700 dark:text-warn',
   info: 'text-nhs-blue',
 }
 
@@ -48,15 +48,15 @@ export function BuilderPreviewPanel({
   const hasIssues = validationIssues.length > 0
 
   return (
-    <div className="flex flex-col h-full border-l border-nhs-grey-4 dark:border-nhs-grey-2 bg-white dark:bg-gray-900">
+    <div className="flex flex-col h-full border-l border-nhs-grey-4 dark:border-line-strong bg-white dark:bg-canvas">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-nhs-grey-4 dark:border-nhs-grey-2 bg-nhs-grey-5 dark:bg-gray-800 shrink-0">
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-nhs-grey-4 dark:border-line-strong bg-nhs-grey-5 dark:bg-surface shrink-0">
         <h3 className="text-sm font-semibold text-nhs-grey-1">FHIR Preview</h3>
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={onDownload}
-            className="border border-nhs-grey-4 dark:border-nhs-grey-2 text-nhs-grey-2 px-3 py-1.5 rounded text-sm hover:border-nhs-blue hover:text-nhs-blue transition-colors flex items-center gap-1"
+            className="border border-nhs-grey-4 dark:border-line-strong text-nhs-grey-2 px-3 py-1.5 rounded text-sm hover:border-nhs-blue hover:text-nhs-blue transition-colors flex items-center gap-1"
             title="Download FHIR JSON"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -85,7 +85,7 @@ export function BuilderPreviewPanel({
       </div>
 
       {checkingSnomed && (
-        <div className="shrink-0 flex items-center gap-2 px-4 py-1.5 text-xs text-nhs-blue bg-blue-50 dark:bg-blue-950/40 border-b border-nhs-grey-4 dark:border-nhs-grey-2">
+        <div className="shrink-0 flex items-center gap-2 px-4 py-1.5 text-xs text-nhs-blue bg-blue-50 dark:bg-accent-soft border-b border-nhs-grey-4 dark:border-line-strong">
           <svg className="h-3.5 w-3.5 shrink-0 animate-spin" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
@@ -96,13 +96,13 @@ export function BuilderPreviewPanel({
 
       {/* Tab bar (only shown when there are issues) */}
       {hasIssues && (
-        <div className="shrink-0 flex border-b border-nhs-grey-4 dark:border-nhs-grey-2 bg-nhs-grey-5 dark:bg-gray-800">
+        <div className="shrink-0 flex border-b border-nhs-grey-4 dark:border-line-strong bg-nhs-grey-5 dark:bg-surface">
           <button
             type="button"
             onClick={() => setActiveTab('json')}
             className={`px-3 py-1.5 text-xs font-medium transition-colors ${
               activeTab === 'json'
-                ? 'bg-white dark:bg-gray-900 border-b-2 border-nhs-blue text-nhs-blue'
+                ? 'bg-white dark:bg-canvas border-b-2 border-nhs-blue text-nhs-blue'
                 : 'text-nhs-grey-2 hover:text-nhs-blue'
             }`}
           >
@@ -113,7 +113,7 @@ export function BuilderPreviewPanel({
             onClick={() => setActiveTab('issues')}
             className={`px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1 ${
               activeTab === 'issues'
-                ? 'bg-white dark:bg-gray-900 border-b-2 border-nhs-blue text-nhs-blue'
+                ? 'bg-white dark:bg-canvas border-b-2 border-nhs-blue text-nhs-blue'
                 : 'text-nhs-grey-2 hover:text-nhs-blue'
             }`}
           >
@@ -136,8 +136,8 @@ export function BuilderPreviewPanel({
       {hasIssues && activeTab === 'json' && (
         <div className={`shrink-0 px-4 py-1.5 text-xs flex items-center gap-3 border-b ${
           errorCount > 0
-            ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
-            : 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
+            ? 'bg-red-50 dark:bg-bad-bg border-red-200 dark:border-bad-line'
+            : 'bg-yellow-50 dark:bg-warn-bg border-yellow-200 dark:border-warn-line'
         }`}>
           <svg className="w-3.5 h-3.5 shrink-0 text-nhs-red" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -166,7 +166,7 @@ export function BuilderPreviewPanel({
             {preview}
           </pre>
         ) : (
-          <div className="p-3 divide-y divide-nhs-grey-5 dark:divide-nhs-grey-2">
+          <div className="p-3 divide-y divide-nhs-grey-5 dark:divide-line-strong">
             {validationIssues.map((issue, i) => (
               <div key={i} className="flex gap-2 py-2">
                 <span className={`shrink-0 text-xs font-bold mt-0.5 w-3 ${SEVERITY_CLS[issue.severity] ?? 'text-nhs-grey-2'}`}>
@@ -188,7 +188,7 @@ export function BuilderPreviewPanel({
 
       {/* Truncation notice */}
       {activeTab === 'json' && truncated && (
-        <div className="shrink-0 px-4 py-2 border-t border-nhs-grey-4 dark:border-nhs-grey-2 bg-nhs-grey-5 dark:bg-gray-800 text-xs text-nhs-grey-3">
+        <div className="shrink-0 px-4 py-2 border-t border-nhs-grey-4 dark:border-line-strong bg-nhs-grey-5 dark:bg-surface text-xs text-nhs-grey-3">
           Showing first {PREVIEW_LINE_LIMIT} of {lines.length} lines — load into viewer for full source
         </div>
       )}

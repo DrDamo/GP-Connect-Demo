@@ -142,7 +142,7 @@ export function TrainingMarkdownEditor({ source, onChange }: Props) {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex flex-wrap gap-1 border-b border-nhs-grey-4 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-2 py-1 shrink-0">
+      <div className="flex flex-wrap gap-1 border-b border-nhs-grey-4 dark:border-line bg-gray-50 dark:bg-surface px-2 py-1 shrink-0">
         {TOOLBAR_BUTTONS.map(btn => (
           <button
             key={btn.title}
@@ -150,7 +150,7 @@ export function TrainingMarkdownEditor({ source, onChange }: Props) {
             title={btn.title}
             onMouseDown={e => e.preventDefault()}
             onClick={() => { if (viewRef.current) btn.action(viewRef.current) }}
-            className="text-xs px-2 py-1 rounded text-nhs-grey-1 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 font-medium"
+            className="text-xs px-2 py-1 rounded text-nhs-grey-1 dark:text-ink hover:bg-gray-200 dark:hover:bg-raised font-medium"
           >
             {btn.label}
           </button>

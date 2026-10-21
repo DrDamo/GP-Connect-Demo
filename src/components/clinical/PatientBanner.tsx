@@ -41,7 +41,7 @@ export function PatientBanner({ patient, practiceOrganisation, patientId, onJump
 
   return (
     <div
-      className={`bg-nhs-blue rounded-lg px-4 py-3 text-white flex-shrink-0 ${hasExpandable ? 'cursor-pointer select-none' : ''}`}
+      className={`gpc-band bg-nhs-blue rounded-lg px-4 py-3 text-white flex-shrink-0 ${hasExpandable ? 'cursor-pointer select-none' : ''}`}
       onClick={hasExpandable ? () => setExpanded(e => !e) : undefined}
     >
       <div className="flex items-start justify-between gap-4">

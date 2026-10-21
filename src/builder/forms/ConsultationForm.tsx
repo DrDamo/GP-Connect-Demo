@@ -105,7 +105,7 @@ function ConsultationTypeField({
             value={typeDisplay ?? ''}
             onChange={e => onChange({ typeDisplay: e.target.value, typeCode: undefined })}
             required
-            className="w-full rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-2 py-1.5 text-sm text-nhs-grey-1 dark:bg-gray-800 focus:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue"
+            className="w-full rounded border border-nhs-grey-4 dark:border-line-strong px-2 py-1.5 text-sm text-nhs-grey-1 dark:bg-surface focus:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue"
           />
           <button type="button" onClick={() => setFreeText(false)} className="shrink-0 text-xs text-nhs-blue hover:underline">
             Use list
@@ -125,7 +125,7 @@ function ConsultationTypeField({
             onChange({ typeDisplay: opt?.display, typeCode: opt?.code })
           }}
           required
-          className="w-full rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-2 py-1.5 text-sm text-nhs-grey-1 dark:bg-gray-800 focus:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue"
+          className="w-full rounded border border-nhs-grey-4 dark:border-line-strong px-2 py-1.5 text-sm text-nhs-grey-1 dark:bg-surface focus:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue"
         >
           <option value="" disabled>— Select —</option>
           {CONSULTATION_TYPE_OPTS.map(o => (
@@ -235,7 +235,7 @@ function ConsultationItemRow({
     })
 
   return (
-    <div className="border border-nhs-grey-5 dark:border-nhs-grey-4 rounded p-2 mb-1.5 bg-white dark:bg-gray-900">
+    <div className="border border-nhs-grey-5 dark:border-line rounded p-2 mb-1.5 bg-white dark:bg-canvas">
       <div className="flex items-start gap-2 mb-1.5">
         <div className="w-40 shrink-0">
           <SelectField
@@ -273,7 +273,7 @@ function ConsultationItemRow({
             value={item.narrativeText ?? ''}
             onChange={e => upd({ narrativeText: e.target.value })}
             rows={2}
-            className="w-full rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-2 py-1.5 text-sm text-nhs-grey-1 dark:bg-gray-800 focus:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue resize-y"
+            className="w-full rounded border border-nhs-grey-4 dark:border-line-strong px-2 py-1.5 text-sm text-nhs-grey-1 dark:bg-surface focus:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue resize-y"
           />
         </div>
       )}
@@ -328,7 +328,7 @@ function TopicProblemBox({
 
   if (!problem) {
     return (
-      <div className="border border-dashed border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg mb-2 px-3 py-2 flex items-center justify-between">
+      <div className="border border-dashed border-nhs-grey-4 dark:border-line-strong rounded-lg mb-2 px-3 py-2 flex items-center justify-between">
         <span className="text-xs text-nhs-grey-3">No problem linked to this topic.</span>
         <button
           type="button"
@@ -345,8 +345,8 @@ function TopicProblemBox({
     dispatch({ type: 'UPDATE_PROBLEM', payload: { _tempId: problem._tempId, updates } })
 
   return (
-    <div className="border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg mb-2">
-      <div className="flex items-center justify-between px-3 py-1.5 bg-nhs-grey-5 dark:bg-gray-800 rounded-t-lg">
+    <div className="border border-nhs-grey-4 dark:border-line-strong rounded-lg mb-2">
+      <div className="flex items-center justify-between px-3 py-1.5 bg-nhs-grey-5 dark:bg-surface rounded-t-lg">
         <span className="text-xs font-semibold text-nhs-grey-2 uppercase tracking-wide">Problem</span>
         <button
           type="button"
@@ -357,7 +357,7 @@ function TopicProblemBox({
           <TrashIcon className="w-3.5 h-3.5" />
         </button>
       </div>
-      <div className="p-3 bg-white dark:bg-gray-900 space-y-2">
+      <div className="p-3 bg-white dark:bg-canvas space-y-2">
         <SnomedPicker
           label="Problem description"
           value={problem.problem ?? ''}
@@ -559,8 +559,8 @@ function CategoryBlock({
   const itemCount = linkKind ? (cat.linkedRefs ?? []).length : cat.items.length
 
   return (
-    <div className="border border-nhs-grey-4 dark:border-nhs-grey-2 rounded mb-1.5 overflow-hidden">
-      <div className="flex items-center justify-between px-2 py-1.5 bg-nhs-grey-5 dark:bg-gray-800">
+    <div className="border border-nhs-grey-4 dark:border-line-strong rounded mb-1.5 overflow-hidden">
+      <div className="flex items-center justify-between px-2 py-1.5 bg-nhs-grey-5 dark:bg-surface">
         <div className="flex items-center gap-1.5 flex-1 min-w-0">
           <button type="button" onClick={() => setOpen(o => !o)} className="shrink-0 p-0.5">
             <svg
@@ -584,7 +584,7 @@ function CategoryBlock({
               }
               placeholder="Category title…"
               required
-              className="min-w-0 flex-1 text-xs font-medium text-nhs-grey-2 rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-1.5 py-0.5 dark:bg-gray-800 focus:border-nhs-blue focus:outline-none"
+              className="min-w-0 flex-1 text-xs font-medium text-nhs-grey-2 rounded border border-nhs-grey-4 dark:border-line-strong px-1.5 py-0.5 dark:bg-surface focus:border-nhs-blue focus:outline-none"
             />
           )}
           <span className="text-xs text-nhs-grey-3 shrink-0">({itemCount} items)</span>
@@ -605,7 +605,7 @@ function CategoryBlock({
       </div>
 
       {open && linkKind && (
-        <div className="p-2 bg-white dark:bg-gray-900">
+        <div className="p-2 bg-white dark:bg-canvas">
           {(cat.linkedRefs ?? []).map(ref => (
             <LinkedRefRow
               key={ref.tempId}
@@ -632,7 +632,7 @@ function CategoryBlock({
       )}
 
       {open && !linkKind && (
-        <div className="p-2 bg-white dark:bg-gray-900">
+        <div className="p-2 bg-white dark:bg-canvas">
           {cat.items.map(item => (
             <ConsultationItemRow
               key={item._tempId}
@@ -688,7 +688,7 @@ function AddCategorySelect({
         const title = val === CUSTOM_CATEGORY_OPTION ? '' : val
         dispatch({ type: 'ADD_CONSULTATION_CATEGORY', payload: { consTempId, topicTempId: topic._tempId, title } })
       }}
-      className="text-xs text-nhs-blue border border-nhs-grey-4 dark:border-nhs-grey-2 rounded px-1.5 py-0.5 bg-white dark:bg-gray-800 hover:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue"
+      className="text-xs text-nhs-blue border border-nhs-grey-4 dark:border-line-strong rounded px-1.5 py-0.5 bg-white dark:bg-surface hover:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue"
     >
       <option value="">+ Add category…</option>
       {ALL_CATEGORY_TITLES
@@ -744,7 +744,7 @@ function TopicBlock({
   }
 
   return (
-    <div className="border border-nhs-grey-4 dark:border-nhs-grey-2 border-t-0 rounded-b-lg p-3 bg-white dark:bg-gray-900 space-y-2">
+    <div className="border border-nhs-grey-4 dark:border-line-strong border-t-0 rounded-b-lg p-3 bg-white dark:bg-canvas space-y-2">
       <Field
         label="Topic title"
         value={topic.title ?? ''}
@@ -884,7 +884,7 @@ function ConsultationCard({
     : consultation.typeDisplay || 'New consultation'
 
   const body = (
-    <div className="p-3 bg-white dark:bg-gray-900 space-y-3">
+    <div className="p-3 bg-white dark:bg-canvas space-y-3">
       {/* Header fields */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <DateField label="Date" value={consultation.date ?? ''} onChange={v => upd({ date: v })} required />
@@ -930,8 +930,8 @@ function ConsultationCard({
                 className={
                   'shrink-0 flex items-center gap-1 rounded-t-lg border border-b-0 -mb-px ' +
                   (isActive
-                    ? 'bg-white dark:bg-gray-900 border-nhs-grey-4 dark:border-nhs-grey-2'
-                    : 'bg-nhs-grey-5 dark:bg-gray-800 border-transparent')
+                    ? 'bg-white dark:bg-canvas border-nhs-grey-4 dark:border-line-strong'
+                    : 'bg-nhs-grey-5 dark:bg-surface border-transparent')
                 }
               >
                 <button
@@ -994,8 +994,8 @@ function ConsultationCard({
   }
 
   return (
-    <div className="border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg overflow-hidden mb-3">
-      <div className="flex items-center justify-between px-3 py-2 bg-nhs-grey-5 dark:bg-gray-800">
+    <div className="border border-nhs-grey-4 dark:border-line-strong rounded-lg overflow-hidden mb-3">
+      <div className="flex items-center justify-between px-3 py-2 bg-nhs-grey-5 dark:bg-surface">
         <button type="button" onClick={() => setOpen(o => !o)} className="flex items-center gap-2 flex-1 text-left">
           <svg
             className={`w-3.5 h-3.5 text-nhs-grey-3 transition-transform ${open ? 'rotate-180' : ''}`}
@@ -1046,16 +1046,16 @@ function ConsultationDisplayRow({
     : consultation.typeDisplay || 'New consultation'
 
   return (
-    <div className="bg-nhs-grey-5 dark:bg-gray-800 border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg mb-2 px-3 py-2 flex items-start justify-between gap-2">
+    <div className="bg-nhs-grey-5 dark:bg-surface border border-nhs-grey-4 dark:border-line-strong rounded-lg mb-2 px-3 py-2 flex items-start justify-between gap-2">
       <div className="min-w-0">
-        <p className="text-sm font-medium text-nhs-grey-1 dark:text-gray-100 truncate">{title}</p>
+        <p className="text-sm font-medium text-nhs-grey-1 dark:text-ink truncate">{title}</p>
         <p className="text-xs text-nhs-grey-3 mt-0.5">
           {clinicianName && <span>{clinicianName} · </span>}
           {consultation.topics.length} {consultation.topics.length === 1 ? 'topic' : 'topics'}
         </p>
       </div>
       <div className="flex items-center gap-2 shrink-0 ml-2">
-        <button type="button" onClick={onEdit} className="text-xs border border-nhs-blue text-nhs-blue px-2 py-0.5 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20">Edit</button>
+        <button type="button" onClick={onEdit} className="text-xs border border-nhs-blue text-nhs-blue px-2 py-0.5 rounded hover:bg-blue-50 dark:hover:bg-accent-soft">Edit</button>
         <button type="button" onClick={onDelete} className="text-nhs-red hover:opacity-70 p-0.5" title="Delete">
           <TrashIcon />
         </button>

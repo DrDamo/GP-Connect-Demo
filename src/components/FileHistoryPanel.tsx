@@ -95,22 +95,22 @@ export function FileHistoryPanel({ onOpen }: Props) {
   if (entries.length === 0) return null
 
   return (
-    <section className="bg-white dark:bg-gray-900 rounded-xl border border-nhs-grey-4 dark:border-gray-700 p-6 space-y-3">
+    <section className="bg-white dark:bg-canvas rounded-xl border border-nhs-grey-4 dark:border-line p-6 space-y-3">
       <div className="flex items-start gap-3">
-        <div className="shrink-0 w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-950 text-nhs-blue flex items-center justify-center">
+        <div className="shrink-0 w-9 h-9 rounded-lg bg-blue-50 dark:bg-accent-soft text-nhs-blue flex items-center justify-center">
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </div>
         <div>
-          <h3 className="font-semibold text-nhs-grey-1 dark:text-gray-100">Recent files</h3>
-          <p className="text-xs text-nhs-grey-3 dark:text-gray-500">
+          <h3 className="font-semibold text-nhs-grey-1 dark:text-ink">Recent files</h3>
+          <p className="text-xs text-nhs-grey-3 dark:text-muted">
             Reopen a cached copy instantly, or re-read the file from disk where your browser allows it
           </p>
         </div>
       </div>
 
-      <ul className="divide-y divide-nhs-grey-4 dark:divide-gray-700 -mx-6 px-6 max-h-72 overflow-y-auto">
+      <ul className="divide-y divide-nhs-grey-4 dark:divide-line -mx-6 px-6 max-h-72 overflow-y-auto">
         {entries.map(entry => {
           const canOpenFromFile = supportsPicker && !!entry.fileHandle
           const canOpenFromCache = !!entry.content
@@ -118,7 +118,7 @@ export function FileHistoryPanel({ onOpen }: Props) {
           return (
             <li key={entry.id} className="py-3 first:pt-0 last:pb-0">
               <div className="flex items-center gap-3">
-                <div className="shrink-0 w-7 h-7 rounded bg-nhs-grey-5 dark:bg-gray-800 text-nhs-grey-2 dark:text-gray-400 flex items-center justify-center">
+                <div className="shrink-0 w-7 h-7 rounded bg-nhs-grey-5 dark:bg-surface text-nhs-grey-2 dark:text-muted flex items-center justify-center">
                   {entry.source === 'paste' ? (
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
@@ -131,9 +131,9 @@ export function FileHistoryPanel({ onOpen }: Props) {
                 </div>
 
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-nhs-grey-1 dark:text-gray-100 truncate">{entry.label}</p>
-                  <p className="text-xs text-nhs-grey-3 dark:text-gray-500">{formatRelativeTime(entry.openedAt)}</p>
-                  {error && <p className="text-xs text-nhs-red dark:text-red-400 mt-0.5">{error}</p>}
+                  <p className="text-sm font-medium text-nhs-grey-1 dark:text-ink truncate">{entry.label}</p>
+                  <p className="text-xs text-nhs-grey-3 dark:text-muted">{formatRelativeTime(entry.openedAt)}</p>
+                  {error && <p className="text-xs text-nhs-red dark:text-bad mt-0.5">{error}</p>}
                 </div>
 
                 <div className="flex items-center gap-1.5 shrink-0">
@@ -141,7 +141,7 @@ export function FileHistoryPanel({ onOpen }: Props) {
                     <button
                       onClick={() => handleOpenFromCache(entry)}
                       disabled={busyId === entry.id}
-                      className="py-1.5 px-3 border border-nhs-grey-4 dark:border-gray-600 text-nhs-grey-2 dark:text-gray-300 rounded-lg text-xs font-medium hover:border-nhs-blue hover:text-nhs-blue transition-colors disabled:opacity-40"
+                      className="py-1.5 px-3 border border-nhs-grey-4 dark:border-line-strong text-nhs-grey-2 dark:text-ink-2 rounded-lg text-xs font-medium hover:border-nhs-blue hover:text-nhs-blue transition-colors disabled:opacity-40"
                     >
                       Open from Cache
                     </button>
@@ -158,7 +158,7 @@ export function FileHistoryPanel({ onOpen }: Props) {
                   <button
                     onClick={() => void removeFileHistoryEntry(entry.id)}
                     aria-label={`Remove ${entry.label} from recent files`}
-                    className="p-1.5 text-nhs-grey-3 dark:text-gray-500 hover:text-nhs-red rounded transition-colors"
+                    className="p-1.5 text-nhs-grey-3 dark:text-muted hover:text-nhs-red rounded transition-colors"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />

@@ -39,7 +39,7 @@ function TableOfContents({ headings }: { headings: Heading[] }) {
   }
   return (
     <nav className="sticky top-4">
-      <div className="text-[10px] font-semibold text-nhs-grey-3 dark:text-slate-500 uppercase tracking-wide mb-2">
+      <div className="text-[10px] font-semibold text-nhs-grey-3 dark:text-muted uppercase tracking-wide mb-2">
         On this page
       </div>
       <ul className="space-y-1">
@@ -48,7 +48,7 @@ function TableOfContents({ headings }: { headings: Heading[] }) {
             <a
               href={`#${h.id}`}
               onClick={e => handleClick(h.id, e)}
-              className={`block text-xs leading-snug text-nhs-grey-3 dark:text-slate-400 hover:text-nhs-grey-1 dark:hover:text-slate-100 hover:underline ${
+              className={`block text-xs leading-snug text-nhs-grey-3 dark:text-muted hover:text-nhs-grey-1 dark:hover:text-ink hover:underline ${
                 h.level === 3 ? 'pl-3' : h.level === 1 ? 'font-medium' : ''
               }`}
             >
@@ -128,8 +128,8 @@ const TILE_COLOURS: Partial<Record<DomainId, string>> = {
   'diary-entries':        'border-cyan-200   bg-cyan-50   dark:bg-cyan-950   dark:border-cyan-800',
   'coded-data':           'border-indigo-200 bg-indigo-50 dark:bg-indigo-950 dark:border-indigo-800',
   documents:              'border-rose-200   bg-rose-50   dark:bg-rose-950   dark:border-rose-800',
-  'supporting-resources': 'border-nhs-grey-4 bg-nhs-grey-5 dark:bg-slate-800 dark:border-slate-600',
-  lists:                  'border-slate-200  bg-slate-50  dark:bg-slate-900  dark:border-slate-700',
+  'supporting-resources': 'border-nhs-grey-4 bg-nhs-grey-5 dark:bg-raised dark:border-line-strong',
+  lists:                  'border-slate-200  bg-slate-50  dark:bg-surface  dark:border-line',
 }
 
 const TILE_ACCENT: Partial<Record<DomainId, string>> = {
@@ -143,8 +143,8 @@ const TILE_ACCENT: Partial<Record<DomainId, string>> = {
   'diary-entries':        'text-cyan-700   dark:text-cyan-300',
   'coded-data':           'text-indigo-700 dark:text-indigo-300',
   documents:              'text-rose-700   dark:text-rose-300',
-  'supporting-resources': 'text-nhs-grey-2 dark:text-slate-300',
-  lists:                  'text-slate-600  dark:text-slate-300',
+  'supporting-resources': 'text-nhs-grey-2 dark:text-ink-2',
+  lists:                  'text-slate-600  dark:text-ink-2',
 }
 
 interface ApiTileDef {
@@ -193,10 +193,10 @@ function DomainTile({ domain, onClick }: { domain: DomainDef; onClick: () => voi
       className={`text-left rounded-lg border-2 p-4 hover:shadow-md transition-shadow space-y-2 ${colour}`}
     >
       <h3 className={`text-sm font-semibold ${accent}`}>{domain.label}</h3>
-      <p className="text-xs text-nhs-grey-2 dark:text-slate-300 leading-relaxed">{domain.description}</p>
+      <p className="text-xs text-nhs-grey-2 dark:text-ink-2 leading-relaxed">{domain.description}</p>
       <div className="flex flex-wrap gap-1 pt-1">
         {domain.fhirResources.map(r => (
-          <span key={r} className="text-[10px] px-1.5 py-0.5 rounded bg-white/70 dark:bg-white/10 border border-white dark:border-white/20 text-nhs-grey-2 dark:text-slate-300 font-mono">
+          <span key={r} className="text-[10px] px-1.5 py-0.5 rounded bg-white/70 dark:bg-white/10 border border-white dark:border-white/20 text-nhs-grey-2 dark:text-ink-2 font-mono">
             {r}
           </span>
         ))}
@@ -215,7 +215,7 @@ function ApiTile({ tile, onClick }: { tile: ApiTileDef; onClick: () => void }) {
       className={`text-left rounded-lg border-2 p-4 hover:shadow-md transition-shadow space-y-2 ${colour}`}
     >
       <h3 className={`text-sm font-semibold ${accent}`}>{tile.label}</h3>
-      <p className="text-xs text-nhs-grey-2 dark:text-slate-300 leading-relaxed">{tile.description}</p>
+      <p className="text-xs text-nhs-grey-2 dark:text-ink-2 leading-relaxed">{tile.description}</p>
       <div className={`text-[11px] font-medium ${accent} pt-1`}>Open guide →</div>
     </button>
   )
@@ -234,21 +234,21 @@ function TrainingDisclaimerModal({ onAcknowledge }: { onAcknowledge: () => void 
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-md">
-        <div className="px-5 py-4 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">Before you start</h2>
+      <div className="bg-white dark:bg-canvas rounded-xl shadow-xl w-full max-w-md">
+        <div className="px-5 py-4 border-b border-gray-200 dark:border-line">
+          <h2 className="text-base font-semibold text-gray-900 dark:text-ink">Before you start</h2>
         </div>
 
         <div className="px-5 py-4 space-y-2">
-          <p className="text-sm text-gray-700 dark:text-gray-300">
+          <p className="text-sm text-gray-700 dark:text-ink-2">
             These training guides are provided <strong>&ldquo;as is&rdquo;</strong> to help explain how GP Connect Access Record Structured data is modelled.
           </p>
-          <p className="text-sm text-gray-700 dark:text-gray-300">
+          <p className="text-sm text-gray-700 dark:text-ink-2">
             The official NHS websites (NHS Digital / NHS England) are the authoritative sources. NHS guidance is updated regularly, so content here may become out of date &mdash; always verify against the current NHS documentation before relying on it.
           </p>
         </div>
 
-        <div className="flex justify-end gap-2 px-5 py-3 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex justify-end gap-2 px-5 py-3 border-t border-gray-200 dark:border-line">
           <button
             type="button"
             onClick={onAcknowledge}
@@ -266,17 +266,17 @@ function IntroPage({ onSelect }: { onSelect: (id: PageId) => void }) {
   return (
     <div className="max-w-4xl mx-auto space-y-8 py-6">
       <div className="space-y-3">
-        <h2 className="text-xl font-bold text-nhs-grey-1 dark:text-slate-100">GP Connect Training Resources</h2>
-        <p className="text-sm text-nhs-grey-2 dark:text-slate-300 leading-relaxed max-w-2xl">
+        <h2 className="text-xl font-bold text-nhs-grey-1 dark:text-ink">GP Connect Training Resources</h2>
+        <p className="text-sm text-nhs-grey-2 dark:text-ink-2 leading-relaxed max-w-2xl">
           These guides explain how each clinical domain in GP Connect Access Record Structured is modelled using FHIR STU3. They cover the key resources, CareConnect extensions, field meanings, and gotchas to be aware of when building or testing GP Connect integrations.
         </p>
-        <p className="text-xs text-nhs-grey-3 dark:text-slate-400 leading-relaxed max-w-2xl">
+        <p className="text-xs text-nhs-grey-3 dark:text-muted leading-relaxed max-w-2xl">
           Select a domain below to open its training guide. When viewing clinical records, use the <strong>Training guide</strong> link at the top of each section to jump directly to the relevant page.
         </p>
       </div>
 
       <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-nhs-grey-1 dark:text-slate-100 uppercase tracking-wide">API Integration</h3>
+        <h3 className="text-sm font-semibold text-nhs-grey-1 dark:text-ink uppercase tracking-wide">API Integration</h3>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {API_TILES.map(tile => (
             <ApiTile key={tile.id} tile={tile} onClick={() => onSelect(tile.id)} />
@@ -285,7 +285,7 @@ function IntroPage({ onSelect }: { onSelect: (id: PageId) => void }) {
       </div>
 
       <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-nhs-grey-1 dark:text-slate-100 uppercase tracking-wide">Clinical domains</h3>
+        <h3 className="text-sm font-semibold text-nhs-grey-1 dark:text-ink uppercase tracking-wide">Clinical domains</h3>
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
           {DOMAINS.filter(d => !['supporting-resources', 'lists'].includes(d.id)).map(domain => (
             <DomainTile key={domain.id} domain={domain} onClick={() => onSelect(domain.id)} />
@@ -294,7 +294,7 @@ function IntroPage({ onSelect }: { onSelect: (id: PageId) => void }) {
       </div>
 
       <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-nhs-grey-1 dark:text-slate-100 uppercase tracking-wide">Infrastructure</h3>
+        <h3 className="text-sm font-semibold text-nhs-grey-1 dark:text-ink uppercase tracking-wide">Infrastructure</h3>
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
           {DOMAINS.filter(d => ['supporting-resources', 'lists'].includes(d.id)).map(domain => (
             <DomainTile key={domain.id} domain={domain} onClick={() => onSelect(domain.id)} />
@@ -340,7 +340,7 @@ function DomainPage({ domainId, onBack, overrideContent, notes, isAdmin, onEdit,
       <div className="flex items-center gap-2">
         <button
           onClick={onBack}
-          className="text-xs text-nhs-grey-3 dark:text-slate-400 hover:text-nhs-grey-1 dark:hover:text-slate-100 hover:underline flex items-center gap-1"
+          className="text-xs text-nhs-grey-3 dark:text-muted hover:text-nhs-grey-1 dark:hover:text-ink hover:underline flex items-center gap-1"
         >
           ← Back to overview
         </button>
@@ -358,16 +358,16 @@ function DomainPage({ domainId, onBack, overrideContent, notes, isAdmin, onEdit,
               <h2 className={`text-lg font-bold ${accent}`}>{domain.label}</h2>
               <div className="flex flex-wrap gap-1 justify-end shrink-0">
                 {domain.fhirResources.map(r => (
-                  <span key={r} className="text-[10px] px-1.5 py-0.5 rounded bg-white/80 dark:bg-white/10 border border-white dark:border-white/20 text-nhs-grey-2 dark:text-slate-300 font-mono">
+                  <span key={r} className="text-[10px] px-1.5 py-0.5 rounded bg-white/80 dark:bg-white/10 border border-white dark:border-white/20 text-nhs-grey-2 dark:text-ink-2 font-mono">
                     {r}
                   </span>
                 ))}
               </div>
             </div>
-            <p className="text-sm text-nhs-grey-2 dark:text-slate-300 leading-relaxed">{domain.description}</p>
+            <p className="text-sm text-nhs-grey-2 dark:text-ink-2 leading-relaxed">{domain.description}</p>
           </div>
 
-          <div className="bg-white dark:bg-slate-800 rounded-lg border border-nhs-grey-4 dark:border-slate-600 p-6">
+          <div className="bg-white dark:bg-surface rounded-lg border border-nhs-grey-4 dark:border-line-strong p-6">
             <MarkdownContent content={effectiveContent} onLoadExample={onLoadExample} />
           </div>
 
@@ -390,7 +390,7 @@ function ApiPage({ pageId, onBack, overrideContent, notes, isAdmin, onEdit, onAd
       <div className="flex items-center gap-2">
         <button
           onClick={onBack}
-          className="text-xs text-nhs-grey-3 dark:text-slate-400 hover:text-nhs-grey-1 dark:hover:text-slate-100 hover:underline flex items-center gap-1"
+          className="text-xs text-nhs-grey-3 dark:text-muted hover:text-nhs-grey-1 dark:hover:text-ink hover:underline flex items-center gap-1"
         >
           ← Back to overview
         </button>
@@ -405,10 +405,10 @@ function ApiPage({ pageId, onBack, overrideContent, notes, isAdmin, onEdit, onAd
         <div className="flex-1 min-w-0 space-y-6">
           <div className={`rounded-lg border-2 p-5 ${colour}`}>
             <h2 className={`text-lg font-bold ${accent}`}>{tile.label}</h2>
-            <p className="text-sm text-nhs-grey-2 dark:text-slate-300 leading-relaxed mt-2">{tile.description}</p>
+            <p className="text-sm text-nhs-grey-2 dark:text-ink-2 leading-relaxed mt-2">{tile.description}</p>
           </div>
 
-          <div className="bg-white dark:bg-slate-800 rounded-lg border border-nhs-grey-4 dark:border-slate-600 p-6">
+          <div className="bg-white dark:bg-surface rounded-lg border border-nhs-grey-4 dark:border-line-strong p-6">
             <MarkdownContent content={effectiveContent} onLoadExample={onLoadExample} />
           </div>
 
@@ -444,7 +444,7 @@ export function TrainingView({ initialPage, onNavigate, onLoadExample }: Props) 
   const staticContentFor = (id: PageId) => isApiPageId(id) ? API_CONTENT[id] : DOMAIN_CONTENT[id]
 
   return (
-    <div className="h-full overflow-auto p-4 bg-nhs-grey-5 dark:bg-slate-900">
+    <div className="h-full overflow-auto p-4 bg-nhs-grey-5 dark:bg-canvas">
       {page === null
         ? <IntroPage onSelect={id => navigate(id)} />
         : isApiPageId(page)

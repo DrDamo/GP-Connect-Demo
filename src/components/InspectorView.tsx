@@ -18,7 +18,7 @@ import { ListsView } from './clinical/ListsView'
 import { DomainNav } from './clinical/DomainNav'
 import { PatientBanner } from './clinical/PatientBanner'
 import { type DomainId, DOMAIN_MAP } from './clinical/domains'
-import { useDomainWarnings, DomainWarningBanner } from './clinical/DomainWarningBanner'
+import { useDomainWarnings, DomainWarningBanner, OperationOutcomeBanner } from './clinical/DomainWarningBanner'
 import { InfoHint } from '../onboarding/InfoHint'
 import { SnomedDetailContent } from './clinical/SnomedDetailPopup'
 import { fetchSnomedDetail } from '../fhir/snomedLookup'
@@ -405,15 +405,17 @@ export function InspectorView({ record, source, format, jumpToId, onJumpHandled,
           top: Math.min(snomedLookup.y + 12, window.innerHeight - 60),
           width: 320,
         }}
-        className="z-50 rounded-md border border-nhs-grey-4 bg-white shadow-lg dark:border-nhs-grey-2 dark:bg-gray-800"
+        className="z-50 rounded-md border border-nhs-grey-4 bg-white shadow-lg dark:border-line-strong dark:bg-surface"
       >
         <SnomedDetailContent code={snomedLookup.code} state={snomedLookup.state} onClose={() => setSnomedLookup(null)} />
       </div>
     )}
     <div className="flex h-full gap-3 min-h-0">
       {/* Left panel: domain nav + clinical content */}
-      <div className="flex-1 flex border border-nhs-grey-4 rounded-lg overflow-hidden min-h-0" data-tour="inspector-domain-nav">
-        <DomainNav active={activeDomain} onSelect={setActiveDomain} counts={counts} />
+      {/* Record 55% / FHIR source 45% of the remaining width */}
+      <div className="flex-[11] min-w-0 flex border border-nhs-grey-4 rounded-lg overflow-hidden min-h-0" data-tour="inspector-domain-nav">
+        {/* Sized to its longest label so nothing is truncated */}
+        <DomainNav active={activeDomain} onSelect={setActiveDomain} counts={counts} widthClass="w-max" />
         <div className="flex flex-col flex-1 overflow-hidden min-h-0">
           <div className="px-3 py-2 bg-nhs-grey-5 border-b border-nhs-grey-4 shrink-0">
             <p className="text-xs text-nhs-grey-3">Click a row to highlight its FHIR source</p>
@@ -441,6 +443,7 @@ export function InspectorView({ record, source, format, jumpToId, onJumpHandled,
                 </button>
               </div>
             )}
+            <OperationOutcomeBanner issues={record.operationIssues} />
             {domainWarnings[activeDomain] && (
               <DomainWarningBanner warning={domainWarnings[activeDomain]!} />
             )}
@@ -488,6 +491,7 @@ export function InspectorView({ record, source, format, jumpToId, onJumpHandled,
                 selectedId={selectedId ?? undefined}
                 onSelect={handleSelect}
                 onJumpToSource={handleJumpToSource}
+                onJumpToRecord={handleJumpToRecord}
               />
             )}
             {activeDomain === 'lists' && (
@@ -504,7 +508,7 @@ export function InspectorView({ record, source, format, jumpToId, onJumpHandled,
       </div>
 
       {/* Right panel: FHIR source */}
-      <div className="flex-1 flex flex-col border border-nhs-grey-4 rounded-lg overflow-hidden min-h-0" data-tour="inspector-source-pane">
+      <div className="flex-[9] min-w-0 flex flex-col border border-nhs-grey-4 rounded-lg overflow-hidden min-h-0" data-tour="inspector-source-pane">
 
         {/* Row 1: title + section navigation */}
         <div className="px-3 py-2 bg-nhs-grey-5 border-b border-nhs-grey-4 shrink-0 flex items-center justify-between gap-3">

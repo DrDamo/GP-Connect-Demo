@@ -45,18 +45,18 @@ export function HelpMenu({ currentTab, onOpenGuide }: Props) {
         </svg>
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-1 w-56 bg-white dark:bg-gray-900 text-nhs-grey-1 dark:text-gray-100 rounded-lg shadow-xl border border-nhs-grey-4 dark:border-gray-700 py-1 z-50">
+        <div className="absolute right-0 top-full mt-1 w-56 bg-white dark:bg-canvas text-nhs-grey-1 dark:text-ink rounded-lg shadow-xl border border-nhs-grey-4 dark:border-line py-1 z-50">
           {tourForTab && (
             <button
               onClick={() => { setOpen(false); restartTour(tourForTab) }}
-              className="w-full text-left px-3 py-2 text-xs hover:bg-nhs-grey-5 dark:hover:bg-gray-800"
+              className="w-full text-left px-3 py-2 text-xs hover:bg-nhs-grey-5 dark:hover:bg-raised"
             >
               Restart tour: {TOURS[tourForTab].label}
             </button>
           )}
           <button
             onClick={() => { setOpen(false); onOpenGuide() }}
-            className="w-full text-left px-3 py-2 text-xs hover:bg-nhs-grey-5 dark:hover:bg-gray-800"
+            className="w-full text-left px-3 py-2 text-xs hover:bg-nhs-grey-5 dark:hover:bg-raised"
           >
             Open App Guide
           </button>

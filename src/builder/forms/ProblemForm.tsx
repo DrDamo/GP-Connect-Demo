@@ -150,8 +150,8 @@ function ProblemCard({
     : []
 
   return (
-    <div className="border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg overflow-hidden mb-2">
-      <div className="flex items-center justify-between px-3 py-2 bg-nhs-grey-5 dark:bg-gray-800">
+    <div className="border border-nhs-grey-4 dark:border-line-strong rounded-lg overflow-hidden mb-2">
+      <div className="flex items-center justify-between px-3 py-2 bg-nhs-grey-5 dark:bg-surface">
         {isModal ? (
           <span className="text-sm font-medium text-nhs-grey-1 flex-1">
             {problem.problem || 'New problem'}
@@ -189,7 +189,7 @@ function ProblemCard({
       </div>
 
       {expanded && (
-        <div className="p-3 bg-white dark:bg-gray-900 space-y-3">
+        <div className="p-3 bg-white dark:bg-canvas space-y-3">
           <SnomedPicker
             label="Problem description"
             value={problem.problem ?? ''}
@@ -268,12 +268,12 @@ function ProblemCard({
           />
 
           {(relatedParent || relatedChildren.length > 0) && (
-            <div className="border-t border-nhs-grey-4 dark:border-gray-700 pt-3 mt-1 space-y-2">
-              <p className="text-xs font-semibold text-nhs-grey-2 dark:text-gray-400 uppercase tracking-wide">
+            <div className="border-t border-nhs-grey-4 dark:border-line pt-3 mt-1 space-y-2">
+              <p className="text-xs font-semibold text-nhs-grey-2 dark:text-muted uppercase tracking-wide">
                 Related Problems (Group / Combine / Evolve)
               </p>
               {relatedParent && (
-                <div className="flex items-center gap-2 flex-wrap text-xs text-nhs-grey-2 dark:text-gray-300">
+                <div className="flex items-center gap-2 flex-wrap text-xs text-nhs-grey-2 dark:text-ink-2">
                   <span className="px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 font-medium">
                     {relatedProblemLabel(problem.relatedProblemEventType)} into
                   </span>
@@ -288,18 +288,18 @@ function ProblemCard({
                 </div>
               )}
               {relatedSiblings.length > 0 && (
-                <div className="flex items-start gap-2 text-xs text-nhs-grey-2 dark:text-gray-300">
-                  <span className="px-1.5 py-0.5 rounded bg-nhs-grey-4 dark:bg-gray-700 font-medium shrink-0">Siblings</span>
+                <div className="flex items-start gap-2 text-xs text-nhs-grey-2 dark:text-ink-2">
+                  <span className="px-1.5 py-0.5 rounded bg-nhs-grey-4 dark:bg-raised font-medium shrink-0">Siblings</span>
                   <span>{relatedSiblings.map(s => s.problem || 'Unnamed problem').join(', ')}</span>
                 </div>
               )}
               {relatedChildren.length > 0 && (
-                <div className="flex items-start gap-2 text-xs text-nhs-grey-2 dark:text-gray-300">
-                  <span className="px-1.5 py-0.5 rounded bg-nhs-grey-4 dark:bg-gray-700 font-medium shrink-0">Children</span>
+                <div className="flex items-start gap-2 text-xs text-nhs-grey-2 dark:text-ink-2">
+                  <span className="px-1.5 py-0.5 rounded bg-nhs-grey-4 dark:bg-raised font-medium shrink-0">Children</span>
                   <span>{relatedChildren.map(c => c.problem || 'Unnamed problem').join(', ')}</span>
                 </div>
               )}
-              <p className="text-[11px] text-nhs-grey-3 dark:text-gray-500">
+              <p className="text-[11px] text-nhs-grey-3 dark:text-muted">
                 Set from the Problems list — select this problem alongside others there and choose Combine/Group/Evolve.
               </p>
             </div>
@@ -338,15 +338,15 @@ function ProblemDisplayRow({
 
   const statusBadge = (
     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-      status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
-      'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+      status === 'active' ? 'bg-green-100 text-green-800 dark:bg-ok-bg dark:text-ok' :
+      'bg-gray-100 text-gray-600 dark:bg-raised dark:text-muted'
     }`}>{status || 'no status'}</span>
   )
 
   const significancePill = significance ? (
     <span className={`text-xs px-2 py-0.5 rounded font-medium ${
-      significance === 'major' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
-      'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
+      significance === 'major' ? 'bg-red-100 text-red-800 dark:bg-bad-bg dark:text-bad' :
+      'bg-blue-100 text-blue-800 dark:bg-accent-soft dark:text-accent'
     }`}>{significance}</span>
   ) : null
 
@@ -356,21 +356,21 @@ function ProblemDisplayRow({
   ].filter(Boolean).join(' ')
 
   return (
-    <div className={`bg-nhs-grey-5 dark:bg-gray-800 border rounded-lg mb-2 px-3 py-2 flex items-start justify-between gap-2 ${
-      selected ? 'border-nhs-blue ring-1 ring-nhs-blue' : 'border-nhs-grey-4 dark:border-nhs-grey-2'
+    <div className={`bg-nhs-grey-5 dark:bg-surface border rounded-lg mb-2 px-3 py-2 flex items-start justify-between gap-2 ${
+      selected ? 'border-nhs-blue ring-1 ring-nhs-blue' : 'border-nhs-grey-4 dark:border-line-strong'
     }`}>
       {selectMode && (
         <input
           type="checkbox"
           checked={selected}
           onChange={onToggleSelected}
-          className="mt-1 shrink-0 rounded border-nhs-grey-4 dark:border-gray-600"
+          className="mt-1 shrink-0 rounded border-nhs-grey-4 dark:border-line-strong"
           aria-label={`Select ${problem.problem || 'this problem'}`}
         />
       )}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-medium text-nhs-grey-1 dark:text-gray-100">
+          <span className="text-sm font-medium text-nhs-grey-1 dark:text-ink">
             {problem.problem || 'Unnamed problem'}
           </span>
           {statusBadge}
@@ -399,7 +399,7 @@ function ProblemDisplayRow({
         )}
         {children.length > 0 && (
           <div className="mt-1">
-            <span className="text-xs px-1.5 py-0.5 rounded bg-nhs-grey-4 dark:bg-gray-700 text-nhs-grey-2 dark:text-gray-300 font-medium">
+            <span className="text-xs px-1.5 py-0.5 rounded bg-nhs-grey-4 dark:bg-raised text-nhs-grey-2 dark:text-ink-2 font-medium">
               {children.length} related problem{children.length !== 1 ? 's' : ''} grouped underneath
             </span>
           </div>
@@ -407,7 +407,7 @@ function ProblemDisplayRow({
       </div>
       {!selectMode && (
         <div className="flex items-center gap-2 shrink-0">
-          <button type="button" onClick={onEdit} className="text-xs border border-nhs-blue text-nhs-blue px-2 py-0.5 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20">Edit</button>
+          <button type="button" onClick={onEdit} className="text-xs border border-nhs-blue text-nhs-blue px-2 py-0.5 rounded hover:bg-blue-50 dark:hover:bg-accent-soft">Edit</button>
           <button type="button" onClick={onDelete} className="text-nhs-red hover:opacity-70 p-0.5" title="Delete">
             <TrashIcon />
           </button>
@@ -435,24 +435,24 @@ function RelateProblemsDialog({
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onCancel}>
       <div
-        className="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-md"
+        className="bg-white dark:bg-canvas rounded-xl shadow-xl w-full max-w-md"
         onClick={e => e.stopPropagation()}
       >
-        <div className="px-5 py-4 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">{RELATE_EVENT_LABELS[eventType]} problems</h2>
+        <div className="px-5 py-4 border-b border-gray-200 dark:border-line">
+          <h2 className="text-base font-semibold text-gray-900 dark:text-ink">{RELATE_EVENT_LABELS[eventType]} problems</h2>
         </div>
         <div className="px-5 py-4 space-y-3">
-          <p className="text-sm text-gray-700 dark:text-gray-300">{RELATE_EVENT_DESCRIPTIONS[eventType]}</p>
-          <p className="text-xs font-medium text-nhs-grey-3 dark:text-gray-500 uppercase tracking-wide">Which one is the parent?</p>
+          <p className="text-sm text-gray-700 dark:text-ink-2">{RELATE_EVENT_DESCRIPTIONS[eventType]}</p>
+          <p className="text-xs font-medium text-nhs-grey-3 dark:text-muted uppercase tracking-wide">Which one is the parent?</p>
           <div className="space-y-1.5">
             {problems.map(p => (
-              <label key={p._tempId} className="flex items-center gap-2 text-sm text-nhs-grey-1 dark:text-gray-200 cursor-pointer select-none">
+              <label key={p._tempId} className="flex items-center gap-2 text-sm text-nhs-grey-1 dark:text-ink cursor-pointer select-none">
                 <input
                   type="radio"
                   name="relate-parent"
                   checked={parentTempId === p._tempId}
                   onChange={() => setParentTempId(p._tempId)}
-                  className="border-nhs-grey-4 dark:border-gray-600"
+                  className="border-nhs-grey-4 dark:border-line-strong"
                 />
                 <span>{p.problem || 'Unnamed problem'}</span>
                 {p.clinicalStatus && <span className="text-xs text-nhs-grey-3">({p.clinicalStatus})</span>}
@@ -460,11 +460,11 @@ function RelateProblemsDialog({
             ))}
           </div>
         </div>
-        <div className="flex justify-end gap-2 px-5 py-3 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex justify-end gap-2 px-5 py-3 border-t border-gray-200 dark:border-line">
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            className="px-4 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-ink-2 hover:bg-gray-100 dark:hover:bg-raised transition-colors"
           >
             Cancel
           </button>
@@ -582,7 +582,7 @@ export function ProblemForm({ draft, dispatch }: Props) {
             <button
               type="button"
               onClick={exitSelectMode}
-              className="text-sm font-medium text-nhs-grey-2 px-3 py-1.5 rounded border border-nhs-grey-4 dark:border-nhs-grey-2 hover:bg-nhs-grey-5 dark:hover:bg-gray-800"
+              className="text-sm font-medium text-nhs-grey-2 px-3 py-1.5 rounded border border-nhs-grey-4 dark:border-line-strong hover:bg-nhs-grey-5 dark:hover:bg-raised"
             >
               Cancel
             </button>
@@ -592,7 +592,7 @@ export function ProblemForm({ draft, dispatch }: Props) {
                 <button
                   type="button"
                   onClick={() => setSelectMode(true)}
-                  className="text-sm font-medium text-nhs-blue px-3 py-1.5 rounded border border-nhs-blue hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                  className="text-sm font-medium text-nhs-blue px-3 py-1.5 rounded border border-nhs-blue hover:bg-blue-50 dark:hover:bg-accent-soft"
                 >
                   Combine / Group / Evolve…
                 </button>
@@ -610,8 +610,8 @@ export function ProblemForm({ draft, dispatch }: Props) {
       </div>
 
       {selectMode && (
-        <div className="mb-3 px-3 py-2 rounded-lg border border-nhs-blue/30 bg-blue-50 dark:bg-blue-900/10 flex items-center justify-between gap-3 flex-wrap">
-          <p className="text-xs text-nhs-grey-2 dark:text-gray-300">
+        <div className="mb-3 px-3 py-2 rounded-lg border border-nhs-blue/30 bg-blue-50 dark:bg-accent-soft flex items-center justify-between gap-3 flex-wrap">
+          <p className="text-xs text-nhs-grey-2 dark:text-ink-2">
             {selectedIds.size === 0 && 'Select 2 or more problems below to combine, group or evolve them into one.'}
             {selectedIds.size === 1 && 'Select at least one more problem.'}
             {selectedIds.size >= 2 && `${selectedIds.size} problems selected.`}

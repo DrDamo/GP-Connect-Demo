@@ -68,7 +68,7 @@ export function CodeStatusBadge({ status }: { status?: CodeStatus }) {
   if (status?.notDmd) {
     return (
       <span
-        className="inline-block ml-1.5 px-2 py-0.5 text-xs font-semibold rounded border bg-red-100 text-red-800 border-red-300 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700"
+        className="inline-block ml-1.5 px-2 py-0.5 text-xs font-semibold rounded border bg-red-100 text-red-800 border-red-300 dark:bg-bad-bg dark:text-bad dark:border-bad-line"
         title="This code is not a member of the dm+d VMP/AMP ValueSet — not a genuine dm+d product code"
       >
         Not DM+D
@@ -78,14 +78,14 @@ export function CodeStatusBadge({ status }: { status?: CodeStatus }) {
   if (!status?.inactive) return null
   return status.withdrawn ? (
     <span
-      className="inline-block ml-1.5 px-2 py-0.5 text-xs font-semibold rounded border bg-red-100 text-red-800 border-red-300 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700"
+      className="inline-block ml-1.5 px-2 py-0.5 text-xs font-semibold rounded border bg-red-100 text-red-800 border-red-300 dark:bg-bad-bg dark:text-bad dark:border-bad-line"
       title="This medication's AMP has a discontinued prescribing/availability status"
     >
       Withdrawn
     </span>
   ) : (
     <span
-      className="inline-block ml-1.5 px-2 py-0.5 text-xs font-semibold rounded border bg-nhs-grey-5 text-nhs-grey-2 border-nhs-grey-4 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600"
+      className="inline-block ml-1.5 px-2 py-0.5 text-xs font-semibold rounded border bg-nhs-grey-5 text-nhs-grey-2 border-nhs-grey-4 dark:bg-raised dark:text-ink-2 dark:border-line-strong"
       title="This code is marked inactive on the terminology server"
     >
       Inactive
@@ -124,11 +124,11 @@ function DegradeBadge({ originalCode, originalTerm }: { originalCode: string; or
       {hovered && pos && createPortal(
         <div
           style={{ position: 'fixed', top: pos.top, left: pos.left }}
-          className="pointer-events-none z-50 w-80 rounded-md border border-nhs-grey-4 bg-white p-2.5 text-xs font-normal leading-snug text-nhs-grey-1 shadow-lg dark:border-nhs-grey-2 dark:bg-gray-800 dark:text-gray-200"
+          className="pointer-events-none z-50 w-80 rounded-md border border-nhs-grey-4 bg-white p-2.5 text-xs font-normal leading-snug text-nhs-grey-1 shadow-lg dark:border-line-strong dark:bg-surface dark:text-ink"
         >
-          <span className="block font-semibold text-nhs-grey-1 dark:text-gray-100">Original coding, before conversion</span>
+          <span className="block font-semibold text-nhs-grey-1 dark:text-ink">Original coding, before conversion</span>
           <span className="mt-1 block">This SNOMED CT code could not be verified against the terminology server, so it was converted to a transfer-degraded coding:</span>
-          <pre className="mt-1.5 whitespace-pre-wrap rounded border border-nhs-grey-4 bg-nhs-grey-5 p-1.5 font-mono text-[11px] text-nhs-grey-1 dark:border-nhs-grey-2 dark:bg-gray-900 dark:text-gray-200">
+          <pre className="mt-1.5 whitespace-pre-wrap rounded border border-nhs-grey-4 bg-nhs-grey-5 p-1.5 font-mono text-[11px] text-nhs-grey-1 dark:border-line-strong dark:bg-canvas dark:text-ink">
 {JSON.stringify({ system: SNOMED_SYSTEM, code: originalCode, display: originalTerm }, null, 2)}
           </pre>
         </div>,

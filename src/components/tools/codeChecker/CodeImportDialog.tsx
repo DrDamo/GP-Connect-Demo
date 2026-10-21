@@ -79,21 +79,21 @@ export function CodeImportDialog({ filename, source, onImport, onCancel }: Props
   const plausibleCount = inputs.filter(i => !i.formatError && !localFormatError(i.code)).length
   const roundedCount = inputs.filter(i => i.formatError).length
 
-  const selectClass = 'w-full rounded-md border border-nhs-grey-4 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1.5 text-sm text-nhs-grey-1 dark:text-gray-100 focus:border-nhs-blue focus:outline-none'
-  const labelClass = 'block text-xs font-medium text-nhs-grey-2 dark:text-gray-400 mb-1'
+  const selectClass = 'w-full rounded-md border border-nhs-grey-4 dark:border-line-strong bg-white dark:bg-surface px-2 py-1.5 text-sm text-nhs-grey-1 dark:text-ink focus:border-nhs-blue focus:outline-none'
+  const labelClass = 'block text-xs font-medium text-nhs-grey-2 dark:text-muted mb-1'
 
   return createPortal(
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onCancel}>
       <div
-        className="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col border border-nhs-grey-4 dark:border-gray-700"
+        className="bg-white dark:bg-canvas rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col border border-nhs-grey-4 dark:border-line"
         onClick={e => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-labelledby="code-import-title"
       >
-        <div className="px-5 py-4 border-b border-gray-200 dark:border-gray-700">
-          <h2 id="code-import-title" className="text-base font-semibold text-gray-900 dark:text-gray-100">Import codes</h2>
-          <p className="text-xs text-nhs-grey-3 dark:text-gray-500 mt-0.5 truncate">{filename}</p>
+        <div className="px-5 py-4 border-b border-gray-200 dark:border-line">
+          <h2 id="code-import-title" className="text-base font-semibold text-gray-900 dark:text-ink">Import codes</h2>
+          <p className="text-xs text-nhs-grey-3 dark:text-muted mt-0.5 truncate">{filename}</p>
         </div>
 
         <div className="px-5 py-4 space-y-4 overflow-y-auto">
@@ -150,23 +150,23 @@ export function CodeImportDialog({ filename, source, onImport, onCancel }: Props
             </div>
           </div>
 
-          <label className="flex items-center gap-2 text-sm text-nhs-grey-2 dark:text-gray-300">
+          <label className="flex items-center gap-2 text-sm text-nhs-grey-2 dark:text-ink-2">
             <input type="checkbox" checked={hasHeader} onChange={e => setHasHeader(e.target.checked)} className="rounded border-nhs-grey-4" />
             First row contains column headings
           </label>
 
           <div>
             <p className={labelClass}>Preview</p>
-            <div className="rounded-md border border-nhs-grey-4 dark:border-gray-700 overflow-x-auto">
+            <div className="rounded-md border border-nhs-grey-4 dark:border-line overflow-x-auto">
               <table className="w-full text-xs">
-                <thead className="bg-gray-50 dark:bg-gray-800">
+                <thead className="bg-gray-50 dark:bg-surface">
                   <tr>
-                    <th className="px-2.5 py-1.5 text-right font-medium text-nhs-grey-3 dark:text-gray-500 w-10">Row</th>
+                    <th className="px-2.5 py-1.5 text-right font-medium text-nhs-grey-3 dark:text-muted w-10">Row</th>
                     {columnNames.map((name, i) => (
                       <th
                         key={i}
                         className={`px-2.5 py-1.5 text-left font-medium whitespace-nowrap ${
-                          i === safeCodeColumn ? 'text-nhs-blue' : i === termColumn ? 'text-emerald-700 dark:text-emerald-400' : 'text-nhs-grey-3 dark:text-gray-500'
+                          i === safeCodeColumn ? 'text-nhs-blue' : i === termColumn ? 'text-emerald-700 dark:text-ok' : 'text-nhs-grey-3 dark:text-muted'
                         }`}
                       >
                         {name}
@@ -176,19 +176,19 @@ export function CodeImportDialog({ filename, source, onImport, onCancel }: Props
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-nhs-grey-4 dark:divide-gray-700">
+                <tbody className="divide-y divide-nhs-grey-4 dark:divide-line">
                   {dataRows.slice(0, PREVIEW_ROWS).map((row, r) => (
                     <tr key={r}>
-                      <td className="px-2.5 py-1.5 text-right tabular-nums text-nhs-grey-3 dark:text-gray-500">{table.rowNumbers[r + headerOffset]}</td>
+                      <td className="px-2.5 py-1.5 text-right tabular-nums text-nhs-grey-3 dark:text-muted">{table.rowNumbers[r + headerOffset]}</td>
                       {columnNames.map((_, i) => (
                         <td
                           key={i}
                           title={table.roundedCells.has(`${r + headerOffset},${i}`) ? 'Rounded by Excel — digits lost' : undefined}
                           className={`px-2.5 py-1.5 whitespace-nowrap max-w-[16rem] truncate ${
-                            table.roundedCells.has(`${r + headerOffset},${i}`) ? 'font-mono bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-200'
-                              : i === safeCodeColumn ? 'font-mono bg-blue-50 dark:bg-blue-950/40 text-nhs-grey-1 dark:text-gray-100'
-                              : i === termColumn ? 'bg-emerald-50 dark:bg-emerald-950/30 text-nhs-grey-1 dark:text-gray-100'
-                              : 'text-nhs-grey-3 dark:text-gray-500'
+                            table.roundedCells.has(`${r + headerOffset},${i}`) ? 'font-mono bg-amber-100 dark:bg-warn-bg text-amber-900 dark:text-warn'
+                              : i === safeCodeColumn ? 'font-mono bg-blue-50 dark:bg-accent-soft text-nhs-grey-1 dark:text-ink'
+                              : i === termColumn ? 'bg-emerald-50 dark:bg-ok-bg text-nhs-grey-1 dark:text-ink'
+                              : 'text-nhs-grey-3 dark:text-muted'
                           }`}
                         >
                           {row[i] ?? ''}
@@ -200,12 +200,12 @@ export function CodeImportDialog({ filename, source, onImport, onCancel }: Props
               </table>
             </div>
             {dataRows.length > PREVIEW_ROWS && (
-              <p className="text-xs text-nhs-grey-3 dark:text-gray-500 mt-1">…and {dataRows.length - PREVIEW_ROWS} more rows</p>
+              <p className="text-xs text-nhs-grey-3 dark:text-muted mt-1">…and {dataRows.length - PREVIEW_ROWS} more rows</p>
             )}
           </div>
 
           {roundedCount > 0 && (
-            <div className="p-3 rounded-md border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 text-xs text-amber-900 dark:text-amber-200">
+            <div className="p-3 rounded-md border border-amber-300 dark:border-warn-line bg-amber-50 dark:bg-warn-bg text-xs text-amber-900 dark:text-warn">
               <strong>{roundedCount} code{roundedCount === 1 ? ' was' : 's were'} rounded by Excel.</strong>{' '}
               Excel only keeps 15 digits for numbers, so longer SNOMED CT ids (UK extension and dm+d codes) lose
               their last digits when the column isn’t formatted as Text. They’ll be listed as failed — fix the
@@ -213,10 +213,10 @@ export function CodeImportDialog({ filename, source, onImport, onCancel }: Props
             </div>
           )}
 
-          <p className="text-sm text-nhs-grey-2 dark:text-gray-300">
+          <p className="text-sm text-nhs-grey-2 dark:text-ink-2">
             <strong>{inputs.length}</strong> code{inputs.length === 1 ? '' : 's'} will be imported
             {inputs.length > 0 && (
-              <span className={plausibleCount === 0 ? 'text-nhs-red dark:text-red-400' : 'text-nhs-grey-3 dark:text-gray-500'}>
+              <span className={plausibleCount === 0 ? 'text-nhs-red dark:text-bad' : 'text-nhs-grey-3 dark:text-muted'}>
                 {' '}· {plausibleCount} look{plausibleCount === 1 ? 's' : ''} like valid SNOMED CT concept ids
                 {plausibleCount === 0 && ' — check the code column is right'}
               </span>
@@ -224,11 +224,11 @@ export function CodeImportDialog({ filename, source, onImport, onCancel }: Props
           </p>
         </div>
 
-        <div className="flex justify-end gap-2 px-5 py-3 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex justify-end gap-2 px-5 py-3 border-t border-gray-200 dark:border-line">
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 border border-nhs-grey-4 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            className="px-4 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-ink-2 border border-nhs-grey-4 dark:border-line hover:bg-gray-100 dark:hover:bg-raised transition-colors"
           >
             Cancel
           </button>

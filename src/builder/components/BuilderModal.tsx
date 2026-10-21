@@ -58,16 +58,16 @@ export function BuilderModal({ title, onDone, onCancel, children, size = 'lg' }:
     // Backdrop — click does nothing (modal is locked)
     <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center overflow-y-auto p-4">
       <div
-        className={`bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full ${maxW} my-4`}
+        className={`bg-white dark:bg-canvas rounded-xl shadow-xl w-full ${maxW} my-4`}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-line">
+          <h2 className="text-base font-semibold text-gray-900 dark:text-ink">{title}</h2>
           <button
             type="button"
             onClick={requestCancel}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded p-1 transition-colors"
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-ink rounded p-1 transition-colors"
             aria-label="Close"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -87,15 +87,15 @@ export function BuilderModal({ title, onDone, onCancel, children, size = 'lg' }:
 
           {/* Footer — normal or discard-confirm */}
           {confirmDiscard ? (
-            <div className="px-4 py-3 border-t border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 rounded-b-xl">
-              <p className="text-sm text-amber-800 dark:text-amber-200 mb-3 font-medium">
+            <div className="px-4 py-3 border-t border-amber-200 dark:border-warn-line bg-amber-50 dark:bg-warn-bg rounded-b-xl">
+              <p className="text-sm text-amber-800 dark:text-warn mb-3 font-medium">
                 Discard changes? Any unsaved edits will be lost.
               </p>
               <div className="flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={keepEditing}
-                  className="px-4 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  className="px-4 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-ink-2 hover:bg-gray-100 dark:hover:bg-raised transition-colors"
                 >
                   Keep editing
                 </button>
@@ -109,11 +109,11 @@ export function BuilderModal({ title, onDone, onCancel, children, size = 'lg' }:
               </div>
             </div>
           ) : (
-            <div className="flex justify-end gap-2 px-4 py-3 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex justify-end gap-2 px-4 py-3 border-t border-gray-200 dark:border-line">
               <button
                 type="button"
                 onClick={requestCancel}
-                className="px-4 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                className="px-4 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-ink-2 hover:bg-gray-100 dark:hover:bg-raised transition-colors"
               >
                 Cancel
               </button>

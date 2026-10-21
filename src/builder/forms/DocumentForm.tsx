@@ -37,11 +37,11 @@ const MIME_TYPE_OPTS = [
 ]
 
 function statusBadgeClass(status: string | undefined): string {
-  if (!status) return 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
-  if (status === 'current') return 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
-  if (status === 'superseded') return 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
-  if (status === 'entered-in-error') return 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
-  return 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
+  if (!status) return 'bg-gray-100 text-gray-600 dark:bg-raised dark:text-ink-2'
+  if (status === 'current') return 'bg-green-100 text-green-700 dark:bg-ok-bg dark:text-ok'
+  if (status === 'superseded') return 'bg-amber-100 text-amber-700 dark:bg-warn-bg dark:text-warn'
+  if (status === 'entered-in-error') return 'bg-red-100 text-red-700 dark:bg-bad-bg dark:text-bad'
+  return 'bg-gray-100 text-gray-600 dark:bg-raised dark:text-ink-2'
 }
 
 export function DocumentDisplayRow({
@@ -59,10 +59,10 @@ export function DocumentDisplayRow({
   ].filter(Boolean).join(' · ')
 
   return (
-    <div className="bg-nhs-grey-5 dark:bg-gray-800 border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg mb-2 px-3 py-2 flex items-start justify-between gap-2">
+    <div className="bg-nhs-grey-5 dark:bg-surface border border-nhs-grey-4 dark:border-line-strong rounded-lg mb-2 px-3 py-2 flex items-start justify-between gap-2">
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-medium text-nhs-grey-1 dark:text-gray-100 truncate">
+          <span className="text-sm font-medium text-nhs-grey-1 dark:text-ink truncate">
             {doc.type || doc.description || 'Unnamed document'}
           </span>
           {doc.status && (
@@ -76,7 +76,7 @@ export function DocumentDisplayRow({
         )}
       </div>
       <div className="flex items-center gap-2 shrink-0 ml-2">
-        <button type="button" onClick={onEdit} className="text-xs border border-nhs-blue text-nhs-blue px-2 py-0.5 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20">Edit</button>
+        <button type="button" onClick={onEdit} className="text-xs border border-nhs-blue text-nhs-blue px-2 py-0.5 rounded hover:bg-blue-50 dark:hover:bg-accent-soft">Edit</button>
         <button type="button" onClick={onDelete} className="text-nhs-red hover:opacity-70 p-0.5" title="Delete">
           <TrashIcon />
         </button>
@@ -104,9 +104,9 @@ export function DocumentCard({
   const expanded = isModal ? true : open
 
   return (
-    <div className="border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg overflow-hidden mb-2">
+    <div className="border border-nhs-grey-4 dark:border-line-strong rounded-lg overflow-hidden mb-2">
       {!isModal && (
-        <div className="flex items-center justify-between px-3 py-2 bg-nhs-grey-5 dark:bg-gray-800">
+        <div className="flex items-center justify-between px-3 py-2 bg-nhs-grey-5 dark:bg-surface">
           <button
             type="button"
             onClick={() => setOpen(o => !o)}
@@ -137,7 +137,7 @@ export function DocumentCard({
       )}
 
       {expanded && (
-        <div className="p-3 bg-white dark:bg-gray-900 space-y-3">
+        <div className="p-3 bg-white dark:bg-canvas space-y-3">
           <Field label="Document type" value={doc.type ?? ''} onChange={v => upd({ type: v })} required />
 
           <div className="grid grid-cols-2 gap-2">
@@ -188,7 +188,7 @@ export function DocumentCard({
             <label className="block text-xs font-medium text-nhs-grey-3 uppercase tracking-wide mb-0.5">
               Custodian organisation
             </label>
-            <div className="w-full rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-2 py-1.5 text-sm text-nhs-grey-3 dark:text-nhs-grey-3 bg-nhs-grey-5 dark:bg-gray-800">
+            <div className="w-full rounded border border-nhs-grey-4 dark:border-line-strong px-2 py-1.5 text-sm text-nhs-grey-3 dark:text-muted bg-nhs-grey-5 dark:bg-surface">
               {orgName}
             </div>
           </div>

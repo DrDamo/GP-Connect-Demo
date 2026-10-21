@@ -20,7 +20,7 @@ export function SearchFilterBox({ value, onChange, placeholder = 'Search this se
           value={value}
           onChange={e => onChange(e.target.value)}
           placeholder={placeholder}
-          className="w-full pl-7 pr-7 py-1.5 text-xs rounded border border-nhs-grey-4 dark:border-gray-600 bg-white dark:bg-gray-800 text-nhs-grey-1 dark:text-gray-100 placeholder-nhs-grey-3 focus:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue"
+          className="w-full pl-7 pr-7 py-1.5 text-xs rounded border border-nhs-grey-4 dark:border-line-strong bg-white dark:bg-surface text-nhs-grey-1 dark:text-ink placeholder-nhs-grey-3 focus:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue"
         />
         {value && (
           <button
@@ -33,7 +33,7 @@ export function SearchFilterBox({ value, onChange, placeholder = 'Search this se
         )}
       </div>
       {value && matchCount !== undefined && totalCount !== undefined && (
-        <span className="text-xs text-nhs-grey-3 dark:text-gray-500 whitespace-nowrap">
+        <span className="text-xs text-nhs-grey-3 dark:text-muted whitespace-nowrap">
           {matchCount} of {totalCount} match{matchCount !== 1 ? 'es' : ''}
         </span>
       )}

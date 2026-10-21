@@ -336,26 +336,26 @@ export function BuilderView({
       {/* SNOMED CT copyright notice — shown once per session in production */}
       {showCopyright && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl border border-nhs-grey-4 dark:border-nhs-grey-2 w-full max-w-lg mx-4 p-6">
+          <div className="bg-white dark:bg-canvas rounded-lg shadow-xl border border-nhs-grey-4 dark:border-line-strong w-full max-w-lg mx-4 p-6">
             <div className="flex items-start gap-3 mb-4">
-              <div className="shrink-0 w-8 h-8 rounded-full bg-nhs-blue/10 dark:bg-blue-900/30 flex items-center justify-center">
+              <div className="shrink-0 w-8 h-8 rounded-full bg-nhs-blue/10 dark:bg-accent-soft flex items-center justify-center">
                 <svg className="w-4 h-4 text-nhs-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
               <div>
-                <h2 className="text-sm font-semibold text-nhs-grey-1 dark:text-gray-100 mb-0.5">
+                <h2 className="text-sm font-semibold text-nhs-grey-1 dark:text-ink mb-0.5">
                   SNOMED CT — Terminology Search Active
                 </h2>
-                <p className="text-xs text-green-700 dark:text-green-400 font-medium">
+                <p className="text-xs text-green-700 dark:text-ok font-medium">
                   Connected to NHS Terminology Server
                 </p>
               </div>
             </div>
 
-            <div className="space-y-2 text-xs text-nhs-grey-3 dark:text-gray-400 leading-relaxed mb-5">
+            <div className="space-y-2 text-xs text-nhs-grey-3 dark:text-muted leading-relaxed mb-5">
               <p>
-                This application uses <strong className="text-nhs-grey-2 dark:text-gray-300">SNOMED Clinical Terms®</strong> (SNOMED CT®)
+                This application uses <strong className="text-nhs-grey-2 dark:text-ink-2">SNOMED Clinical Terms®</strong> (SNOMED CT®)
                 to support clinical coding in the record builder. SNOMED CT® terminology searches are
                 handled through the NHS Terminology Server — no credentials are stored in your browser.
               </p>
@@ -389,7 +389,7 @@ export function BuilderView({
       )}
 
       {/* Toolbar */}
-      <div className="shrink-0 flex items-center justify-between px-4 py-2 border-b border-nhs-grey-4 dark:border-nhs-grey-2 bg-white dark:bg-gray-900">
+      <div className="shrink-0 flex items-center justify-between px-4 py-2 border-b border-nhs-grey-4 dark:border-line-strong bg-white dark:bg-canvas">
         {/* Left: auto-populate | clear | save-to-shared */}
         <div className="flex items-center gap-2">
           <button
@@ -404,7 +404,7 @@ export function BuilderView({
             <button
               type="button"
               onClick={handleClearAllFinal}
-              className="border border-nhs-grey-4 dark:border-nhs-grey-2 text-nhs-grey-2 px-3 py-1.5 rounded text-sm hover:border-nhs-red hover:text-nhs-red transition-colors"
+              className="border border-nhs-grey-4 dark:border-line-strong text-nhs-grey-2 px-3 py-1.5 rounded text-sm hover:border-nhs-red hover:text-nhs-red transition-colors"
             >
               Clear all
             </button>
@@ -415,7 +415,7 @@ export function BuilderView({
               <button
                 type="button"
                 onClick={handleSaveToSharedClick}
-                className="border border-nhs-green dark:border-green-500 text-nhs-green dark:text-green-400 px-3 py-1.5 rounded text-sm hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors flex items-center gap-1.5"
+                className="border border-nhs-green dark:border-ok-line text-nhs-green dark:text-ok px-3 py-1.5 rounded text-sm hover:bg-green-50 dark:hover:bg-ok-bg transition-colors flex items-center gap-1.5"
                 title={currentDraftId ? `Update shared record (currently v${currentVersion})` : 'Save to shared patients area'}
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -424,23 +424,23 @@ export function BuilderView({
                 Save to shared
               </button>
               {currentDraftId && !isDirty && !saveSuccess && (
-                <span className="text-xs px-1.5 py-0.5 bg-nhs-grey-5 dark:bg-gray-800 text-nhs-grey-3 dark:text-gray-500 rounded">
+                <span className="text-xs px-1.5 py-0.5 bg-nhs-grey-5 dark:bg-surface text-nhs-grey-3 dark:text-muted rounded">
                   v{currentVersion}
                 </span>
               )}
               {isDirty && currentDraftId && (
-                <span className="text-xs px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded font-medium inline-flex items-center gap-1">
+                <span className="text-xs px-1.5 py-0.5 bg-amber-100 dark:bg-warn-bg text-amber-700 dark:text-warn rounded font-medium inline-flex items-center gap-1">
                   Unsaved changes
                   <InfoHint topic="builder.dirty-guard" />
                 </span>
               )}
               {saveSuccess && (
-                <span className="text-xs px-1.5 py-0.5 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 rounded font-medium">
+                <span className="text-xs px-1.5 py-0.5 bg-green-100 dark:bg-ok-bg text-green-700 dark:text-ok rounded font-medium">
                   Saved v{currentVersion} ✓
                 </span>
               )}
               {saveError && (
-                <span className="text-xs px-1.5 py-0.5 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 rounded font-medium" title={saveError}>
+                <span className="text-xs px-1.5 py-0.5 bg-red-100 dark:bg-bad-bg text-red-700 dark:text-bad rounded font-medium" title={saveError}>
                   Save failed
                 </span>
               )}
@@ -454,14 +454,14 @@ export function BuilderView({
             type="button"
             onClick={handlePreview}
             data-tour="builder-preview"
-            className="border border-nhs-grey-4 dark:border-nhs-grey-2 text-nhs-grey-2 px-3 py-1.5 rounded text-sm hover:border-nhs-blue hover:text-nhs-blue transition-colors"
+            className="border border-nhs-grey-4 dark:border-line-strong text-nhs-grey-2 px-3 py-1.5 rounded text-sm hover:border-nhs-blue hover:text-nhs-blue transition-colors"
           >
             Preview FHIR
           </button>
           <button
             type="button"
             onClick={handleSaveJson}
-            className="border border-nhs-grey-4 dark:border-nhs-grey-2 text-nhs-grey-2 px-3 py-1.5 rounded text-sm hover:border-nhs-blue hover:text-nhs-blue transition-colors flex items-center gap-1"
+            className="border border-nhs-grey-4 dark:border-line-strong text-nhs-grey-2 px-3 py-1.5 rounded text-sm hover:border-nhs-blue hover:text-nhs-blue transition-colors flex items-center gap-1"
             title="Validate against GP Connect AR:S standard then download"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -488,7 +488,7 @@ export function BuilderView({
 
       {/* Build error banner */}
       {buildError && (
-        <div className="shrink-0 flex items-center gap-2 px-4 py-2 bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800 text-xs text-nhs-red">
+        <div className="shrink-0 flex items-center gap-2 px-4 py-2 bg-red-50 dark:bg-bad-bg border-b border-red-200 dark:border-bad-line text-xs text-nhs-red">
           <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
@@ -513,7 +513,7 @@ export function BuilderView({
           />
         </div>
 
-        <div className={`flex-1 overflow-auto p-4 bg-nhs-grey-5 dark:bg-gray-950 ${showPreview ? 'hidden sm:block' : ''}`}>
+        <div className={`flex-1 overflow-auto p-4 bg-nhs-grey-5 dark:bg-canvas ${showPreview ? 'hidden sm:block' : ''}`}>
           {renderForm()}
         </div>
 

@@ -3,6 +3,7 @@ import type { GpConnectBundle, GpConnectReferral } from '../../fhir/types'
 import { DomainTable, StatusBadge, DegradedTermText } from './DomainTable'
 import type { DomainColumn } from './DomainTable'
 import { ReferencedResources } from './ReferencedResources'
+import { ReferencedBy } from './ReferencedBy'
 import { ReferenceChip } from './ResourceCard'
 import { type DomainId } from './domains'
 import { SearchFilterBox } from './SearchFilterBox'
@@ -73,7 +74,7 @@ function ReferralDetail({ referral, bundle, onJumpToSource, onJumpToRecord }: { 
       </div>
 
       {/* Two-column layout: requester left, recipients right */}
-      <div className="grid grid-cols-2 gap-x-8">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,max(20rem,calc(50%_-_1rem))),1fr))] gap-x-8">
         {/* Left — requester */}
         <div className="space-y-1.5">
           <p className="text-[10px] font-semibold text-nhs-grey-3 uppercase tracking-wide mb-1">Requester</p>
@@ -158,6 +159,12 @@ function ReferralDetail({ referral, bundle, onJumpToSource, onJumpToRecord }: { 
         healthcareServices={bundle.healthcareServices}
         documents={bundle.documents}
         highlightedId={openResourceId ?? undefined}
+        onJumpToSource={onJumpToSource}
+        onJumpToRecord={onJumpToRecord}
+      />
+      <ReferencedBy
+        record={bundle}
+        self={`ReferralRequest/${referral.id}`}
         onJumpToSource={onJumpToSource}
         onJumpToRecord={onJumpToRecord}
       />

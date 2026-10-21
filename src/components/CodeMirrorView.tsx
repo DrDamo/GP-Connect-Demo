@@ -3,10 +3,10 @@ import { EditorView, Decoration, lineNumbers, ViewPlugin } from '@codemirror/vie
 import type { DecorationSet, ViewUpdate } from '@codemirror/view'
 import { EditorState, StateEffect, StateField, RangeSetBuilder, Compartment } from '@codemirror/state'
 import type { Text } from '@codemirror/state'
-import { syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language'
+import { syntaxHighlighting } from '@codemirror/language'
 import { json as jsonLang } from '@codemirror/lang-json'
 import { xml as xmlLang } from '@codemirror/lang-xml'
-import { editorTheme } from './codeMirrorTheme'
+import { editorTheme, fhirHighlightStyle } from './codeMirrorTheme'
 
 export interface CodeMirrorViewHandle {
   scrollToLine(line: number): void
@@ -130,7 +130,7 @@ export const CodeMirrorView = memo(forwardRef<CodeMirrorViewHandle, Props>(funct
       doc: source,
       extensions: [
         lineNumbers(),
-        syntaxHighlighting(defaultHighlightStyle),
+        syntaxHighlighting(fhirHighlightStyle),
         compartment.of(langExt),
         EditorView.editable.of(false),
         highlightField,

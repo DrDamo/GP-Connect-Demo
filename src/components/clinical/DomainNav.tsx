@@ -4,11 +4,13 @@ interface Props {
   active: DomainId
   onSelect: (id: DomainId) => void
   counts: Partial<Record<DomainId, number>>
+  /** Width utility for the nav column; defaults to w-48 */
+  widthClass?: string
 }
 
-export function DomainNav({ active, onSelect, counts }: Props) {
+export function DomainNav({ active, onSelect, counts, widthClass = 'w-48' }: Props) {
   return (
-    <div className="w-48 shrink-0 flex flex-col border-r border-nhs-grey-4 bg-nhs-grey-5 overflow-y-auto">
+    <div className={`${widthClass} shrink-0 flex flex-col border-r border-nhs-grey-4 bg-nhs-grey-5 overflow-y-auto`}>
       <div className="px-3 py-2.5 border-b border-nhs-grey-4">
         <span className="text-xs font-semibold text-nhs-grey-2 uppercase tracking-wide">Clinical areas</span>
       </div>

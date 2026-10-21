@@ -54,10 +54,10 @@ export function InfoHint({ topic, className }: Props) {
           style={{ position: 'fixed', top: anchorPos.top, left }}
           onMouseEnter={() => setOpen(true)}
           onMouseLeave={() => setOpen(false)}
-          className="z-[900] w-56 bg-white dark:bg-gray-900 text-left rounded-lg shadow-lg border border-nhs-grey-4 dark:border-gray-700 p-3 not-italic font-normal normal-case"
+          className="z-[900] w-56 bg-white dark:bg-canvas text-left rounded-lg shadow-lg border border-nhs-grey-4 dark:border-line p-3 not-italic font-normal normal-case"
         >
-          <p className="text-xs font-semibold text-nhs-grey-1 dark:text-gray-100 mb-1">{hint.title}</p>
-          <p className="text-xs text-nhs-grey-2 dark:text-gray-300 leading-relaxed mb-2">{hint.body}</p>
+          <p className="text-xs font-semibold text-nhs-grey-1 dark:text-ink mb-1">{hint.title}</p>
+          <p className="text-xs text-nhs-grey-2 dark:text-ink-2 leading-relaxed mb-2">{hint.body}</p>
           {guideNav && (
             <button
               onClick={e => { e.stopPropagation(); guideNav.openGuide(hint.guideFile, hint.guideAnchor) }}

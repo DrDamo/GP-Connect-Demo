@@ -77,9 +77,9 @@ function OrganisationCard({
   const expanded = isModal ? true : open
 
   return (
-    <div className="border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg overflow-hidden mb-2">
+    <div className="border border-nhs-grey-4 dark:border-line-strong rounded-lg overflow-hidden mb-2">
       {!isModal && (
-        <div className="flex items-center justify-between px-3 py-2 bg-nhs-grey-5 dark:bg-gray-800">
+        <div className="flex items-center justify-between px-3 py-2 bg-nhs-grey-5 dark:bg-surface">
           <button
             type="button"
             onClick={() => setOpen(o => !o)}
@@ -91,7 +91,7 @@ function OrganisationCard({
             >
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
             </svg>
-            <span className="text-sm font-medium text-nhs-grey-1 dark:text-gray-100">
+            <span className="text-sm font-medium text-nhs-grey-1 dark:text-ink">
               {org.name || 'New organisation'}
             </span>
             {org.odsCode && (
@@ -109,7 +109,7 @@ function OrganisationCard({
       )}
 
       {expanded && (
-        <div className="p-3 bg-white dark:bg-gray-900 grid grid-cols-2 gap-2">
+        <div className="p-3 bg-white dark:bg-canvas grid grid-cols-2 gap-2">
           <Field label="Organisation name" value={org.name ?? ''} onChange={v => upd({ name: v })} className="col-span-2" />
           <Field label="ODS code" value={org.odsCode ?? ''} onChange={v => upd({ odsCode: v })} />
           <Field label="Phone" type="tel" value={org.phone ?? ''} onChange={v => upd({ phone: v })} />
@@ -134,9 +134,9 @@ function OrganisationDisplayRow({
   onDelete: () => void
 }) {
   return (
-    <div className="bg-nhs-grey-5 dark:bg-gray-800 border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg mb-2 px-3 py-2 flex items-start justify-between gap-2">
+    <div className="bg-nhs-grey-5 dark:bg-surface border border-nhs-grey-4 dark:border-line-strong rounded-lg mb-2 px-3 py-2 flex items-start justify-between gap-2">
       <div className="min-w-0 flex-1">
-        <span className="text-sm font-medium text-nhs-grey-1 dark:text-gray-100 truncate block">
+        <span className="text-sm font-medium text-nhs-grey-1 dark:text-ink truncate block">
           {org.name || 'Unnamed organisation'}
         </span>
         {org.odsCode && (
@@ -172,9 +172,9 @@ function PractitionerCard({
   const label = [prac.prefix, prac.givenName, prac.familyName].filter(Boolean).join(' ') || 'New practitioner'
 
   return (
-    <div className="border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg overflow-hidden mb-2">
+    <div className="border border-nhs-grey-4 dark:border-line-strong rounded-lg overflow-hidden mb-2">
       {!isModal && (
-        <div className="flex items-center justify-between px-3 py-2 bg-nhs-grey-5 dark:bg-gray-800">
+        <div className="flex items-center justify-between px-3 py-2 bg-nhs-grey-5 dark:bg-surface">
           <button
             type="button"
             onClick={() => setOpen(o => !o)}
@@ -186,7 +186,7 @@ function PractitionerCard({
             >
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
             </svg>
-            <span className="text-sm font-medium text-nhs-grey-1 dark:text-gray-100">{label}</span>
+            <span className="text-sm font-medium text-nhs-grey-1 dark:text-ink">{label}</span>
           </button>
           <button
             type="button"
@@ -198,7 +198,7 @@ function PractitionerCard({
         </div>
       )}
       {expanded && (
-        <div className="p-3 bg-white dark:bg-gray-900 grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <div className="p-3 bg-white dark:bg-canvas grid grid-cols-2 gap-2 sm:grid-cols-3">
           <SelectField
             label="Role"
             value={prac.role ?? ''}
@@ -238,9 +238,9 @@ function PractitionerDisplayRow({
 }) {
   const label = [prac.prefix, prac.givenName, prac.familyName].filter(Boolean).join(' ') || 'Unnamed practitioner'
   return (
-    <div className="bg-nhs-grey-5 dark:bg-gray-800 border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg mb-2 px-3 py-2 flex items-start justify-between gap-2">
+    <div className="bg-nhs-grey-5 dark:bg-surface border border-nhs-grey-4 dark:border-line-strong rounded-lg mb-2 px-3 py-2 flex items-start justify-between gap-2">
       <div className="min-w-0 flex-1">
-        <span className="text-sm font-medium text-nhs-grey-1 dark:text-gray-100 truncate block">
+        <span className="text-sm font-medium text-nhs-grey-1 dark:text-ink truncate block">
           {label}
         </span>
         {(prac.role || prac.sdsUserId) && (
@@ -277,9 +277,9 @@ function LocationCard({
   const expanded = isModal ? true : open
 
   return (
-    <div className="border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg overflow-hidden mb-2">
+    <div className="border border-nhs-grey-4 dark:border-line-strong rounded-lg overflow-hidden mb-2">
       {!isModal && (
-        <div className="flex items-center justify-between px-3 py-2 bg-nhs-grey-5 dark:bg-gray-800">
+        <div className="flex items-center justify-between px-3 py-2 bg-nhs-grey-5 dark:bg-surface">
           <button
             type="button"
             onClick={() => setOpen(o => !o)}
@@ -291,7 +291,7 @@ function LocationCard({
             >
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
             </svg>
-            <span className="text-sm font-medium text-nhs-grey-1 dark:text-gray-100">
+            <span className="text-sm font-medium text-nhs-grey-1 dark:text-ink">
               {loc.name || 'New location'}
             </span>
           </button>
@@ -305,7 +305,7 @@ function LocationCard({
         </div>
       )}
       {expanded && (
-        <div className="p-3 bg-white dark:bg-gray-900 grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <div className="p-3 bg-white dark:bg-canvas grid grid-cols-1 gap-2 sm:grid-cols-2">
           <Field label="Name" value={loc.name ?? ''} onChange={v => upd({ name: v })} />
           <Field label="Address" value={loc.address ?? ''} onChange={v => upd({ address: v })} />
         </div>
@@ -328,9 +328,9 @@ function LocationDisplayRow({
   onDelete: () => void
 }) {
   return (
-    <div className="bg-nhs-grey-5 dark:bg-gray-800 border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg mb-2 px-3 py-2 flex items-start justify-between gap-2">
+    <div className="bg-nhs-grey-5 dark:bg-surface border border-nhs-grey-4 dark:border-line-strong rounded-lg mb-2 px-3 py-2 flex items-start justify-between gap-2">
       <div className="min-w-0 flex-1">
-        <span className="text-sm font-medium text-nhs-grey-1 dark:text-gray-100 truncate block">
+        <span className="text-sm font-medium text-nhs-grey-1 dark:text-ink truncate block">
           {loc.name || 'Unnamed location'}
         </span>
         {loc.address && (
@@ -360,9 +360,9 @@ function ContactCard({
 }) {
   const label = [contact.prefix, contact.givenName, contact.familyName].filter(Boolean).join(' ') || 'New contact'
   return (
-    <div className="border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg overflow-hidden mb-2">
-      <div className="flex items-center justify-between px-3 py-2 bg-nhs-grey-5 dark:bg-gray-800">
-        <span className="text-sm font-medium text-nhs-grey-1 dark:text-gray-100">{label}</span>
+    <div className="border border-nhs-grey-4 dark:border-line-strong rounded-lg overflow-hidden mb-2">
+      <div className="flex items-center justify-between px-3 py-2 bg-nhs-grey-5 dark:bg-surface">
+        <span className="text-sm font-medium text-nhs-grey-1 dark:text-ink">{label}</span>
         <button
           type="button"
           onClick={onRemove}
@@ -371,7 +371,7 @@ function ContactCard({
           Remove
         </button>
       </div>
-      <div className="p-3 bg-white dark:bg-gray-900 grid grid-cols-2 gap-2 sm:grid-cols-3">
+      <div className="p-3 bg-white dark:bg-canvas grid grid-cols-2 gap-2 sm:grid-cols-3">
         <SelectField
           label="Relationship"
           value={contact.relationship ?? ''}

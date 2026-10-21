@@ -103,21 +103,21 @@ export function TourOverlay({ currentTab, setTab }: Props) {
       />
 
       <div
-        className="absolute w-72 bg-white dark:bg-gray-900 rounded-lg shadow-xl border border-nhs-grey-4 dark:border-gray-700 p-4"
+        className="absolute w-72 bg-white dark:bg-canvas rounded-lg shadow-xl border border-nhs-grey-4 dark:border-line p-4"
         style={popoverStyle}
       >
         <p className="text-[11px] font-semibold text-nhs-blue uppercase tracking-wide mb-1">
           Step {activeStepIndex + 1} of {tour.steps.length}
         </p>
-        <h4 className="text-sm font-semibold text-nhs-grey-1 dark:text-gray-100 mb-1">{step.title}</h4>
-        <p className="text-xs text-nhs-grey-2 dark:text-gray-300 leading-relaxed mb-3">{step.body}</p>
+        <h4 className="text-sm font-semibold text-nhs-grey-1 dark:text-ink mb-1">{step.title}</h4>
+        <p className="text-xs text-nhs-grey-2 dark:text-ink-2 leading-relaxed mb-3">{step.body}</p>
         <div className="flex items-center justify-between">
-          <button onClick={skipTour} className="text-xs text-nhs-grey-3 dark:text-gray-500 hover:underline">
+          <button onClick={skipTour} className="text-xs text-nhs-grey-3 dark:text-muted hover:underline">
             Skip tour
           </button>
           <div className="flex items-center gap-2">
             {activeStepIndex > 0 && (
-              <button onClick={prevStep} className="text-xs px-2.5 py-1.5 rounded border border-nhs-grey-4 dark:border-gray-600 text-nhs-grey-2 dark:text-gray-300 hover:border-nhs-blue hover:text-nhs-blue">
+              <button onClick={prevStep} className="text-xs px-2.5 py-1.5 rounded border border-nhs-grey-4 dark:border-line-strong text-nhs-grey-2 dark:text-ink-2 hover:border-nhs-blue hover:text-nhs-blue">
                 Back
               </button>
             )}

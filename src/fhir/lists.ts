@@ -1,6 +1,6 @@
 import type * as fhir3 from 'fhir/r3'
 import type { GpConnectList, GpConnectListEntry, ListCategory } from './types'
-import { getEntries, resolveItemDisplay, extractOriginalTermText, extractId, fhirDateKey, hasNopatSecurity } from './utils'
+import { getEntries, getExtensionValue, resolveItemDisplay, extractOriginalTermText, extractId, fhirDateKey, hasNopatSecurity } from './utils'
 import { titleIndexKey } from './lineIndex'
 
 const PRIMARY_LIST_CODES = new Set([
@@ -68,6 +68,9 @@ export function extractLists(bundle: fhir3.Bundle): GpConnectList[] {
         e.url?.includes('Extension-CareConnect-GPC-ListWarningCode-1')
       )
       const warningCode = (warningExt as { valueCode?: string } | undefined)?.valueCode
+      const clinicalSetting = extractOriginalTermText(
+        getExtensionValue(list.extension, 'Extension-CareConnect-GPC-ClinicalSetting-1')?.valueCodeableConcept,
+      )
 
       const entries: GpConnectListEntry[] = (list.entry ?? []).map(e => {
         const ref = e.item.reference
@@ -109,6 +112,7 @@ export function extractLists(bundle: fhir3.Bundle): GpConnectList[] {
         encounterId,
         listCode,
         warningCode,
+        clinicalSetting,
         notForPfs: hasNopatSecurity(list),
       }
     })

@@ -21,27 +21,27 @@ export function DeleteConfirmDialog({ label, onConfirm, onCancel }: DeleteConfir
       onClick={onCancel}
     >
       <div
-        className="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-sm"
+        className="bg-white dark:bg-canvas rounded-xl shadow-xl w-full max-w-sm"
         onClick={e => e.stopPropagation()}
       >
-        <div className="px-5 py-4 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">Delete item?</h2>
+        <div className="px-5 py-4 border-b border-gray-200 dark:border-line">
+          <h2 className="text-base font-semibold text-gray-900 dark:text-ink">Delete item?</h2>
         </div>
 
         <div className="px-5 py-4 space-y-2">
-          <p className="text-sm text-gray-700 dark:text-gray-300">
+          <p className="text-sm text-gray-700 dark:text-ink-2">
             Are you sure you want to delete &ldquo;{label}&rdquo;? This cannot be undone.
           </p>
-          <p className="text-sm text-[var(--nhs-red,#DA291C)] dark:text-red-400 font-medium">
+          <p className="text-sm text-[var(--nhs-red,#DA291C)] dark:text-bad font-medium">
             This is not a normal GP system function - it will leave no trace.
           </p>
         </div>
 
-        <div className="flex justify-end gap-2 px-5 py-3 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex justify-end gap-2 px-5 py-3 border-t border-gray-200 dark:border-line">
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            className="px-4 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-ink-2 hover:bg-gray-100 dark:hover:bg-raised transition-colors"
           >
             Cancel
           </button>

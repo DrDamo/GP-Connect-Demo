@@ -15,12 +15,12 @@ type LookupState =
 function ActiveIndicator({ inactive }: { inactive?: boolean }) {
   if (inactive === undefined) return null
   return inactive ? (
-    <span className="inline-flex items-center gap-1 text-xs font-medium text-nhs-grey-2 dark:text-gray-400">
-      <span className="w-2 h-2 rounded-full bg-nhs-grey-3 dark:bg-gray-500" />
+    <span className="inline-flex items-center gap-1 text-xs font-medium text-nhs-grey-2 dark:text-muted">
+      <span className="w-2 h-2 rounded-full bg-nhs-grey-3 dark:bg-line-strong" />
       Inactive
     </span>
   ) : (
-    <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 dark:text-green-400">
+    <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 dark:text-ok">
       <span className="w-2 h-2 rounded-full bg-green-500" />
       Active
     </span>
@@ -33,10 +33,10 @@ function ActiveIndicator({ inactive }: { inactive?: boolean }) {
 export function SnomedDetailContent({ code, state, onClose }: { code: string; state: LookupState; onClose?: () => void }) {
   const body = (() => {
     if (state.status === 'loading') {
-      return <div className="p-3 text-xs text-nhs-grey-3 dark:text-gray-400">Looking up {code}…</div>
+      return <div className="p-3 text-xs text-nhs-grey-3 dark:text-muted">Looking up {code}…</div>
     }
     if (state.status === 'error') {
-      return <div className="p-3 text-xs text-red-700 dark:text-red-400">{state.message}</div>
+      return <div className="p-3 text-xs text-red-700 dark:text-bad">{state.message}</div>
     }
     const { detail } = state
     const fsn = detail.designations.find(d => d.use?.toLowerCase().includes('fully specified'))
@@ -51,32 +51,32 @@ export function SnomedDetailContent({ code, state, onClose }: { code: string; st
       return true
     })
     return (
-      <div className="p-3 text-xs text-nhs-grey-1 dark:text-gray-200 space-y-2.5 max-h-96 overflow-y-auto">
+      <div className="p-3 text-xs text-nhs-grey-1 dark:text-ink space-y-2.5 max-h-96 overflow-y-auto">
         <div className="flex items-center justify-between gap-2">
-          <span className="font-mono text-nhs-grey-3 dark:text-gray-400">{detail.code}</span>
+          <span className="font-mono text-nhs-grey-3 dark:text-muted">{detail.code}</span>
           <ActiveIndicator inactive={detail.inactive} />
         </div>
         {detail.resolvedFromDescriptionId && (
-          <div className="text-[10px] text-nhs-grey-3 dark:text-gray-500 italic">
+          <div className="text-[10px] text-nhs-grey-3 dark:text-muted italic">
             Resolved from description ID {detail.resolvedFromDescriptionId} to its concept
           </div>
         )}
         <div>
-          <div className="text-[10px] font-semibold uppercase tracking-wide text-nhs-grey-3 dark:text-gray-500 mb-0.5">
+          <div className="text-[10px] font-semibold uppercase tracking-wide text-nhs-grey-3 dark:text-muted mb-0.5">
             Fully specified name
           </div>
           <div className="font-medium">{fsn?.value ?? detail.display}</div>
         </div>
         {synonyms.length > 0 && (
           <div>
-            <div className="text-[10px] font-semibold uppercase tracking-wide text-nhs-grey-3 dark:text-gray-500 mb-0.5">
+            <div className="text-[10px] font-semibold uppercase tracking-wide text-nhs-grey-3 dark:text-muted mb-0.5">
               Synonyms
             </div>
             <ul className="space-y-1">
               {synonyms.map((d, i) => (
                 <li key={i}>
                   {d.value}
-                  {d.use && <span className="text-nhs-grey-3 dark:text-gray-500"> ({d.use})</span>}
+                  {d.use && <span className="text-nhs-grey-3 dark:text-muted"> ({d.use})</span>}
                 </li>
               ))}
             </ul>
@@ -84,13 +84,13 @@ export function SnomedDetailContent({ code, state, onClose }: { code: string; st
         )}
         {detail.attributes.length > 0 && (
           <div>
-            <div className="text-[10px] font-semibold uppercase tracking-wide text-nhs-grey-3 dark:text-gray-500 mb-0.5">
+            <div className="text-[10px] font-semibold uppercase tracking-wide text-nhs-grey-3 dark:text-muted mb-0.5">
               Attributes
             </div>
             <ul className="space-y-0.5">
               {detail.attributes.map((a, i) => (
                 <li key={i} className="flex items-baseline justify-between gap-3">
-                  <span className="text-nhs-grey-2 dark:text-gray-300 min-w-0">{a.attributeName}</span>
+                  <span className="text-nhs-grey-2 dark:text-ink-2 min-w-0">{a.attributeName}</span>
                   <span className="text-right shrink-0">{a.valueDisplay ?? a.valueCode ?? a.valueNumber}</span>
                 </li>
               ))}
@@ -114,7 +114,7 @@ export function SnomedDetailContent({ code, state, onClose }: { code: string; st
       <button
         onClick={onClose}
         aria-label="Close"
-        className="absolute top-1.5 right-1.5 w-5 h-5 flex items-center justify-center rounded text-nhs-grey-3 hover:bg-nhs-grey-5 hover:text-nhs-grey-1 dark:hover:bg-gray-700 dark:hover:text-gray-200 transition-colors"
+        className="absolute top-1.5 right-1.5 w-5 h-5 flex items-center justify-center rounded text-nhs-grey-3 hover:bg-nhs-grey-5 hover:text-nhs-grey-1 dark:hover:bg-raised dark:hover:text-ink transition-colors"
       >
         ✕
       </button>
@@ -181,7 +181,7 @@ export function SnomedCodeChip({ code, system = SNOMED_SYSTEM, status }: { code:
         ref={anchorRef}
         onMouseEnter={handleEnter}
         onMouseLeave={scheduleHide}
-        className="font-mono cursor-help border-b border-dotted border-nhs-grey-3 dark:border-gray-500"
+        className="font-mono cursor-help border-b border-dotted border-nhs-grey-3 dark:border-line-strong"
       >
         {code}
       </span>
@@ -189,7 +189,7 @@ export function SnomedCodeChip({ code, system = SNOMED_SYSTEM, status }: { code:
       {open && pos && createPortal(
         <div
           style={{ position: 'fixed', top: pos.top, left: pos.left, width: widenDropdown(pos, 340) }}
-          className="z-50 rounded-md border border-nhs-grey-4 bg-white shadow-lg dark:border-nhs-grey-2 dark:bg-gray-800"
+          className="z-50 rounded-md border border-nhs-grey-4 bg-white shadow-lg dark:border-line-strong dark:bg-surface"
           onMouseEnter={cancelHide}
           onMouseLeave={scheduleHide}
         >

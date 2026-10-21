@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import type { GpConnectBundle, GpConnectPractitioner, GpConnectPractitionerRole, GpConnectOrganisation, GpConnectHealthcareService, GpConnectLocation, GpConnectFhirMedication, CodeStatus } from '../../fhir/types'
 import { SearchFilterBox } from './SearchFilterBox'
 import { SnomedCodeChip } from './SnomedDetailPopup'
+import { ReferencedBy } from './ReferencedBy'
+import type { DomainId } from './domains'
 
 function practitionerSearchText(p: GpConnectPractitioner, roles: GpConnectPractitionerRole[], organisations: GpConnectOrganisation[]): string {
   const myRoles = roles.filter(r => r.practitionerId === p.id)
@@ -32,6 +34,7 @@ interface Props {
   selectedId?: string
   onSelect?: (id: string) => void
   onJumpToSource?: (id: string) => void
+  onJumpToRecord?: (domain: DomainId, id: string) => void
 }
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
@@ -61,13 +64,14 @@ function CollapsibleSectionHeader({ title, count, open, onToggle }: {
   )
 }
 
-function PractitionerCard({ p, roles, organisations, selected, onSelect, onJumpToSource }: {
+function PractitionerCard({ p, roles, organisations, selected, onSelect, onJumpToSource, children }: {
   p: GpConnectPractitioner
   roles: GpConnectPractitionerRole[]
   organisations: GpConnectOrganisation[]
   selected: boolean
   onSelect?: (id: string) => void
   onJumpToSource?: (id: string) => void
+  children?: React.ReactNode
 }) {
   const myRoles = roles.filter(r => r.practitionerId === p.id)
   return (
@@ -116,13 +120,15 @@ function PractitionerCard({ p, roles, organisations, selected, onSelect, onJumpT
           })}
         </div>
       )}
+      {children && <div onClick={e => e.stopPropagation()}>{children}</div>}
     </div>
   )
 }
 
-function OrganisationCard({ o, selected, onSelect, onJumpToSource }: {
+function OrganisationCard({ o, selected, onSelect, onJumpToSource, children }: {
   o: GpConnectOrganisation; selected: boolean
   onSelect?: (id: string) => void; onJumpToSource?: (id: string) => void
+  children?: React.ReactNode
 }) {
   return (
     <div
@@ -142,15 +148,18 @@ function OrganisationCard({ o, selected, onSelect, onJumpToSource }: {
         <Row label="ODS Code"    value={o.odsCode} />
         <Row label="Phone"       value={o.phone} />
         <Row label="Address"     value={o.address} />
+        <Row label="Main location" value={o.mainLocationName ?? o.mainLocationId} />
         <Row label="Resource ID" value={o.id} />
       </div>
+      {children && <div onClick={e => e.stopPropagation()}>{children}</div>}
     </div>
   )
 }
 
-function LocationCard({ l, selected, onSelect, onJumpToSource }: {
+function LocationCard({ l, selected, onSelect, onJumpToSource, children }: {
   l: GpConnectLocation; selected: boolean
   onSelect?: (id: string) => void; onJumpToSource?: (id: string) => void
+  children?: React.ReactNode
 }) {
   return (
     <div
@@ -170,13 +179,15 @@ function LocationCard({ l, selected, onSelect, onJumpToSource }: {
         <Row label="Address"     value={l.address} />
         <Row label="Resource ID" value={l.id} />
       </div>
+      {children && <div onClick={e => e.stopPropagation()}>{children}</div>}
     </div>
   )
 }
 
-function MedicationResourceCard({ m, status, selected, onSelect, onJumpToSource }: {
+function MedicationResourceCard({ m, status, selected, onSelect, onJumpToSource, children }: {
   m: GpConnectFhirMedication; status?: CodeStatus; selected: boolean
   onSelect?: (id: string) => void; onJumpToSource?: (id: string) => void
+  children?: React.ReactNode
 }) {
   return (
     <div
@@ -199,13 +210,15 @@ function MedicationResourceCard({ m, status, selected, onSelect, onJumpToSource 
         ))}
         <Row label="Resource ID"   value={m.id} />
       </div>
+      {children && <div onClick={e => e.stopPropagation()}>{children}</div>}
     </div>
   )
 }
 
-function HealthcareServiceCard({ h, selected, onSelect, onJumpToSource }: {
+function HealthcareServiceCard({ h, selected, onSelect, onJumpToSource, children }: {
   h: GpConnectHealthcareService; selected: boolean
   onSelect?: (id: string) => void; onJumpToSource?: (id: string) => void
+  children?: React.ReactNode
 }) {
   return (
     <div
@@ -227,13 +240,14 @@ function HealthcareServiceCard({ h, selected, onSelect, onJumpToSource }: {
         <Row label="Comment"     value={h.comment} />
         <Row label="Resource ID" value={h.id} />
       </div>
+      {children && <div onClick={e => e.stopPropagation()}>{children}</div>}
     </div>
   )
 }
 
 type SectionKey = 'practitioners' | 'organisations' | 'locations' | 'healthcareServices' | 'fhirMedications'
 
-export function SupportingResourcesView({ bundle, selectedId, onSelect, onJumpToSource }: Props) {
+export function SupportingResourcesView({ bundle, selectedId, onSelect, onJumpToSource, onJumpToRecord }: Props) {
   const {
     practitioners: allPractitioners, practitionerRoles,
     organisations: allOrganisations, healthcareServices: allHealthcareServices,
@@ -321,7 +335,9 @@ export function SupportingResourcesView({ bundle, selectedId, onSelect, onJumpTo
           {(openSections.has('practitioners') || !!trimmedQuery) && (
             <div className="grid grid-cols-1 gap-3">
               {practitioners.map(p => (
-                <PractitionerCard key={p.id} p={p} roles={practitionerRoles} organisations={organisations} selected={selectedId === p.id} onSelect={onSelect} onJumpToSource={onJumpToSource} />
+                <PractitionerCard key={p.id} p={p} roles={practitionerRoles} organisations={organisations} selected={selectedId === p.id} onSelect={onSelect} onJumpToSource={onJumpToSource}>
+                  {selectedId === p.id && <ReferencedBy record={bundle} self={`Practitioner/${p.id}`} onJumpToSource={onJumpToSource} onJumpToRecord={onJumpToRecord} />}
+                </PractitionerCard>
               ))}
             </div>
           )}
@@ -334,7 +350,9 @@ export function SupportingResourcesView({ bundle, selectedId, onSelect, onJumpTo
           {(openSections.has('organisations') || !!trimmedQuery) && (
             <div className="grid grid-cols-1 gap-3">
               {organisations.map(o => (
-                <OrganisationCard key={o.id} o={o} selected={selectedId === o.id} onSelect={onSelect} onJumpToSource={onJumpToSource} />
+                <OrganisationCard key={o.id} o={o} selected={selectedId === o.id} onSelect={onSelect} onJumpToSource={onJumpToSource}>
+                  {selectedId === o.id && <ReferencedBy record={bundle} self={`Organization/${o.id}`} onJumpToSource={onJumpToSource} onJumpToRecord={onJumpToRecord} />}
+                </OrganisationCard>
               ))}
             </div>
           )}
@@ -347,7 +365,9 @@ export function SupportingResourcesView({ bundle, selectedId, onSelect, onJumpTo
           {(openSections.has('locations') || !!trimmedQuery) && (
             <div className="grid grid-cols-1 gap-3">
               {locations.map(l => (
-                <LocationCard key={l.id} l={l} selected={selectedId === l.id} onSelect={onSelect} onJumpToSource={onJumpToSource} />
+                <LocationCard key={l.id} l={l} selected={selectedId === l.id} onSelect={onSelect} onJumpToSource={onJumpToSource}>
+                  {selectedId === l.id && <ReferencedBy record={bundle} self={`Location/${l.id}`} onJumpToSource={onJumpToSource} onJumpToRecord={onJumpToRecord} />}
+                </LocationCard>
               ))}
             </div>
           )}
@@ -360,7 +380,9 @@ export function SupportingResourcesView({ bundle, selectedId, onSelect, onJumpTo
           {(openSections.has('healthcareServices') || !!trimmedQuery) && (
             <div className="grid grid-cols-1 gap-3">
               {healthcareServices.map(h => (
-                <HealthcareServiceCard key={h.id} h={h} selected={selectedId === h.id} onSelect={onSelect} onJumpToSource={onJumpToSource} />
+                <HealthcareServiceCard key={h.id} h={h} selected={selectedId === h.id} onSelect={onSelect} onJumpToSource={onJumpToSource}>
+                  {selectedId === h.id && <ReferencedBy record={bundle} self={`HealthcareService/${h.id}`} onJumpToSource={onJumpToSource} onJumpToRecord={onJumpToRecord} />}
+                </HealthcareServiceCard>
               ))}
             </div>
           )}
@@ -373,7 +395,9 @@ export function SupportingResourcesView({ bundle, selectedId, onSelect, onJumpTo
           {(openSections.has('fhirMedications') || !!trimmedQuery) && (
             <div className="grid grid-cols-1 gap-3">
               {fhirMedications.map(m => (
-                <MedicationResourceCard key={m.id} m={m} status={m.snomedCode ? bundle.snomedStatus?.[m.snomedCode] : undefined} selected={selectedId === m.id} onSelect={onSelect} onJumpToSource={onJumpToSource} />
+                <MedicationResourceCard key={m.id} m={m} status={m.snomedCode ? bundle.snomedStatus?.[m.snomedCode] : undefined} selected={selectedId === m.id} onSelect={onSelect} onJumpToSource={onJumpToSource}>
+                  {selectedId === m.id && <ReferencedBy record={bundle} self={`Medication/${m.id}`} onJumpToSource={onJumpToSource} onJumpToRecord={onJumpToRecord} />}
+                </MedicationResourceCard>
               ))}
             </div>
           )}

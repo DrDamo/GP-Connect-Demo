@@ -25,7 +25,7 @@ export function BuilderPatientBanner({ patient }: Props) {
 
   return (
     <div
-      className={`shrink-0 bg-nhs-blue px-4 py-2.5 text-white ${hasExpandable ? 'cursor-pointer select-none' : ''}`}
+      className={`gpc-band shrink-0 bg-nhs-blue px-4 py-2.5 text-white ${hasExpandable ? 'cursor-pointer select-none' : ''}`}
       onClick={hasExpandable ? () => setExpanded(e => !e) : undefined}
     >
       <div className="flex items-center justify-between gap-4">

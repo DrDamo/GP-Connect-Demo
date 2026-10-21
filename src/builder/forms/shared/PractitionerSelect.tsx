@@ -5,8 +5,8 @@ import type { DraftRecord } from '../../types'
 // ---------------------------------------------------------------------------
 
 const SELECT_CLS =
-  'w-full rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-2 py-1.5 text-sm ' +
-  'text-nhs-grey-1 dark:bg-gray-800 ' +
+  'w-full rounded border border-nhs-grey-4 dark:border-line-strong px-2 py-1.5 text-sm ' +
+  'text-nhs-grey-1 dark:bg-surface ' +
   'focus:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue'
 
 export interface PractitionerSelectProps {

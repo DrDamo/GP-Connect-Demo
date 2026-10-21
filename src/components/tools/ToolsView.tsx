@@ -34,7 +34,7 @@ export function ToolsView() {
           <button
             type="button"
             onClick={() => setActiveToolId(null)}
-            className="text-sm text-nhs-grey-2 dark:text-gray-400 hover:text-nhs-blue"
+            className="text-sm text-nhs-grey-2 dark:text-muted hover:text-nhs-blue"
           >
             ← All tools
           </button>
@@ -48,8 +48,8 @@ export function ToolsView() {
     <div className="h-full overflow-y-auto p-6">
       <div className="max-w-4xl mx-auto space-y-4">
         <div>
-          <h2 className="text-xl font-semibold text-nhs-grey-1 dark:text-gray-100">Tools</h2>
-          <p className="text-sm text-nhs-grey-3 dark:text-gray-500 mt-1">
+          <h2 className="text-xl font-semibold text-nhs-grey-1 dark:text-ink">Tools</h2>
+          <p className="text-sm text-nhs-grey-3 dark:text-muted mt-1">
             Standalone utilities for working with GP Connect FHIR STU3 data
           </p>
         </div>
@@ -60,10 +60,10 @@ export function ToolsView() {
               key={tool.id}
               type="button"
               onClick={() => setActiveToolId(tool.id)}
-              className="text-left bg-white dark:bg-gray-900 rounded-xl border border-nhs-grey-4 dark:border-gray-700 p-5 hover:border-nhs-blue transition-colors"
+              className="text-left bg-white dark:bg-canvas rounded-xl border border-nhs-grey-4 dark:border-line p-5 hover:border-nhs-blue transition-colors"
             >
-              <h3 className="font-semibold text-nhs-grey-1 dark:text-gray-100">{tool.name}</h3>
-              <p className="text-xs text-nhs-grey-3 dark:text-gray-500 mt-1">{tool.description}</p>
+              <h3 className="font-semibold text-nhs-grey-1 dark:text-ink">{tool.name}</h3>
+              <p className="text-xs text-nhs-grey-3 dark:text-muted mt-1">{tool.description}</p>
               <p className="text-sm text-nhs-blue mt-3">Open →</p>
             </button>
           ))}

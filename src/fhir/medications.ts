@@ -225,6 +225,8 @@ export function extractMedications(bundle: fhir3.Bundle): GpConnectMedication[] 
     // GP Connect last issue date extension
     const lastIssuedExt = getExtensionValue(stmt.extension, 'Extension-CareConnect-GPC-MedicationStatementLastIssueDate-1')
     const lastIssuedDate = formatDate(lastIssuedExt?.valueDateTime ?? lastIssuedExt?.valueDate)
+    const dosageChangedExt = getExtensionValue(stmt.extension, 'Extension-CareConnect-MedicationDosageLastChanged-1')
+    const dosageLastChanged = formatDate(dosageChangedExt?.valueDateTime ?? dosageChangedExt?.valueDate)
 
     const requestIds = extractMedicationRequestIds(stmt)
     // MedicationStatement.basedOn references the intent:plan request (the authorisation)
@@ -388,6 +390,7 @@ export function extractMedications(bundle: fhir3.Bundle): GpConnectMedication[] 
       startDate,
       endDate,
       lastIssuedDate,
+      dosageLastChanged,
       numberOfRepeatsAllowed,
       numberOfIssued,
       authorisationExpiryDate,

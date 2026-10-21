@@ -4,6 +4,8 @@
 @theme {
   --color-nhs-blue: #005eb8;
   --color-nhs-blue-dark: #003087;
+  /* Alias — components use `hover:bg-nhs-dark-blue`, which previously matched no token */
+  --color-nhs-dark-blue: #003087;
   --color-nhs-blue-light: #4c9fd5;
   --color-nhs-green: #007f3b;
   --color-nhs-red: #d5281b;
@@ -14,11 +16,85 @@
   --color-nhs-grey-4: #aeb7bd;
   --color-nhs-grey-5: #e8edee;
   --color-nhs-white: #ffffff;
-  --font-sans: Arial, sans-serif;
+  --font-sans: "IBM Plex Sans", Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
-/* CodeMirror highlight colours — overridden in dark mode */
+/* ── Semantic colour tokens ──────────────────────────────────────────
+ * One palette, two themes. Light values keep the NHS look; dark values
+ * are a single teal-black family (bg → surface → raised share one hue)
+ * with teal as the only accent, and status colours as dark tint + light
+ * text pairs. Use these (`bg-surface`, `text-muted`, `border-line`,
+ * `bg-ok-bg text-ok` …) instead of Tailwind's gray/slate scales so dark
+ * mode stays one system.
+ */
+@theme inline {
+  --color-canvas: var(--c-canvas);
+  --color-surface: var(--c-surface);
+  --color-raised: var(--c-raised);
+  --color-raised-2: var(--c-raised-2);
+  --color-band: var(--c-band);
+  --color-line: var(--c-line);
+  --color-line-strong: var(--c-line-strong);
+  --color-ink: var(--c-ink);
+  --color-ink-2: var(--c-ink-2);
+  --color-muted: var(--c-muted);
+  --color-accent: var(--c-accent);
+  --color-accent-hover: var(--c-accent-hover);
+  --color-accent-ink: var(--c-accent-ink);
+  --color-accent-soft: var(--c-accent-soft);
+  --color-accent-line: var(--c-accent-line);
+  --color-ok: var(--c-ok);
+  --color-ok-bg: var(--c-ok-bg);
+  --color-ok-line: var(--c-ok-line);
+  --color-warn: var(--c-warn);
+  --color-warn-bg: var(--c-warn-bg);
+  --color-warn-line: var(--c-warn-line);
+  --color-bad: var(--c-bad);
+  --color-bad-bg: var(--c-bad-bg);
+  --color-bad-line: var(--c-bad-line);
+}
+
 :root {
+  color-scheme: light;
+
+  --c-canvas: #f0f4f5;
+  --c-surface: #ffffff;
+  --c-raised: #f3f6f7;
+  --c-raised-2: #e8edee;
+  --c-band: #eff6ff;
+  --c-line: #d8dde0;
+  --c-line-strong: #aeb7bd;
+  --c-ink: #212b32;
+  --c-ink-2: #425563;
+  --c-muted: #5d6f7b;
+  --c-accent: #005eb8;
+  --c-accent-hover: #003087;
+  --c-accent-ink: #ffffff;
+  --c-accent-soft: #e8f1fa;
+  --c-accent-line: #9cc3e6;
+  --c-ok: #007f3b;
+  --c-ok-bg: #e6f4ea;
+  --c-ok-line: #a3d9b5;
+  --c-warn: #8a5300;
+  --c-warn-bg: #fff4e0;
+  --c-warn-line: #f2c97d;
+  --c-bad: #b3261e;
+  --c-bad-bg: #fde8e6;
+  --c-bad-line: #f3aaa3;
+
+  /* JSON / XML syntax colours (Raw Source, Inspector, examples) */
+  --json-key: #0b6b74;
+  --json-str: #7a4a00;
+  --json-num: #6b3fa0;
+  --json-bool: #ae2a20;
+  --json-punct: #5d6f7b;
+
+  /* CodeMirror chrome and line highlights */
+  --cm-gutter-bg: #f8f9fa;
+  --cm-gutter-line: #e9ecef;
+  --cm-gutter-fg: #aeb7bd;
+  --cm-selection: #b3d4fc;
   --cm-highlight: #fffbcc;
   --cm-search-match: #dcfce7;
   --cm-current-match: #86efac;
@@ -36,11 +112,73 @@
   --cm-editor-gutter-fg: #aeb7bd;
 }
 
+.dark {
+  color-scheme: dark;
+
+  --c-canvas: #0e1517;
+  --c-surface: #152024;
+  --c-raised: #1b292e;
+  --c-raised-2: #22343a;
+  --c-band: #122a2d;
+  --c-line: #25353a;
+  --c-line-strong: #3d555c;
+  --c-ink: #e2eaec;
+  --c-ink-2: #bccacf;
+  --c-muted: #93a5ab;
+  --c-accent: #5cc2cb;
+  --c-accent-hover: #7fd3da;
+  --c-accent-ink: #0b1a1d;
+  --c-accent-soft: #163538;
+  --c-accent-line: #2a6b71;
+  --c-ok: #7fcf9e;
+  --c-ok-bg: #163021;
+  --c-ok-line: #2a5a3c;
+  --c-warn: #e9ad52;
+  --c-warn-bg: #3a2a12;
+  --c-warn-line: #6b4f1f;
+  --c-bad: #f28b80;
+  --c-bad-bg: #3d1c19;
+  --c-bad-line: #6e2f2a;
+
+  /* The NHS grey scale, re-pointed at the dark palette */
+  --color-nhs-grey-1: #e2eaec;
+  --color-nhs-grey-2: #bccacf;
+  --color-nhs-grey-3: #93a5ab;
+  --color-nhs-grey-4: #2c3e44;
+  --color-nhs-grey-5: #1b292e;
+
+  --json-key: #5cc2cb;
+  --json-str: #e3b56b;
+  --json-num: #c1a3f0;
+  --json-bool: #f28b80;
+  --json-punct: #7d9097;
+
+  --cm-gutter-bg: #0e1517;
+  --cm-gutter-line: #25353a;
+  --cm-gutter-fg: #5f7479;
+  --cm-selection: #1f4a4f;
+  /* Selected resource: a soft teal wash, not a solid block, so the JSON stays readable */
+  --cm-highlight: rgba(92, 194, 203, 0.13);
+  --cm-search-match: rgba(233, 173, 82, 0.22);
+  --cm-current-match: rgba(233, 173, 82, 0.45);
+  --cm-indent-0: rgba(255,  85,  85, 0.12);
+  --cm-indent-1: rgba(255, 170,   0, 0.12);
+  --cm-indent-2: rgba(  0, 170,  85, 0.12);
+  --cm-indent-3: rgba( 51, 153, 255, 0.12);
+  --cm-indent-4: rgba(170,  85, 255, 0.12);
+
+  --cm-editor-bg: #0e1517;
+  --cm-editor-fg: #e2eaec;
+  --cm-editor-caret: #5cc2cb;
+  --cm-editor-gutter-bg: #152024;
+  --cm-editor-gutter-fg: #5f7479;
+}
+
 body {
   margin: 0;
-  font-family: Arial, sans-serif;
-  background-color: #f0f4f5;
-  color: #212b32;
+  font-family: var(--font-sans);
+  background-color: var(--c-canvas);
+  color: var(--c-ink);
   transition: background-color 0.15s, color 0.15s;
 }
 
@@ -48,157 +186,214 @@ body {
   min-height: 100svh;
 }
 
-/* ── Dark mode ───────────────────────────────────────────────────── */
-
-.dark {
-  /* Invert the NHS grey scale for dark surfaces */
-  --color-nhs-grey-1: #e8edee;
-  --color-nhs-grey-2: #b0c0cc;
-  --color-nhs-grey-3: #7a8f9a;
-  --color-nhs-grey-4: #2d4256;
-  --color-nhs-grey-5: #162032;
-
-  /* CodeMirror highlight colours */
-  --cm-highlight: #6b5500;
-  --cm-search-match: #1f5c30;
-  --cm-current-match: #2a7a45;
-
-  /* Training markdown editor */
-  --cm-editor-bg: #111827;
-  --cm-editor-fg: #e5e7eb;
-  --cm-editor-caret: #7dd3fc;
-  --cm-editor-gutter-bg: #1f2937;
-  --cm-editor-gutter-fg: #6b7280;
-}
-
-html.dark body {
-  background-color: #0e1621;
-  color: #e8edee;
-}
-
-/*
- * Tailwind utility overrides for dark mode.
- * Two-class selectors have specificity (0,2,0) which beats the
- * single-class utility (0,1,0), so no !important needed.
+/* ── Dark mode: light-only utilities mapped onto tokens ─────────────
+ * Many components were written light-first (`bg-white`, `bg-blue-50`,
+ * `text-nhs-blue` …). These rules give those utilities their dark
+ * meaning centrally. They are unlayered, so they win over Tailwind's
+ * layered utilities — including explicit `dark:` variants on the same
+ * element, which is why the values here must match the tokens those
+ * variants use.
  */
 
-/* Main card / panel surfaces */
-.dark .bg-white {
-  background-color: #162032;
-}
+/* Surfaces */
+.dark .bg-white { background-color: var(--c-surface); }
+.dark .hover\:bg-white:hover { background-color: var(--c-raised); }
+.dark .bg-white\/60 { background-color: color-mix(in srgb, var(--c-raised) 85%, transparent); }
+.dark .bg-white\/50 { background-color: color-mix(in srgb, var(--c-raised) 70%, transparent); }
+.dark .bg-white\/40 { background-color: color-mix(in srgb, var(--c-raised) 50%, transparent); }
+.dark .border-b-white { border-bottom-color: var(--c-surface); }
 
-/* Table row selected / hover */
-.dark .bg-blue-50 {
-  background-color: #1a2838;
-}
-.dark .hover\:bg-blue-50:hover {
-  background-color: #1a2838;
-}
+/* Selected / expanded rows */
+.dark .bg-blue-50,
+.dark .hover\:bg-blue-50:hover,
+.dark .bg-blue-50\/50 { background-color: var(--c-band); }
 .dark .bg-blue-100,
-.dark .hover\:bg-blue-100:hover {
-  background-color: #1e3048;
-}
-.dark .bg-blue-200 {
-  background-color: #1e3a5f;
-}
+.dark .hover\:bg-blue-100:hover,
+.dark .bg-blue-200 { background-color: var(--c-accent-soft); }
+.dark .text-blue-800 { color: var(--c-accent); }
+.dark .border-blue-300 { border-color: var(--c-accent-line); }
 
-/* Blue badge text/border (draft, intended status pills) */
-.dark .text-blue-800 {
-  color: #a8d8ff;
-}
-.dark .border-blue-300 {
-  border-color: #2d5a8e;
-}
+/* nhs-grey-4 is a border colour in dark mode; as text (faint ids, hints) it needs to stay legible */
+.dark .text-nhs-grey-4 { color: #6f8389; }
 
-/* Expanded detail panel backgrounds (bg-blue-50/50) */
-.dark .bg-blue-50\/50 {
-  background-color: rgb(26 40 56 / 0.9);
-}
+/* bg-nhs-grey-5 and its hover would otherwise be the same colour */
+.dark .hover\:bg-nhs-grey-5:hover { background-color: var(--c-raised-2); }
 
-/* Test group and sub-row surfaces (bg-white/40, bg-white/50, bg-white/60) */
-.dark .bg-white\/60 {
-  background-color: rgb(30 48 70 / 0.85);
-}
-.dark .bg-white\/50 {
-  background-color: rgb(30 48 70 / 0.7);
-}
-.dark .bg-white\/40 {
-  background-color: rgb(30 48 70 / 0.5);
-}
-
-/* Nav item hover (hover:bg-white) */
-.dark .hover\:bg-white:hover {
-  background-color: #1c2a3e;
-}
-
-/* NHS blue (#005eb8) is designed for white backgrounds — too dark for dark surfaces.
-   Boost text, border, and focus-ring to the lighter NHS blue (#4c9fd5) in dark mode.
-   bg-nhs-blue is intentionally excluded so the header/badge backgrounds stay correct. */
+/* NHS blue is built for white backgrounds; in dark mode the accent is teal */
 .dark .text-nhs-blue,
-.dark .hover\:text-nhs-blue:hover {
-  color: #4c9fd5;
-}
+.dark .hover\:text-nhs-blue:hover { color: var(--c-accent); }
 .dark .border-nhs-blue,
 .dark .hover\:border-nhs-blue:hover,
-.dark .focus\:border-nhs-blue:focus {
-  border-color: #4c9fd5;
-}
-.dark .focus\:ring-nhs-blue:focus {
-  --tw-ring-color: #4c9fd5;
-}
+.dark .focus\:border-nhs-blue:focus { border-color: var(--c-accent); }
+.dark .focus\:ring-nhs-blue:focus { --tw-ring-color: var(--c-accent); }
+.dark .border-nhs-blue\/20 { border-color: var(--c-line); }
+.dark .border-nhs-blue\/30:not([class*="dark:border-"]) { border-color: var(--c-accent-line); }
+.dark :is(.bg-nhs-blue\/5, .bg-nhs-blue\/10):not([class*="dark:bg-"]) { background-color: var(--c-accent-soft); }
+/* Filled NHS-blue controls (buttons, active tabs, count badges) → teal with dark ink, as in the reference */
+.dark .bg-nhs-blue { background-color: var(--c-accent); color: var(--c-accent-ink); }
+.dark .hover\:bg-nhs-dark-blue:hover,
+.dark .hover\:bg-nhs-blue:hover { background-color: var(--c-accent-hover); color: var(--c-accent-ink); }
 
-/* Active tab "flush" bottom border must match the dark card surface, not stay white */
-.dark .border-b-white {
-  border-bottom-color: #162032;
-}
+/* ── Dark mode: status tints written light-only ─────────────────────
+ * Pills and banners like `bg-green-100 text-green-800` were showing as
+ * light patches on dark pages. Map them to the status token pairs —
+ * but only where the element doesn't already choose its own dark
+ * colour (`:not([class*="dark:…"])`), so explicit choices win.
+ */
+.dark :is(.bg-green-50, .bg-green-100, .bg-emerald-50, .bg-emerald-100):not([class*="dark:bg-"]) { background-color: var(--c-ok-bg); }
+.dark :is(.text-green-600, .text-green-700, .text-green-800, .text-emerald-600, .text-emerald-700, .text-emerald-800, .text-nhs-green):not([class*="dark:text-"]) { color: var(--c-ok); }
+.dark :is(.border-green-200, .border-green-300, .border-emerald-200, .border-emerald-300):not([class*="dark:border-"]) { border-color: var(--c-ok-line); }
 
-/* hover:bg-nhs-grey-5 — both colours collapse to #162032 in dark mode, making hover
-   states invisible. Lift the hover target slightly so it's distinguishable. */
-.dark .hover\:bg-nhs-grey-5:hover {
-  background-color: #1e2d40;
-}
+.dark :is(.bg-amber-50, .bg-amber-100, .bg-yellow-50, .bg-yellow-100, .bg-orange-100):not([class*="dark:bg-"]) { background-color: var(--c-warn-bg); }
+.dark :is(.text-amber-600, .text-amber-700, .text-amber-800, .text-amber-900, .text-yellow-700, .text-yellow-800, .text-orange-700, .text-orange-800):not([class*="dark:text-"]) { color: var(--c-warn); }
+.dark :is(.border-amber-200, .border-amber-300, .border-amber-400, .border-yellow-200, .border-yellow-300, .border-yellow-400, .border-orange-300):not([class*="dark:border-"]) { border-color: var(--c-warn-line); }
 
-/* ── CodeMirror dark theme ───────────────────────────────────────── */
+.dark :is(.bg-red-50, .bg-red-100):not([class*="dark:bg-"]) { background-color: var(--c-bad-bg); }
+.dark :is(.text-red-600, .text-red-700, .text-red-800, .text-nhs-red):not([class*="dark:text-"]) { color: var(--c-bad); }
+.dark :is(.border-red-200, .border-red-300):not([class*="dark:border-"]) { border-color: var(--c-bad-line); }
 
-.dark .cm-editor {
-  background-color: #162032;
-  color: #e0e8ed;
+/* Light neutrals written without a dark variant */
+.dark :is(.bg-gray-50, .bg-gray-100, .bg-slate-50, .bg-slate-100):not([class*="dark:bg-"]) { background-color: var(--c-raised); }
+.dark :is(.text-gray-700, .text-gray-800, .text-gray-900, .text-slate-700, .text-slate-800, .text-slate-900):not([class*="dark:text-"]) { color: var(--c-ink); }
+.dark :is(.text-gray-500, .text-gray-600, .text-slate-500, .text-slate-600):not([class*="dark:text-"]) { color: var(--c-muted); }
+.dark :is(.border-gray-100, .border-gray-200, .border-gray-300, .border-slate-200, .border-slate-300):not([class*="dark:border-"]) { border-color: var(--c-line); }
+
+/* ── Chrome: header and patient banner ──────────────────────────────
+ * Solid NHS blue in light mode. In dark mode they become quiet bands so
+ * the record, not the frame, is the brightest thing on screen. Their
+ * children are written against blue (text-white/70, border-white/40 …),
+ * so those are remapped inside the scope only.
+ */
+.dark .gpc-chrome {
+  background-color: var(--c-surface);
+  color: var(--c-ink);
+  border-bottom: 1px solid var(--c-line);
+  box-shadow: none;
 }
-.dark .cm-scroller {
-  background-color: #162032;
+.dark .gpc-band {
+  background-color: var(--c-band);
+  color: var(--c-ink);
+  box-shadow: inset 0 0 0 1px var(--c-line);
 }
-.dark .cm-gutters {
-  background-color: #0e1621;
-  border-right-color: #2d4256;
-  color: #5a7a94;
-}
-/* Keep selection visible */
-.dark .cm-selectionBackground,
-.dark .cm-focused .cm-selectionBackground {
-  background-color: #1e3a5f;
-}
-/* Syntax token colours for dark backgrounds */
-.dark .cm-content { color: #cdd5de; }
-/* JSON/XML strings */
-.dark .ͼ1 .ͼb { color: #a8d8ff; }
-/* JSON property names */
-.dark .ͼ1 .ͼc { color: #7ee787; }
-/* Numbers / booleans */
-.dark .ͼ1 .ͼd { color: #f8c555; }
-/* Punctuation */
-.dark .ͼ1 .ͼe { color: #8b9eb8; }
+.dark :is(.gpc-chrome, .gpc-band) .text-white { color: var(--c-ink); }
+.dark :is(.gpc-chrome, .gpc-band) :is(.text-white\/90, .hover\:text-white:hover) { color: var(--c-ink); }
+.dark :is(.gpc-chrome, .gpc-band) :is(.text-white\/60, .text-white\/70, .text-white\/75) { color: var(--c-muted); }
+/* Header "Transfer-degraded on import" pill: amber-400 + nhs-grey-1 would turn light-on-amber */
+.dark .gpc-chrome .bg-amber-400 { background-color: var(--c-warn-bg); color: var(--c-warn); box-shadow: inset 0 0 0 1px var(--c-warn-line); }
+.dark :is(.gpc-chrome, .gpc-band) :is(.border-white\/20, .border-white\/25, .border-white\/40) { border-color: var(--c-line-strong); }
+.dark :is(.gpc-chrome, .gpc-band) .hover\:border-white\/80:hover { border-color: var(--c-accent); }
+.dark :is(.gpc-chrome, .gpc-band) :is(.bg-white\/15, .bg-white\/20) { background-color: var(--c-raised); }
+.dark :is(.gpc-chrome, .gpc-band) .hover\:bg-white\/10:hover { background-color: var(--c-raised); }
+.dark .gpc-band .text-green-100 { color: var(--c-ok); }
+.dark .gpc-band .bg-green-400\/30 { background-color: var(--c-ok-bg); }
+.dark .gpc-band .border-green-300\/50 { border-color: var(--c-ok-line); }
+.dark .gpc-band .text-red-100 { color: var(--c-bad); }
+.dark .gpc-band .bg-red-400\/30 { background-color: var(--c-bad-bg); }
+.dark .gpc-band .border-red-300\/50 { border-color: var(--c-bad-line); }
+.dark .gpc-band .text-green-300 { color: var(--c-ok); }
+.dark .gpc-band .text-yellow-300 { color: var(--c-warn); }
+/* The NHS logo keeps its identity: white on NHS blue */
+.dark .gpc-nhs-logo { background-color: #005eb8; color: #ffffff; }
+
+/* ── CodeMirror ───────────────────────────────────────────────────── */
+
+.dark .cm-editor,
+.dark .cm-scroller { background-color: var(--c-surface); }
+.dark .cm-content { color: var(--c-ink-2); }
 
 /* ── Indent rainbow ─────────────────────────────────────────────── */
 
-.dark {
-  --cm-indent-0: rgba(255,  85,  85, 0.18);
-  --cm-indent-1: rgba(255, 170,   0, 0.18);
-  --cm-indent-2: rgba(  0, 170,  85, 0.18);
-  --cm-indent-3: rgba( 51, 153, 255, 0.18);
-  --cm-indent-4: rgba(170,  85, 255, 0.18);
-}
 .cm-indent-level-0 { background-color: var(--cm-indent-0); }
 .cm-indent-level-1 { background-color: var(--cm-indent-1); }
 .cm-indent-level-2 { background-color: var(--cm-indent-2); }
 .cm-indent-level-3 { background-color: var(--cm-indent-3); }
 .cm-indent-level-4 { background-color: var(--cm-indent-4); }
+
+@media (prefers-reduced-motion: reduce) {
+  body { transition: none; }
+}
+
+/* ── Relationship visualiser ─────────────────────────────────────────
+ * Line colours encode what a reference means (contains, based on,
+ * clinical link, happened in, who/where/what); dot colours encode the
+ * resource type. Both have light and dark values. */
+.gpc-viz {
+  --viz-contains: #5d6f7b; --viz-chain: #b26a00; --viz-link: #005eb8; --viz-context: #8a9aa4; --viz-actor: #aeb7bd;
+  --viz-enc: #005eb8; --viz-list: #5d6f7b; --viz-cond: #b3261e; --viz-obs: #6b3fa0; --viz-mr: #b26a00;
+  --viz-ms: #007f3b; --viz-med: #0b6b74; --viz-who: #768692;
+  --viz-dr: #8a1538; --viz-pat: #212b32; --viz-patient: #425563;
+  --viz-ring-inner: #005eb8; --viz-ring-outer: #b26a00;
+}
+.dark .gpc-viz {
+  --viz-contains: #93a5ab; --viz-chain: #e9ad52; --viz-link: #5cc2cb; --viz-context: #6f8389; --viz-actor: #4a6066;
+  --viz-enc: #5cc2cb; --viz-list: #93a5ab; --viz-cond: #f28b80; --viz-obs: #c1a3f0; --viz-mr: #e9ad52;
+  --viz-ms: #7fcf9e; --viz-med: #7fd3da; --viz-who: #93a5ab;
+  --viz-dr: #f0a6c0; --viz-pat: #e8eef0; --viz-patient: #b9c7cb;
+  --viz-ring-inner: #5cc2cb; --viz-ring-outer: #c1a3f0;
+}
+.gpc-viz .viz-edge { fill: none; stroke-width: 1.5; transition: opacity 0.12s; }
+.gpc-viz .viz-edge.contains { stroke: var(--viz-contains); }
+.gpc-viz .viz-edge.chain { stroke: var(--viz-chain); stroke-width: 2; }
+.gpc-viz .viz-edge.link { stroke: var(--viz-link); stroke-width: 1.7; }
+.gpc-viz .viz-edge.context { stroke: var(--viz-context); stroke-dasharray: 5 4; }
+.gpc-viz .viz-edge.actor { stroke: var(--viz-actor); stroke-dasharray: 1.5 3.5; stroke-linecap: round; }
+.gpc-viz .viz-edge.patient { stroke: var(--viz-patient); stroke-dasharray: 8 3 1.5 3; }
+.gpc-viz .is-dim .viz-edge:not(.hot) { opacity: 0.1; }
+.gpc-viz .is-dim .viz-node:not(.hot) { opacity: 0.3; }
+.gpc-viz .viz-behind .viz-edge { opacity: 0.4; }
+.gpc-viz .viz-behind.is-dim .viz-edge { opacity: 0.12; }
+.gpc-viz .viz-node { cursor: pointer; transition: opacity 0.12s; outline: none; }
+.gpc-viz .viz-node rect.box { fill: var(--c-raised); stroke: var(--c-line-strong); stroke-width: 1; }
+.gpc-viz .viz-node.focus rect.box { fill: var(--c-accent-soft); stroke: var(--c-accent); stroke-width: 2; }
+.gpc-viz .viz-node.far rect.box { fill: var(--c-surface); stroke-dasharray: 3 3; }
+.gpc-viz .viz-node.cluster rect.box { fill: var(--c-surface); stroke-dasharray: 7 3; }
+.gpc-viz .viz-node.pinned rect.box, .gpc-viz .viz-node:focus-visible rect.box { stroke: var(--c-accent); stroke-width: 2.5; }
+.gpc-viz .viz-node .ty { font: 500 10px "IBM Plex Mono", ui-monospace, monospace; fill: var(--c-muted); }
+.gpc-viz .viz-node .lb { font: 600 12.5px "IBM Plex Sans", Arial, sans-serif; fill: var(--c-ink); }
+.gpc-viz .viz-node.far .lb { fill: var(--c-ink-2); font-weight: 500; }
+.gpc-viz .viz-lane-bg { fill: var(--c-raised); opacity: 0.5; }
+.gpc-viz .viz-lane-title { font: 600 12px "IBM Plex Sans", Arial, sans-serif; fill: var(--c-muted); }
+.gpc-viz .viz-ring { stroke-width: 1.25; stroke-dasharray: 4 6; fill-opacity: 0.06; stroke-opacity: 0.4; }
+.gpc-viz .viz-ring.inner { fill: var(--viz-ring-inner); stroke: var(--viz-ring-inner); }
+.gpc-viz .viz-ring.outer { fill: var(--viz-ring-outer); stroke: var(--viz-ring-outer); }
+
+.gpc-viz .viz-box {
+  border: 1px solid var(--c-line-strong); border-radius: 9px; padding: 10px 12px 12px;
+  display: flex; flex-direction: column; gap: 10px; background: var(--c-surface);
+  position: relative; z-index: 1; cursor: pointer; outline: none;
+}
+.gpc-viz .viz-box .viz-box { background: var(--c-raised); }
+.gpc-viz .viz-box .viz-box .viz-box { background: var(--c-surface); }
+.gpc-viz .viz-box .viz-box .viz-box .viz-box { background: var(--c-raised); }
+.gpc-viz .viz-box.group { cursor: default; border-style: dashed; }
+.gpc-viz .viz-box.inferred { border-style: dashed; }
+.gpc-viz .viz-tl-grid { stroke: var(--c-line); stroke-dasharray: 2 4; }
+.gpc-viz .viz-tl-tick { font: 500 11px "IBM Plex Sans", Arial, sans-serif; fill: var(--c-muted); }
+.gpc-viz .viz-tl-label { font: 600 12.5px "IBM Plex Sans", Arial, sans-serif; fill: var(--c-ink); }
+.gpc-viz .viz-tl-sub { font: 500 10.5px "IBM Plex Mono", ui-monospace, monospace; fill: var(--c-muted); }
+.gpc-viz .viz-tl-bar { fill: color-mix(in srgb, var(--viz-mr) 28%, transparent); stroke: var(--viz-mr); stroke-width: 1.25; }
+.gpc-viz .viz-tl-bar.stopped { stroke-dasharray: 4 3; fill: color-mix(in srgb, var(--viz-mr) 12%, transparent); }
+.gpc-viz .viz-tl-stmt { fill: var(--viz-ms); opacity: 0.85; }
+.gpc-viz .viz-tl-issue { fill: var(--c-surface); stroke: var(--viz-mr); stroke-width: 2; }
+.gpc-viz .viz-node.early .viz-tl-issue { fill: var(--c-warn, #b26a00); stroke: var(--c-warn, #b26a00); }
+.gpc-viz .viz-tl-ongoing { fill: var(--viz-mr); }
+.gpc-viz .viz-tl .viz-node.hot .viz-tl-bar, .gpc-viz .viz-tl .viz-node.pinned .viz-tl-bar,
+.gpc-viz .viz-tl .viz-node:focus-visible .viz-tl-bar { stroke: var(--c-accent); stroke-width: 2.5; }
+.gpc-viz .viz-tl .viz-node.hot .viz-tl-issue, .gpc-viz .viz-tl .viz-node.pinned .viz-tl-issue,
+.gpc-viz .viz-tl .viz-node:focus-visible .viz-tl-issue { stroke: var(--c-accent); r: 6.5; }
+.gpc-viz .viz-tl .viz-node.hot .viz-tl-stmt, .gpc-viz .viz-tl .viz-node.pinned .viz-tl-stmt { opacity: 1; stroke: var(--c-accent); stroke-width: 1.5; }
+.gpc-viz .viz-box.focus { border: 2px solid var(--c-accent); }
+.gpc-viz .viz-card {
+  border: 1px solid var(--c-line); border-radius: 8px; padding: 7px 10px; background: var(--c-raised);
+  display: flex; flex-direction: column; cursor: pointer; outline: none; position: relative; z-index: 1;
+}
+.gpc-viz .viz-card.far { border-style: dashed; background: transparent; }
+.gpc-viz .viz-box.hot, .gpc-viz .viz-card.hot { box-shadow: 0 0 0 2px var(--c-accent); }
+.gpc-viz .viz-box.pinned, .gpc-viz .viz-card.pinned,
+.gpc-viz .viz-box:focus-visible, .gpc-viz .viz-card:focus-visible { box-shadow: 0 0 0 3px var(--c-accent); }
+.gpc-viz .viz-kids { display: flex; flex-wrap: wrap; gap: 10px; }
+.gpc-viz .viz-kids > * { flex: 1 1 210px; min-width: 0; }
+.gpc-viz .viz-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }
+@media (prefers-reduced-motion: reduce) {
+  .gpc-viz .viz-edge, .gpc-viz .viz-node { transition: none; }
+}

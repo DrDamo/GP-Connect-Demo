@@ -1,50 +1,16 @@
 import type { GpConnectPatient, GpConnectContact, GpConnectCodedDataItem } from './types'
+import { getBundleIndex, lookupReference, type AnyResource } from './bundleIndex'
 
-export type AnyResource = fhir3.Resource & { resourceType: string }
+export type { AnyResource }
 
-// Some vendor exports include the exact same resource id twice within a
-// single bundle (invalid per the FHIR spec, but seen in real GP Connect
-// exports) — de-duplicate by id, keeping the first occurrence, so callers
-// never see the same clinical record rendered as two rows.
+// De-duplicated by id (see getBundleIndex). Returns a copy so callers can
+// sort or filter without disturbing the cached index.
 export function getEntries<T extends fhir3.Resource>(bundle: fhir3.Bundle, resourceType: string): T[] {
-  const seenIds = new Set<string>()
-  const results: (T & AnyResource)[] = []
-  for (const entry of bundle.entry ?? []) {
-    const r = entry.resource as AnyResource | undefined
-    if (r?.resourceType !== resourceType) continue
-    if (r.id) {
-      if (seenIds.has(r.id)) continue
-      seenIds.add(r.id)
-    }
-    results.push(r as T & AnyResource)
-  }
-  return results
+  return (getBundleIndex(bundle).byType.get(resourceType) ?? []).slice() as unknown as T[]
 }
 
 export function resolveReference(bundle: fhir3.Bundle, ref: string | undefined): AnyResource | undefined {
-  if (!ref) return undefined
-  // Local contained reference (#id) — search all List.contained[] arrays
-  if (ref.startsWith('#')) {
-    const localId = ref.slice(1)
-    for (const entry of bundle.entry ?? []) {
-      const contained = (entry.resource as { contained?: fhir3.Resource[] } | undefined)?.contained
-      if (contained) {
-        const found = contained.find(c => c.id === localId)
-        if (found) return found as AnyResource
-      }
-    }
-    return undefined
-  }
-  return (bundle.entry ?? [])
-    .map(e => e.resource as AnyResource | undefined)
-    .find(r => {
-      if (!r) return false
-      const relRef = `${r.resourceType}/${r.id}`
-      // Match by ResourceType/id only. The bare-id fallback (ref.endsWith(`/${r.id}`))
-      // is intentionally omitted: it ignores resource type and causes wrong matches
-      // when two resources share the same id (e.g. Organization/1 matching Patient/1).
-      return ref === relRef || ref.endsWith(`/${relRef}`)
-    })
+  return lookupReference(getBundleIndex(bundle), ref)
 }
 
 /** Returns a lexicographically sortable key from any FHIR date/datetime string.
@@ -138,10 +104,17 @@ export function extractSnomedDisplay(codings: fhir3.Coding[] | undefined): strin
 // extension slightly differently, but this app only ever sees STU3 data.
 const CODING_SCT_DESC_ID_EXT = 'Extension-coding-sctdescid'
 
+// EMIS also sends, on dosage site codings in STU3 bundles, a flat variant:
+// a flat `coding-sctdescid` (valueId only) alongside a separate UK Core
+// description-display extension carrying the term as a plain valueString.
+// Seen in real INT exports, so honoured as a fallback.
+const UKCORE_SCT_DESC_DISPLAY_EXT = 'Extension-UKCore-CodingSCTDescDisplay'
+
 function findDescriptionDisplay(coding: fhir3.Coding): string | undefined {
   const wrapper = getExtensionValue(coding.extension, CODING_SCT_DESC_ID_EXT)
   const subExtensions = (wrapper as unknown as { extension?: fhir3.Extension[] } | undefined)?.extension
   const valueString = subExtensions?.find(e => e.url === 'descriptionDisplay')?.valueString
+    ?? getExtensionValue(coding.extension, UKCORE_SCT_DESC_DISPLAY_EXT)?.valueString
   return typeof valueString === 'string' && valueString ? valueString : undefined
 }
 

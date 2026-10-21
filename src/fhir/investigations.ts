@@ -200,6 +200,16 @@ function obsHasValue(obs: ObsLike): boolean {
   return obs.valueQuantity?.value !== undefined || !!cast.valueString || !!obs.valueCodeableConcept
 }
 
+// A result the lab couldn't give a value for still carries result-level notes
+// in its comment (e.g. TPP's "Interpretation Code: Outside reference range"
+// and "U=Unsuitable for analysis" on a haemolysed potassium). Group headers
+// never do, so these mustn't start a new implicit group.
+const RESULT_NOTE = /^\s*(Value|Interpretation Code|Reference range):|\bU=Unsuitable\b/im
+
+function isValuelessResult(obs: ObsLike): boolean {
+  return !obsHasValue(obs) && !!obs.comment && RESULT_NOTE.test(obs.comment)
+}
+
 function extractObsResult(obs: ObsLike): Pick<GpConnectInvestigationResult,
   'value' | 'unit' | 'referenceRange' | 'interpretation' | 'comment' | 'components' | 'isApproximate'> {
   const vq = obs.valueQuantity
@@ -533,15 +543,17 @@ export function extractInvestigations(bundle: fhir3.Bundle): GpConnectInvestigat
 
         let currentGroup: GpConnectTestGroup | null = null
         let prevHadValue = false
+        const implicitHeaders = new Map<GpConnectTestGroup, ObsLike>()
 
         for (const obs of labObs) {
           const code = obs.code?.coding?.[0]?.code ?? ''
           if (code === SKIP_CODE) continue
 
           const hasValue = obsHasValue(obs)
+          const valuelessResult = isValuelessResult(obs)
           const isGroupHeader = hasExplicitGroups
             ? code === GROUP_HEADER_CODE
-            : !hasValue && (testGroups.length === 0 || prevHadValue)
+            : !hasValue && !valuelessResult && (testGroups.length === 0 || prevHadValue)
 
           if (isGroupHeader) {
             const obsCoding = obs.code?.coding
@@ -558,6 +570,7 @@ export function extractInvestigations(bundle: fhir3.Bundle): GpConnectInvestigat
               results: [],
             }
             testGroups.push(currentGroup)
+            if (!hasExplicitGroups) implicitHeaders.set(currentGroup, obs)
             prevHadValue = false
           } else {
             if (!currentGroup) {
@@ -576,8 +589,26 @@ export function extractInvestigations(bundle: fhir3.Bundle): GpConnectInvestigat
               ...obsResult(obs),
             }
             currentGroup.results.push(result)
-            prevHadValue = hasValue
+            // Counts as a result, so a header straight after it still starts a group.
+            prevHadValue = hasValue || valuelessResult
           }
+        }
+
+        // An implicit "header" with nothing after it (e.g. a valueless
+        // "Differential white blood cell count" at the end of an FBC) was a
+        // result all along — return it to the group before it.
+        for (const [group, obs] of implicitHeaders) {
+          const at = testGroups.indexOf(group)
+          if (group.results.length || at < 1) continue
+          testGroups[at - 1].results.push({
+            id: obs.id ?? crypto.randomUUID(),
+            reportId,
+            name: resolveObsName(obs, 'Result'),
+            snomedCode: extractSnomedCode(obs.code?.coding),
+            isTransferDegraded: isTransferDegradedObs(obs) || undefined,
+            ...obsResult(obs),
+          })
+          testGroups.splice(at, 1)
         }
       }
 

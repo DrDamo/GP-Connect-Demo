@@ -88,7 +88,7 @@ function ResultRow({
     })
 
   return (
-    <div className="border border-nhs-grey-5 dark:border-nhs-grey-4 rounded p-2 mb-1.5 bg-white dark:bg-gray-900">
+    <div className="border border-nhs-grey-5 dark:border-line rounded p-2 mb-1.5 bg-white dark:bg-canvas">
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 mb-2">
         <SnomedPicker
           label="Result name"
@@ -151,8 +151,8 @@ function TestGroupCard({
     dispatch({ type: 'UPDATE_TEST_GROUP', payload: { invTempId, groupTempId: group._tempId, updates } })
 
   return (
-    <div className="border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg mb-2 overflow-hidden">
-      <div className="p-3 bg-nhs-grey-5 dark:bg-gray-800 space-y-2">
+    <div className="border border-nhs-grey-4 dark:border-line-strong rounded-lg mb-2 overflow-hidden">
+      <div className="p-3 bg-nhs-grey-5 dark:bg-surface space-y-2">
         <div className="flex items-start gap-2">
           <SnomedPicker
             label="Test group name"
@@ -185,7 +185,7 @@ function TestGroupCard({
         </div>
       </div>
 
-      <div className="p-3 bg-white dark:bg-gray-900">
+      <div className="p-3 bg-white dark:bg-canvas">
         <div className="flex items-center justify-between mb-1">
           <span className="text-xs font-medium text-nhs-grey-3 uppercase tracking-wide">
             Results ({group.results.length})
@@ -242,7 +242,7 @@ function SpecimenRow({
     dispatch({ type: 'UPDATE_SPECIMEN', payload: { invTempId, specimenTempId: specimen._tempId, updates } })
 
   return (
-    <div className="border border-nhs-grey-5 dark:border-nhs-grey-4 rounded p-2 mb-2 bg-white dark:bg-gray-900 space-y-2">
+    <div className="border border-nhs-grey-5 dark:border-line rounded p-2 mb-2 bg-white dark:bg-canvas space-y-2">
       <div className="flex items-start gap-2">
         <SnomedPicker
           label="Specimen type"
@@ -296,7 +296,7 @@ function TestRequestRow({
     dispatch({ type: 'UPDATE_TEST_REQUEST', payload: { invTempId, requestTempId: request._tempId, updates } })
 
   return (
-    <div className="border border-nhs-grey-5 dark:border-nhs-grey-4 rounded p-2 mb-2 bg-white dark:bg-gray-900 space-y-2">
+    <div className="border border-nhs-grey-5 dark:border-line rounded p-2 mb-2 bg-white dark:bg-canvas space-y-2">
       <div className="flex items-start gap-2">
         <SnomedPicker
           label="Test requested"
@@ -362,7 +362,7 @@ export function InvestigationCard({
   const resultCount = inv.testGroups.reduce((n, g) => n + g.results.length, 0)
 
   const body = (
-    <div className="p-3 bg-white dark:bg-gray-900 space-y-3">
+    <div className="p-3 bg-white dark:bg-canvas space-y-3">
       {/* No Associated Text here: DiagnosticReport has no free-text field for it in STU3 */}
       <SnomedPicker
         label="Report name"
@@ -469,8 +469,8 @@ export function InvestigationCard({
   }
 
   return (
-    <div className="border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg overflow-hidden mb-2">
-      <div className="flex items-center justify-between px-3 py-2 bg-nhs-grey-5 dark:bg-gray-800">
+    <div className="border border-nhs-grey-4 dark:border-line-strong rounded-lg overflow-hidden mb-2">
+      <div className="flex items-center justify-between px-3 py-2 bg-nhs-grey-5 dark:bg-surface">
         <button
           type="button"
           onClick={() => setOpen(o => !o)}
@@ -511,14 +511,14 @@ function invStatusBadge(status: string | undefined) {
   if (!status) return null
   const cfg =
     status === 'final'
-      ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
+      ? 'bg-green-100 text-green-800 dark:bg-ok-bg dark:text-ok'
       : status === 'preliminary'
-      ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300'
+      ? 'bg-blue-100 text-blue-800 dark:bg-accent-soft dark:text-accent'
       : status === 'cancelled' || status === 'entered-in-error'
-      ? 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
+      ? 'bg-gray-100 text-gray-600 dark:bg-raised dark:text-ink-2'
       : status === 'amended'
-      ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
-      : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
+      ? 'bg-amber-100 text-amber-800 dark:bg-warn-bg dark:text-warn'
+      : 'bg-gray-100 text-gray-600 dark:bg-raised dark:text-ink-2'
   const label = DIAG_STATUS_OPTS.find(o => o.value === status)?.label ?? status
   return (
     <span className={`inline-block text-xs font-medium px-1.5 py-0.5 rounded ${cfg}`}>
@@ -544,10 +544,10 @@ export function InvestigationDisplayRow({
   ].filter(Boolean).join(' · ')
 
   return (
-    <div className="bg-nhs-grey-5 dark:bg-gray-800 border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg mb-2 px-3 py-2 flex items-start justify-between gap-2">
+    <div className="bg-nhs-grey-5 dark:bg-surface border border-nhs-grey-4 dark:border-line-strong rounded-lg mb-2 px-3 py-2 flex items-start justify-between gap-2">
       <div className="min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <p className="text-sm font-medium text-nhs-grey-1 dark:text-gray-100 truncate">
+          <p className="text-sm font-medium text-nhs-grey-1 dark:text-ink truncate">
             {inv.name || 'New investigation'}
           </p>
           {invStatusBadge(inv.status)}
@@ -555,7 +555,7 @@ export function InvestigationDisplayRow({
         {meta && <p className="text-xs text-nhs-grey-3 mt-0.5">{meta}</p>}
       </div>
       <div className="flex items-center gap-2 shrink-0 ml-2">
-        <button type="button" onClick={onEdit} className="text-xs border border-nhs-blue text-nhs-blue px-2 py-0.5 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20">Edit</button>
+        <button type="button" onClick={onEdit} className="text-xs border border-nhs-blue text-nhs-blue px-2 py-0.5 rounded hover:bg-blue-50 dark:hover:bg-accent-soft">Edit</button>
         <button type="button" onClick={onDelete} className="text-nhs-red hover:opacity-70 p-0.5" title="Delete">
           <TrashIcon />
         </button>

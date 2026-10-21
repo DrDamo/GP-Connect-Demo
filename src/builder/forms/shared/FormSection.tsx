@@ -16,11 +16,11 @@ export function FormSection({ title, count, children, defaultOpen = true }: Form
   const [open, setOpen] = useState(defaultOpen)
 
   return (
-    <div className="border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg overflow-hidden mb-3">
+    <div className="border border-nhs-grey-4 dark:border-line-strong rounded-lg overflow-hidden mb-3">
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between px-4 py-2.5 bg-nhs-grey-5 dark:bg-gray-800 hover:bg-nhs-grey-4 dark:hover:bg-gray-700 transition-colors"
+        className="w-full flex items-center justify-between px-4 py-2.5 bg-nhs-grey-5 dark:bg-surface hover:bg-nhs-grey-4 dark:hover:bg-raised transition-colors"
       >
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold text-nhs-grey-1">{title}</span>
@@ -41,7 +41,7 @@ export function FormSection({ title, count, children, defaultOpen = true }: Form
         </svg>
       </button>
       {open && (
-        <div className="p-4 bg-white dark:bg-gray-900">
+        <div className="p-4 bg-white dark:bg-canvas">
           {children}
         </div>
       )}

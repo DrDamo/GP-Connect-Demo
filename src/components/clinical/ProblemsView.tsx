@@ -4,6 +4,7 @@ import { DomainTable, StatusBadge, DegradedTermText } from './DomainTable'
 import { SnomedCodeChip } from './SnomedDetailPopup'
 import type { DomainColumn } from './DomainTable'
 import { ReferencedResources } from './ReferencedResources'
+import { ReferencedBy } from './ReferencedBy'
 import { ReferenceChip } from './ResourceCard'
 import { type DomainId } from './domains'
 import { SearchFilterBox } from './SearchFilterBox'
@@ -157,7 +158,7 @@ function ProblemDetail({ problem, bundle, byId, onJumpToSource, onJumpToRecord, 
           <StatusBadge value={problem.clinicalStatus} />
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-x-8 gap-y-1.5">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,max(20rem,calc(50%_-_1rem))),1fr))] gap-x-8 gap-y-1.5">
         {problem.snomedCode && (
           <DetailRow label="SNOMED code" value={
             <SnomedCodeChip code={problem.snomedCode} status={bundle.snomedStatus?.[problem.snomedCode]} />
@@ -284,6 +285,12 @@ function ProblemDetail({ problem, bundle, byId, onJumpToSource, onJumpToRecord, 
         healthcareServices={bundle.healthcareServices}
         consultations={bundle.consultations}
         highlightedId={openResourceId ?? undefined}
+        onJumpToSource={onJumpToSource}
+        onJumpToRecord={onJumpToRecord}
+      />
+      <ReferencedBy
+        record={bundle}
+        self={`Condition/${problem.id}`}
         onJumpToSource={onJumpToSource}
         onJumpToRecord={onJumpToRecord}
       />

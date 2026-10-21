@@ -5,6 +5,7 @@ import { DomainTable, DegradedTermText, hasDegradeMarker } from './DomainTable'
 import { SnomedCodeChip } from './SnomedDetailPopup'
 import type { DomainColumn } from './DomainTable'
 import { ReferencedResources } from './ReferencedResources'
+import { ReferencedBy } from './ReferencedBy'
 import { ReferenceChip } from './ResourceCard'
 import { type DomainId } from './domains'
 import { InfoHint } from '../../onboarding/InfoHint'
@@ -40,6 +41,14 @@ const COLUMNS: DomainColumn<GpConnectCodedDataItem>[] = [
           <DegradedTermText text={item.description} />
           {item.isTransferDegraded && !hasDegradeMarker(item.description) && (
             <span className="inline-block ml-1.5 text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200 font-medium leading-none align-middle">Degrade</span>
+          )}
+          {item.group && (
+            <span
+              className="inline-block ml-1.5 text-[10px] px-1.5 py-0.5 rounded bg-nhs-grey-5 text-nhs-grey-2 border border-nhs-grey-4 font-medium leading-none align-middle"
+              title="Template header — open to see its grouped entries"
+            >
+              Template · {item.group.members.length}
+            </span>
           )}
         </div>
         {item.category && (
@@ -83,13 +92,15 @@ function CodedDataDetail({ item, bundle, onJumpToSource, onJumpToRecord }: { ite
 
   const valueText = [item.value, item.unit].filter(Boolean).join(' ') || undefined
   const hasComponents = (item.components?.length ?? 0) > 0
+  const groupHeader = item.groupHeaderId ? bundle.codedData.find(c => c.id === item.groupHeaderId) : undefined
+  const isCodedRow = (id: string) => bundle.codedData.some(c => c.id === id)
   return (
     <div className="border border-nhs-blue/20 rounded-lg bg-blue-50/50 p-4 space-y-3">
       <div className="flex items-start justify-between gap-3">
         <h3 className="text-sm font-semibold text-nhs-grey-1">{item.description}</h3>
         {item.interpretation && <span className="text-xs font-medium text-amber-700">{item.interpretation}</span>}
       </div>
-      <div className="grid grid-cols-2 gap-x-8 gap-y-1.5">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,max(20rem,calc(50%_-_1rem))),1fr))] gap-x-8 gap-y-1.5">
         {item.category && (
           <DetailRow label="Category" value={item.category} />
         )}
@@ -116,6 +127,13 @@ function CodedDataDetail({ item, bundle, onJumpToSource, onJumpToRecord }: { ite
               : item.organisation
             : undefined
         } />
+        {groupHeader && (
+          <DetailRow label="Part of template" value={
+            onJumpToRecord
+              ? <button type="button" onClick={() => onJumpToRecord('coded-data', groupHeader.id)} className="text-nhs-blue hover:underline text-left">{groupHeader.description}</button>
+              : groupHeader.description
+          } />
+        )}
       </div>
       {item.comment && (
         <div className="pt-1 border-t border-nhs-blue/20">
@@ -147,6 +165,37 @@ function CodedDataDetail({ item, bundle, onJumpToSource, onJumpToRecord }: { ite
           </table>
         </div>
       )}
+      {item.group && (
+        <div className="pt-2 border-t border-nhs-blue/20">
+          <p className="text-[10px] font-semibold text-nhs-grey-3 uppercase tracking-wide mb-1.5">
+            Template entries ({item.group.members.length})
+          </p>
+          <table className="w-full text-xs border-collapse">
+            <tbody>
+              {item.group.members.map(m => (
+                <tr key={m.id} className="border-b border-nhs-blue/10 last:border-0">
+                  <td className={`py-1.5 pr-4 ${m.isNote ? 'italic text-nhs-grey-2 whitespace-pre-wrap break-words' : 'text-nhs-grey-1'}`}>
+                    {m.isNote && <span className="not-italic text-[10px] uppercase tracking-wide text-nhs-grey-3 mr-1.5">Comment</span>}
+                    {m.description}
+                  </td>
+                  <td className="py-1.5 pr-4 font-medium whitespace-nowrap">{m.value ?? ''}</td>
+                  <td className="py-1.5 text-right whitespace-nowrap">
+                    {onJumpToRecord && isCodedRow(m.id)
+                      ? <button type="button" onClick={() => onJumpToRecord('coded-data', m.id)} className="text-nhs-blue hover:underline">View →</button>
+                      : onJumpToSource && <button type="button" onClick={() => onJumpToSource(m.id)} className="text-nhs-blue hover:underline">FHIR ↗</button>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="mt-1.5 text-[10px] text-nhs-grey-3">
+            Grouped by QuestionnaireResponse{' '}
+            {onJumpToSource
+              ? <button type="button" onClick={() => onJumpToSource(item.group!.questionnaireResponseId)} className="font-mono text-nhs-blue hover:underline break-all">{item.group.questionnaireResponseId}</button>
+              : <span className="font-mono break-all">{item.group.questionnaireResponseId}</span>}
+          </p>
+        </div>
+      )}
       <ReferencedResources
         refs={refs}
         practitioners={bundle.practitioners}
@@ -154,6 +203,12 @@ function CodedDataDetail({ item, bundle, onJumpToSource, onJumpToRecord }: { ite
         healthcareServices={bundle.healthcareServices}
         consultations={bundle.consultations}
         highlightedId={openResourceId ?? undefined}
+        onJumpToSource={onJumpToSource}
+        onJumpToRecord={onJumpToRecord}
+      />
+      <ReferencedBy
+        record={bundle}
+        self={`Observation/${item.id}`}
         onJumpToSource={onJumpToSource}
         onJumpToRecord={onJumpToRecord}
       />

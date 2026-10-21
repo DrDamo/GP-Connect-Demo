@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { DomainTable, StatusBadge, DegradedTermText, type DomainColumn } from './DomainTable'
 import type { GpConnectBundle, GpConnectDocument } from '../../fhir/types'
 import { ReferencedResources } from './ReferencedResources'
+import { ReferencedBy } from './ReferencedBy'
 import { ReferenceChip } from './ResourceCard'
 import { type DomainId } from './domains'
 import { SearchFilterBox } from './SearchFilterBox'
@@ -69,7 +70,7 @@ function DocumentDetail({ document, bundle, onJumpToSource, onJumpToRecord }: { 
         <h3 className="text-sm font-semibold text-nhs-grey-1">{document.type}</h3>
         <StatusBadge value={document.status} />
       </div>
-      <div className="grid grid-cols-2 gap-x-8 gap-y-1.5">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,max(20rem,calc(50%_-_1rem))),1fr))] gap-x-8 gap-y-1.5">
         <DetailRow label="Date" value={document.date} />
         <DetailRow label="Author" value={
           document.author
@@ -94,19 +95,19 @@ function DocumentDetail({ document, bundle, onJumpToSource, onJumpToRecord }: { 
           <DetailRow label="Master identifier" value={<span className="font-mono text-xs">{document.masterIdentifier}</span>} />
         )}
         {document.description && (
-          <div className="col-span-2 flex gap-2 min-w-0">
+          <div className="col-span-full flex gap-2 min-w-0">
             <span className="text-xs text-nhs-grey-3 shrink-0 w-36">Description</span>
             <span className="text-xs text-nhs-grey-1 min-w-0 whitespace-pre-wrap break-words">{document.description}</span>
           </div>
         )}
         {document.attachmentTitle && (
-          <div className="col-span-2 flex gap-2 items-start min-w-0 bg-amber-50 border border-amber-300 rounded px-3 py-2">
+          <div className="col-span-full flex gap-2 items-start min-w-0 bg-amber-50 border border-amber-300 rounded px-3 py-2">
             <span className="text-amber-600 text-sm leading-none mt-0.5">⚠</span>
             <span className="text-xs text-amber-800">{document.attachmentTitle}</span>
           </div>
         )}
         {document.url && (
-          <div className="col-span-2 flex gap-2 min-w-0">
+          <div className="col-span-full flex gap-2 min-w-0">
             <span className="text-xs text-nhs-grey-3 shrink-0 w-36">URL</span>
             <a href={document.url} target="_blank" rel="noopener noreferrer"
                className="text-xs text-nhs-blue underline hover:no-underline truncate">
@@ -122,6 +123,12 @@ function DocumentDetail({ document, bundle, onJumpToSource, onJumpToRecord }: { 
         healthcareServices={bundle.healthcareServices}
         consultations={bundle.consultations}
         highlightedId={openResourceId ?? undefined}
+        onJumpToSource={onJumpToSource}
+        onJumpToRecord={onJumpToRecord}
+      />
+      <ReferencedBy
+        record={bundle}
+        self={`DocumentReference/${document.id}`}
         onJumpToSource={onJumpToSource}
         onJumpToRecord={onJumpToRecord}
       />

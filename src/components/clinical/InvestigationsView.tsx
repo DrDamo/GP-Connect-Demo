@@ -3,7 +3,10 @@ import type { GpConnectBundle, GpConnectInvestigation, GpConnectTestGroup, GpCon
 import { DomainTable, StatusBadge, DegradedTermText } from './DomainTable'
 import type { DomainColumn } from './DomainTable'
 import { ReferencedResources } from './ReferencedResources'
+import { ReferencedBy } from './ReferencedBy'
 import { ReferenceChip } from './ResourceCard'
+import { VisualiseButton } from './VisualiseButton'
+import { buildInvestigationGraph } from '../../fhir/relationshipGraph'
 import { type DomainId } from './domains'
 import { InfoHint } from '../../onboarding/InfoHint'
 import { SearchFilterBox } from './SearchFilterBox'
@@ -148,14 +151,14 @@ function ResultsTable({
                       </button>
                     )}
                   </td>
-                  <td className={`py-1.5 pr-4 font-medium ${intClass}`} title={r.isApproximate ? 'Approximate/estimated result' : undefined}>{valueText}</td>
+                  <td className={`py-1.5 pr-4 font-medium ${valueText === '—' ? 'text-nhs-grey-3' : intClass}`} title={r.isApproximate ? 'Approximate/estimated result' : undefined}>{valueText}</td>
                   <td className="py-1.5 pr-4 text-nhs-grey-2">{r.referenceRange ?? '—'}</td>
                   <td className={`py-1.5 ${intClass}`}>{r.interpretation ?? '—'}</td>
                 </tr>
                 {r.components?.map((c, ci) => (
                   <tr key={`${r.id}-c${ci}`} className="border-b border-nhs-blue/10 last:border-0 bg-white/40">
                     <td className="py-1 pr-4 pl-4 text-nhs-grey-2 italic">{c.name}</td>
-                    <td className={`py-1 pr-4 ${interpretationClass(c.interpretation)}`}>
+                    <td className={`py-1 pr-4 ${c.value ? interpretationClass(c.interpretation) : 'text-nhs-grey-3'}`}>
                       {[c.value, c.unit].filter(Boolean).join(' ') || '—'}
                     </td>
                     <td className="py-1 pr-4 text-nhs-grey-3">{c.referenceRange ?? '—'}</td>
@@ -370,13 +373,19 @@ function InvestigationDetail({ investigation, bundle, onJumpToSource, onJumpToRe
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <h3 className="text-sm font-semibold text-nhs-grey-1">{investigation.name}</h3>
-        <div className="flex gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           {investigation.status && <StatusBadge value={investigation.status} />}
+          <VisualiseButton
+            record={bundle}
+            build={fhir => buildInvestigationGraph(fhir, investigation)}
+            onJumpToSource={onJumpToSource}
+            onJumpToRecord={onJumpToRecord}
+          />
         </div>
       </div>
 
       {/* Report metadata */}
-      <div className="grid grid-cols-2 gap-x-8 gap-y-1.5">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,max(20rem,calc(50%_-_1rem))),1fr))] gap-x-8 gap-y-1.5">
         {investigation.category && <DetailRow label="Category" value={investigation.category} />}
         <DetailRow label="Date" value={investigation.date} />
         <DetailRow label="Performer" value={
@@ -472,6 +481,12 @@ function InvestigationDetail({ investigation, bundle, onJumpToSource, onJumpToRe
         healthcareServices={bundle.healthcareServices}
         consultations={bundle.consultations}
         highlightedId={openResourceId ?? undefined}
+        onJumpToSource={onJumpToSource}
+        onJumpToRecord={onJumpToRecord}
+      />
+      <ReferencedBy
+        record={bundle}
+        self={`DiagnosticReport/${investigation.id}`}
         onJumpToSource={onJumpToSource}
         onJumpToRecord={onJumpToRecord}
       />

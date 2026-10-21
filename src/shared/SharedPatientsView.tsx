@@ -66,8 +66,8 @@ export function SharedPatientsView({ onLoadDraft }: Props) {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-nhs-grey-4 dark:border-gray-700 shrink-0">
-        <h2 className="text-sm font-semibold text-nhs-grey-1 dark:text-gray-100">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-nhs-grey-4 dark:border-line shrink-0">
+        <h2 className="text-sm font-semibold text-nhs-grey-1 dark:text-ink">
           Shared Patients
         </h2>
         <button onClick={fetchRows} className="text-xs text-nhs-blue hover:underline">
@@ -77,11 +77,11 @@ export function SharedPatientsView({ onLoadDraft }: Props) {
 
       <div className="flex-1 overflow-auto p-4">
         {loading ? (
-          <p className="text-sm text-nhs-grey-3 dark:text-gray-500 py-8 text-center">Loading…</p>
+          <p className="text-sm text-nhs-grey-3 dark:text-muted py-8 text-center">Loading…</p>
         ) : error ? (
           <p className="text-sm text-nhs-red py-8 text-center">Error: {error}</p>
         ) : rows.length === 0 ? (
-          <div className="text-center py-12 text-nhs-grey-3 dark:text-gray-500">
+          <div className="text-center py-12 text-nhs-grey-3 dark:text-muted">
             <p className="text-sm">No shared patients yet.</p>
             <p className="text-xs mt-1">Use the Record Builder to create a patient and save them to the shared area.</p>
           </div>
@@ -92,16 +92,16 @@ export function SharedPatientsView({ onLoadDraft }: Props) {
               return (
                 <div
                   key={row.id}
-                  className="bg-white dark:bg-gray-900 border border-nhs-grey-4 dark:border-gray-700 rounded-lg px-4 py-3"
+                  className="bg-white dark:bg-canvas border border-nhs-grey-4 dark:border-line rounded-lg px-4 py-3"
                 >
                   {/* Name + actions row */}
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-nhs-grey-1 dark:text-gray-100 truncate">
+                      <p className="text-sm font-semibold text-nhs-grey-1 dark:text-ink truncate">
                         {row.name || <span className="italic font-normal text-nhs-grey-3">Untitled record</span>}
                       </p>
                       {row.description && (
-                        <p className="text-xs text-nhs-grey-2 dark:text-gray-300 mt-0.5 line-clamp-2">
+                        <p className="text-xs text-nhs-grey-2 dark:text-ink-2 mt-0.5 line-clamp-2">
                           {row.description}
                         </p>
                       )}
@@ -110,7 +110,7 @@ export function SharedPatientsView({ onLoadDraft }: Props) {
                       <button
                         onClick={() => handleLoad(row.id)}
                         disabled={loadingId === row.id}
-                        className="text-xs border border-nhs-blue text-nhs-blue px-2 py-0.5 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 disabled:opacity-50"
+                        className="text-xs border border-nhs-blue text-nhs-blue px-2 py-0.5 rounded hover:bg-blue-50 dark:hover:bg-accent-soft disabled:opacity-50"
                       >
                         {loadingId === row.id ? 'Loading…' : 'Load into builder'}
                       </button>
@@ -125,8 +125,8 @@ export function SharedPatientsView({ onLoadDraft }: Props) {
                   </div>
 
                   {/* Meta row */}
-                  <p className="text-xs text-nhs-grey-3 dark:text-gray-500 mt-1.5 flex flex-wrap gap-x-3">
-                    <span className="font-medium text-nhs-grey-2 dark:text-gray-400">v{row.version}</span>
+                  <p className="text-xs text-nhs-grey-3 dark:text-muted mt-1.5 flex flex-wrap gap-x-3">
+                    <span className="font-medium text-nhs-grey-2 dark:text-muted">v{row.version}</span>
                     {row.patient_name && <span>Patient: {row.patient_name}</span>}
                     {row.nhs_number && <span>NHS: {row.nhs_number}</span>}
                     <span>

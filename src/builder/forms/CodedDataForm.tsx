@@ -41,12 +41,12 @@ const INTERPRETATION_OPTS = [
 ]
 
 function statusBadgeClass(status: string | undefined): string {
-  if (!status) return 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
-  if (status === 'final') return 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
-  if (status === 'preliminary') return 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
-  if (status === 'cancelled') return 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
-  if (status === 'amended') return 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
-  return 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
+  if (!status) return 'bg-gray-100 text-gray-600 dark:bg-raised dark:text-ink-2'
+  if (status === 'final') return 'bg-green-100 text-green-700 dark:bg-ok-bg dark:text-ok'
+  if (status === 'preliminary') return 'bg-blue-100 text-blue-700 dark:bg-accent-soft dark:text-accent'
+  if (status === 'cancelled') return 'bg-gray-100 text-gray-600 dark:bg-raised dark:text-ink-2'
+  if (status === 'amended') return 'bg-amber-100 text-amber-700 dark:bg-warn-bg dark:text-warn'
+  return 'bg-gray-100 text-gray-600 dark:bg-raised dark:text-ink-2'
 }
 
 function CodedDataDisplayRow({
@@ -69,10 +69,10 @@ function CodedDataDisplayRow({
   ].filter(Boolean).join(' · ')
 
   return (
-    <div className="bg-nhs-grey-5 dark:bg-gray-800 border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg mb-2 px-3 py-2 flex items-start justify-between gap-2">
+    <div className="bg-nhs-grey-5 dark:bg-surface border border-nhs-grey-4 dark:border-line-strong rounded-lg mb-2 px-3 py-2 flex items-start justify-between gap-2">
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-medium text-nhs-grey-1 dark:text-gray-100 truncate">
+          <span className="text-sm font-medium text-nhs-grey-1 dark:text-ink truncate">
             {item.description || 'Unnamed coded data'}
           </span>
           {item.status && (
@@ -86,7 +86,7 @@ function CodedDataDisplayRow({
         )}
       </div>
       <div className="flex items-center gap-2 shrink-0 ml-2">
-        <button type="button" onClick={onEdit} className="text-xs border border-nhs-blue text-nhs-blue px-2 py-0.5 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20">Edit</button>
+        <button type="button" onClick={onEdit} className="text-xs border border-nhs-blue text-nhs-blue px-2 py-0.5 rounded hover:bg-blue-50 dark:hover:bg-accent-soft">Edit</button>
         <button type="button" onClick={onDelete} className="text-nhs-red hover:opacity-70 p-0.5" title="Delete">
           <TrashIcon />
         </button>
@@ -113,9 +113,9 @@ function CodedDataCard({
   const expanded = isModal ? true : open
 
   return (
-    <div className="border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg overflow-hidden mb-2">
+    <div className="border border-nhs-grey-4 dark:border-line-strong rounded-lg overflow-hidden mb-2">
       {!isModal && (
-        <div className="flex items-center justify-between px-3 py-2 bg-nhs-grey-5 dark:bg-gray-800">
+        <div className="flex items-center justify-between px-3 py-2 bg-nhs-grey-5 dark:bg-surface">
           <button
             type="button"
             onClick={() => setOpen(o => !o)}
@@ -146,7 +146,7 @@ function CodedDataCard({
       )}
 
       {expanded && (
-        <div className="p-3 bg-white dark:bg-gray-900 space-y-3">
+        <div className="p-3 bg-white dark:bg-canvas space-y-3">
           <SnomedPicker
             label="Description"
             value={item.description ?? ''}

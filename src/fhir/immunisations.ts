@@ -1,5 +1,5 @@
 import type { GpConnectImmunisation } from './types'
-import { getEntries, formatDate, resolvePractitionerRef, getExtensionValue, extractSnomedCode, extractOriginalTermText, extractId, fhirDateKey, hasNopatSecurity } from './utils'
+import { getEntries, resolveReference, formatDate, resolvePractitionerRef, getExtensionValue, extractSnomedCode, extractOriginalTermText, extractId, fhirDateKey, hasNopatSecurity } from './utils'
 
 const IMMUNISATIONS_LIST_CODE = '1102181000000102'
 
@@ -52,9 +52,7 @@ export function extractImmunisations(bundle: fhir3.Bundle): GpConnectImmunisatio
     const cast2 = resource as unknown as { encounter?: { reference?: string }; location?: { reference?: string } }
     const encounterId = extractId(cast2.encounter?.reference)
     const locationId = extractId(cast2.location?.reference)
-    const locationResource = locationId
-      ? (bundle.entry ?? []).find(e => (e.resource as any)?.id === locationId)?.resource as fhir3.Location | undefined
-      : undefined
+    const locationResource = resolveReference(bundle, cast2.location?.reference) as fhir3.Location | undefined
     const locationName = locationResource?.name
 
     const explanationReason = (cast.explanation as any)?.reason?.[0] as fhir3.CodeableConcept | undefined

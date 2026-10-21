@@ -57,6 +57,9 @@ export interface GpConnectMedication {
   startDate?: string
   endDate?: string
   lastIssuedDate?: string
+  /** MedicationStatement extension Extension-CareConnect-MedicationDosageLastChanged-1
+   * (sent by TPP) — when the dosage was last amended on this authorisation. */
+  dosageLastChanged?: string
   reviewDate?: string
   numberOfRepeatsAllowed?: number
   numberOfIssued?: number
@@ -431,6 +434,15 @@ export interface GpConnectDiaryEntry {
   notForPfs?: boolean
 }
 
+export interface GpConnectObservationGroupMember {
+  id: string
+  description: string
+  value?: string
+  /** Free-text comment note (37331000000100) — not listed as its own Coded
+   * data row, so it can only be seen here within its template. */
+  isNote?: boolean
+}
+
 export interface GpConnectCodedDataItem {
   id: string
   date?: string
@@ -448,6 +460,20 @@ export interface GpConnectCodedDataItem {
   organisationId?: string
   encounterId?: string
   components?: GpConnectObservationComponent[]
+  /** Set on a template header Observation: EMIS groups template entries
+   * (e.g. "24 hour blood pressure") as header Observation
+   * → related[has-member] → QuestionnaireResponse → item.answer.valueReference
+   * → member Observations. */
+  group?: {
+    /** QuestionnaireResponse item.linkId — EMIS sometimes fills this with
+     * free-text comment rather than the template name, so the UI labels the
+     * group by the header's own description instead. */
+    linkId?: string
+    questionnaireResponseId: string
+    members: GpConnectObservationGroupMember[]
+  }
+  /** Set on a member Observation of such a group: the header Observation id. */
+  groupHeaderId?: string
   notForPfs?: boolean
 }
 
@@ -493,6 +519,9 @@ export interface GpConnectOrganisation {
   odsCode?: string
   phone?: string
   address?: string
+  /** Extension-CareConnect-GPC-MainLocation-1 — the organisation's main site */
+  mainLocationId?: string
+  mainLocationName?: string
 }
 
 export interface GpConnectHealthcareService {
@@ -543,6 +572,9 @@ export interface GpConnectList {
   listCode?: string
   /** Value from Extension-CareConnect-GPC-ListWarningCode-1, e.g. 'data-in-transit' */
   warningCode?: string
+  /** Extension-CareConnect-GPC-ClinicalSetting-1 — the care setting the list
+   * was produced from, e.g. "General practice service" */
+  clinicalSetting?: string
   notForPfs?: boolean
 }
 
@@ -592,6 +624,31 @@ export interface SnomedDetail {
   resolvedFromDescriptionId?: string
 }
 
+/** One issue from an OperationOutcome returned inside (or instead of) the
+ * Bundle — e.g. a clinical area the provider has disabled. */
+export interface GpConnectOperationIssue {
+  outcomeId?: string
+  severity: string
+  code?: string
+  /** details.coding code, e.g. Spine-ErrorOrWarningCode 'INVALID_PARAMETER' */
+  detailCode?: string
+  detailText?: string
+  diagnostics?: string
+}
+
+/** A resource that references another — the reverse of a FHIR reference.
+ * See buildIncomingRefs in incomingRefs.ts. */
+export interface IncomingRef {
+  sourceType: string
+  /** Resource id, or the title-derived key for id-less Lists ('' if neither) */
+  sourceId: string
+  /** FHIRPath-like element holding the reference, e.g. 'List.entry.item' */
+  path: string
+  label?: string
+  /** Source is a contained resource (e.g. inside the Ended allergies List) */
+  contained?: boolean
+}
+
 export interface GpConnectBundle {
   patient?: GpConnectPatient
   practiceOrganisation?: string
@@ -618,6 +675,13 @@ export interface GpConnectBundle {
   healthcareServices: GpConnectHealthcareService[]
   locations: GpConnectLocation[]
   lists: GpConnectList[]
+  /** Optional so records built elsewhere (builder preview, tests) stay valid. */
+  operationIssues?: GpConnectOperationIssue[]
+  /** Reverse references keyed by target `Type/id` (Patient excluded). */
+  incomingRefs?: Record<string, IncomingRef[]>
+  /** The parsed FHIR Bundle this record was extracted from — used by the
+   * relationship visualiser, which needs the raw references. */
+  fhir?: fhir3.Bundle
 }
 
 // Backward-compat alias — components importing this type still work unchanged

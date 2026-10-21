@@ -106,20 +106,20 @@ function DegradeRow({ issue }: { issue: ValidationIssue }) {
   const d = issue.snomedDegrade
   if (!d) return null
   return (
-    <div className="rounded border border-amber-300 bg-amber-50 p-2 text-xs dark:border-amber-800 dark:bg-amber-950/30">
+    <div className="rounded border border-amber-300 bg-amber-50 p-2 text-xs dark:border-warn-line dark:bg-warn-bg">
       {issue.path && (
-        <div className="mb-1 break-all font-mono text-nhs-grey-3 dark:text-gray-400">{issue.path}</div>
+        <div className="mb-1 break-all font-mono text-nhs-grey-3 dark:text-muted">{issue.path}</div>
       )}
       <div className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5">
-        <span className="font-semibold text-nhs-grey-2 dark:text-gray-300">Original:</span>
+        <span className="font-semibold text-nhs-grey-2 dark:text-ink-2">Original:</span>
         <span className="break-all">
           <span className="font-mono">{d.originalCode}</span>
-          {d.originalDisplay && <span className="text-nhs-grey-2 dark:text-gray-300"> — {d.originalDisplay}</span>}
+          {d.originalDisplay && <span className="text-nhs-grey-2 dark:text-ink-2"> — {d.originalDisplay}</span>}
         </span>
-        <span className="font-semibold text-nhs-grey-2 dark:text-gray-300">Degraded to:</span>
+        <span className="font-semibold text-nhs-grey-2 dark:text-ink-2">Degraded to:</span>
         <span className="break-all">
           <span className="font-mono">{d.degradedCode}</span>
-          <span className="text-nhs-grey-2 dark:text-gray-300"> — {d.degradedDisplay}</span>
+          <span className="text-nhs-grey-2 dark:text-ink-2"> — {d.degradedDisplay}</span>
         </span>
       </div>
     </div>
@@ -132,15 +132,15 @@ function DegradeSection({ issues, open, onToggle }: {
   onToggle: () => void
 }) {
   return (
-    <div className="rounded-lg border border-amber-300 dark:border-amber-800 overflow-hidden shrink-0">
+    <div className="rounded-lg border border-amber-300 dark:border-warn-line overflow-hidden shrink-0">
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-950/50 transition-colors text-left"
+        className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-amber-50 dark:bg-warn-bg hover:bg-amber-100 dark:hover:bg-warn-bg transition-colors text-left"
       >
         <span className="flex items-center gap-2">
           <span className="w-5 h-5 flex items-center justify-center rounded-full text-xs font-bold bg-nhs-yellow text-nhs-grey-1">⇄</span>
-          <span className="text-sm font-semibold text-nhs-grey-1 dark:text-gray-100">SNOMED CT code degrades</span>
-          <span className="px-1.5 py-0.5 rounded-full bg-amber-200 text-amber-800 dark:bg-amber-800 dark:text-amber-100 text-[11px] font-semibold">{issues.length}</span>
+          <span className="text-sm font-semibold text-nhs-grey-1 dark:text-ink">SNOMED CT code degrades</span>
+          <span className="px-1.5 py-0.5 rounded-full bg-amber-200 text-amber-800 dark:bg-warn-bg dark:text-warn text-[11px] font-semibold">{issues.length}</span>
         </span>
         <span className="text-xs text-nhs-grey-3">{open ? '▲ Collapse' : '▼ Expand'}</span>
       </button>

@@ -207,7 +207,7 @@ export function RawSourceViewer({ source, format, filename, hasOriginalSource, s
           top: Math.min(snomedLookup.y + 12, window.innerHeight - 60),
           width: 320,
         }}
-        className="z-50 rounded-md border border-nhs-grey-4 bg-white shadow-lg dark:border-nhs-grey-2 dark:bg-gray-800"
+        className="z-50 rounded-md border border-nhs-grey-4 bg-white shadow-lg dark:border-line-strong dark:bg-surface"
       >
         <SnomedDetailContent code={snomedLookup.code} state={snomedLookup.state} onClose={() => setSnomedLookup(null)} />
       </div>

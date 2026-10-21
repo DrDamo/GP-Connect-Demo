@@ -37,8 +37,8 @@ const ROUTE_OPTS = [
 ]
 
 const SELECT_CLS =
-  'w-full rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-2 py-1.5 text-sm ' +
-  'text-nhs-grey-1 dark:bg-gray-800 ' +
+  'w-full rounded border border-nhs-grey-4 dark:border-line-strong px-2 py-1.5 text-sm ' +
+  'text-nhs-grey-1 dark:bg-surface ' +
   'focus:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue'
 
 // ---------------------------------------------------------------------------
@@ -51,7 +51,7 @@ function NotApplicableField({ label }: { label: string }) {
       <label className="block text-xs font-medium text-nhs-grey-3 uppercase tracking-wide mb-0.5">
         {label}
       </label>
-      <div className="w-full rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-2 py-1.5 text-sm bg-nhs-grey-5 dark:bg-gray-800 text-nhs-grey-3 dark:text-gray-600 italic">
+      <div className="w-full rounded border border-nhs-grey-4 dark:border-line-strong px-2 py-1.5 text-sm bg-nhs-grey-5 dark:bg-surface text-nhs-grey-3 dark:text-muted italic">
         N/A — not given
       </div>
     </div>
@@ -83,7 +83,7 @@ function ImmunisationCard({
   ]
 
   const body = (
-    <div className="p-3 bg-white dark:bg-gray-900 space-y-3">
+    <div className="p-3 bg-white dark:bg-canvas space-y-3">
       <SnomedPicker
         label="Vaccination procedure"
         value={imm.vaccinationProcedureDisplay ?? ''}
@@ -105,7 +105,7 @@ function ImmunisationCard({
             <label className="block text-xs font-medium text-nhs-grey-3 uppercase tracking-wide mb-0.5">
               Status<span className="text-nhs-red ml-0.5">*</span>
             </label>
-            <div className="w-full rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-2 py-1.5 text-sm bg-nhs-grey-5 dark:bg-gray-800 text-nhs-grey-3 dark:text-gray-600 italic">
+            <div className="w-full rounded border border-nhs-grey-4 dark:border-line-strong px-2 py-1.5 text-sm bg-nhs-grey-5 dark:bg-surface text-nhs-grey-3 dark:text-muted italic">
               Not done
             </div>
           </div>
@@ -228,7 +228,7 @@ function ImmunisationCard({
         </select>
       </div>
 
-      <div className="pt-2 border-t border-nhs-grey-4 dark:border-nhs-grey-2 space-y-2">
+      <div className="pt-2 border-t border-nhs-grey-4 dark:border-line-strong space-y-2">
         <span className="text-xs font-semibold text-nhs-grey-2 uppercase tracking-wide block">
           Vaccine product {!imm.notGiven && <span className="normal-case font-normal text-nhs-grey-3">(optional)</span>}
         </span>
@@ -266,8 +266,8 @@ function ImmunisationCard({
   }
 
   return (
-    <div className="border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg overflow-hidden mb-2">
-      <div className="flex items-center justify-between px-3 py-2 bg-nhs-grey-5 dark:bg-gray-800">
+    <div className="border border-nhs-grey-4 dark:border-line-strong rounded-lg overflow-hidden mb-2">
+      <div className="flex items-center justify-between px-3 py-2 bg-nhs-grey-5 dark:bg-surface">
         <button
           type="button"
           onClick={() => setOpen(o => !o)}
@@ -309,8 +309,8 @@ function statusBadge(status: string | undefined) {
   if (!status) return null
   const cfg =
     status === 'completed'
-      ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
-      : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
+      ? 'bg-green-100 text-green-800 dark:bg-ok-bg dark:text-ok'
+      : 'bg-gray-100 text-gray-600 dark:bg-raised dark:text-ink-2'
   const label = STATUS_OPTS.find(o => o.value === status)?.label ?? status
   return (
     <span className={`inline-block text-xs font-medium px-1.5 py-0.5 rounded ${cfg}`}>
@@ -331,10 +331,10 @@ function ImmunisationDisplayRow({
   const meta = [imm.dateGiven, [imm.site, imm.route].filter(Boolean).join(' / ')].filter(Boolean).join(' · ')
 
   return (
-    <div className="bg-nhs-grey-5 dark:bg-gray-800 border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg mb-2 px-3 py-2 flex items-start justify-between gap-2">
+    <div className="bg-nhs-grey-5 dark:bg-surface border border-nhs-grey-4 dark:border-line-strong rounded-lg mb-2 px-3 py-2 flex items-start justify-between gap-2">
       <div className="min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <p className="text-sm font-medium text-nhs-grey-1 dark:text-gray-100 truncate">
+          <p className="text-sm font-medium text-nhs-grey-1 dark:text-ink truncate">
             {imm.vaccinationProcedureDisplay || imm.vaccineName || 'New immunisation'}
           </p>
           {statusBadge(imm.status)}
@@ -342,7 +342,7 @@ function ImmunisationDisplayRow({
         {meta && <p className="text-xs text-nhs-grey-3 mt-0.5">{meta}</p>}
       </div>
       <div className="flex items-center gap-2 shrink-0 ml-2">
-        <button type="button" onClick={onEdit} className="text-xs border border-nhs-blue text-nhs-blue px-2 py-0.5 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20">Edit</button>
+        <button type="button" onClick={onEdit} className="text-xs border border-nhs-blue text-nhs-blue px-2 py-0.5 rounded hover:bg-blue-50 dark:hover:bg-accent-soft">Edit</button>
         <button type="button" onClick={onDelete} className="text-nhs-red hover:opacity-70 p-0.5" title="Delete">
           <TrashIcon />
         </button>

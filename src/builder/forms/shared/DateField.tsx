@@ -152,7 +152,7 @@ export function DateField({ label, value, onChange, required, disabled, classNam
           required={required && !disabled}
           disabled={disabled}
           title={fullDateOnly ? 'Enter a full date as DD-MM-YYYY' : 'Enter DD-MM-YYYY, MM-YYYY for month and year, or YYYY for year only'}
-          className={`${INPUT_CLS} pr-8 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-nhs-grey-5 dark:disabled:bg-gray-800 ${
+          className={`${INPUT_CLS} pr-8 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-nhs-grey-5 dark:disabled:bg-raised ${
             invalid ? 'border-nhs-red focus:border-nhs-red focus:ring-nhs-red' : ''
           }`}
           autoComplete="off"

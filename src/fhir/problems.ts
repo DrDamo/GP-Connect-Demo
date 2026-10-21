@@ -1,8 +1,8 @@
 import type { GpConnectProblem, GpConnectLinkedItem, GpConnectRelatedProblem } from './types'
-import { getEntries, formatDate, getExtensionValue, resolvePractitionerRef, extractSnomedCode, extractOriginalTermText, extractId, fhirDateKey, hasNopatSecurity } from './utils'
+import { getEntries, resolveReference, formatDate, getExtensionValue, resolvePractitionerRef, extractSnomedCode, extractOriginalTermText, extractId, fhirDateKey, hasNopatSecurity } from './utils'
 
 function resolveLinkedDescription(bundle: fhir3.Bundle, resourceType: string, id: string): string | undefined {
-  const resource = (bundle.entry ?? []).find(e => (e.resource as any)?.id === id)?.resource as any
+  const resource = resolveReference(bundle, `${resourceType}/${id}`) as any
   if (!resource) return undefined
   switch (resourceType) {
     case 'Observation':
@@ -13,8 +13,7 @@ function resolveLinkedDescription(bundle: fhir3.Bundle, resourceType: string, id
     case 'MedicationStatement': {
       const medRef = resource.medicationReference?.reference
       if (medRef) {
-        const medId = medRef.split('/').pop()
-        const med = (bundle.entry ?? []).find(e => (e.resource as any)?.id === medId)?.resource as any
+        const med = resolveReference(bundle, medRef) as any
         return extractOriginalTermText(med?.code)
       }
       return extractOriginalTermText(resource.medicationCodeableConcept)

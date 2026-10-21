@@ -1,4 +1,4 @@
-import type { GpConnectCodedDataItem, GpConnectObservationComponent } from './types'
+import type { GpConnectCodedDataItem, GpConnectObservationComponent, GpConnectObservationGroupMember } from './types'
 import { getEntries, formatDate, extractSnomedCode, extractOriginalTermText, resolvePractitionerRef, resolveReference, extractId, fhirDateKey, hasNopatSecurity } from './utils'
 
 type ObsLike = fhir3.Observation & {
@@ -26,6 +26,45 @@ function extractObsDescription(obs: ObsLike): string {
 const COMMENT_NOTE_CODE = '37331000000100'
 
 type Related = { type?: string; target?: { reference?: string } }
+
+type QrItem = { linkId?: string; text?: string; answer?: { valueReference?: fhir3.Reference }[]; item?: QrItem[] }
+
+/** Indexes EMIS template groupings (see GpConnectCodedDataItem.group). */
+function extractObservationGroups(bundle: fhir3.Bundle) {
+  const byHeader = new Map<string, NonNullable<GpConnectCodedDataItem['group']>>()
+  const headerOfMember = new Map<string, string>()
+  for (const qr of getEntries<fhir3.QuestionnaireResponse>(bundle, 'QuestionnaireResponse')) {
+    const parent = Array.isArray(qr.parent) ? qr.parent[0] : qr.parent
+    const header = resolveReference(bundle, parent?.reference)
+    if (header?.resourceType !== 'Observation' || !header.id || !qr.id) continue
+    const items = (qr.item ?? []) as QrItem[]
+    const members: GpConnectObservationGroupMember[] = []
+    const collect = (list: QrItem[]) => {
+      for (const it of list) {
+        for (const a of it.answer ?? []) {
+          const member = resolveReference(bundle, a.valueReference?.reference) as ObsLike | undefined
+          if (member?.resourceType !== 'Observation' || !member.id || member.id === header.id) continue
+          const isNote = member.code?.coding?.some(c => c.code === COMMENT_NOTE_CODE) ?? false
+          const vq = member.valueQuantity
+          const value = vq?.value !== undefined
+            ? [vq.value, vq.unit].filter(v => v !== undefined).join(' ')
+            : (member as { valueString?: string }).valueString ?? extractOriginalTermText(member.valueCodeableConcept)
+          members.push({
+            id: member.id,
+            description: isNote ? (member.comment ?? value ?? 'Comment') : extractObsDescription(member),
+            value: isNote ? undefined : value,
+            isNote: isNote || undefined,
+          })
+        }
+        collect(it.item ?? [])
+      }
+    }
+    collect(items)
+    byHeader.set(header.id, { linkId: items[0]?.linkId ?? items[0]?.text, questionnaireResponseId: qr.id, members })
+    for (const m of members) headerOfMember.set(m.id, header.id)
+  }
+  return { byHeader, headerOfMember }
+}
 
 export function extractCodedData(bundle: fhir3.Bundle): GpConnectCodedDataItem[] {
   // Always exclude observations that belong to a DiagnosticReport result set.
@@ -65,6 +104,7 @@ export function extractCodedData(bundle: fhir3.Bundle): GpConnectCodedDataItem[]
   }
 
   const notAnInvestigation = (obs: ObsLike) => !investigationObsIds.has(obs.id ?? '')
+  const groups = extractObservationGroups(bundle)
 
   // Show every coded Observation that isn't an investigation result and isn't
   // a free-text comment note (37331000000100) — including ones nested inside
@@ -146,6 +186,8 @@ export function extractCodedData(bundle: fhir3.Bundle): GpConnectCodedDataItem[]
         organisationId: organisationId || undefined,
         encounterId: encounterId || undefined,
         components,
+        group: obs.id ? groups.byHeader.get(obs.id) : undefined,
+        groupHeaderId: obs.id ? groups.headerOfMember.get(obs.id) : undefined,
         notForPfs: hasNopatSecurity(obs),
       }
     })

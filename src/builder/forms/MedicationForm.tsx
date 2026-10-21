@@ -66,9 +66,9 @@ const SECTIONS: { key: DraftMedication['prescriptionType']; label: string }[] = 
 function ReadOnlyField({ label, value }: { label: string; value: string | number | undefined }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-nhs-grey-2 dark:text-gray-400 mb-0.5">{label}</label>
-      <div className="w-full px-2.5 py-1.5 rounded border border-nhs-grey-4 dark:border-gray-600 bg-nhs-grey-5 dark:bg-gray-800 text-sm text-nhs-grey-2 dark:text-gray-400 min-h-[2rem]">
-        {value !== undefined && value !== '' ? String(value) : <span className="text-nhs-grey-3 dark:text-gray-600 italic">—</span>}
+      <label className="block text-xs font-medium text-nhs-grey-2 dark:text-muted mb-0.5">{label}</label>
+      <div className="w-full px-2.5 py-1.5 rounded border border-nhs-grey-4 dark:border-line-strong bg-nhs-grey-5 dark:bg-surface text-sm text-nhs-grey-2 dark:text-muted min-h-[2rem]">
+        {value !== undefined && value !== '' ? String(value) : <span className="text-nhs-grey-3 dark:text-muted italic">—</span>}
       </div>
     </div>
   )
@@ -98,9 +98,9 @@ function IssueModal({
     <BuilderModal title={title} onDone={onDone} onCancel={onCancel} size="md">
       <div className="space-y-3">
         {med.drugName && (
-          <div className="px-3 py-2 rounded bg-nhs-grey-5 dark:bg-gray-800 border border-nhs-grey-4 dark:border-gray-600">
-            <p className="text-xs text-nhs-grey-3 dark:text-gray-500 uppercase tracking-wide mb-0.5">Drug</p>
-            <p className="text-sm font-medium text-nhs-grey-1 dark:text-gray-100">{med.drugName}</p>
+          <div className="px-3 py-2 rounded bg-nhs-grey-5 dark:bg-surface border border-nhs-grey-4 dark:border-line-strong">
+            <p className="text-xs text-nhs-grey-3 dark:text-muted uppercase tracking-wide mb-0.5">Drug</p>
+            <p className="text-sm font-medium text-nhs-grey-1 dark:text-ink">{med.drugName}</p>
           </div>
         )}
         <div className="grid grid-cols-2 gap-2">
@@ -172,12 +172,12 @@ function RepeatDispensingIssueModal({
     >
       <div className="space-y-3">
         {med.drugName && (
-          <div className="px-3 py-2 rounded bg-nhs-grey-5 dark:bg-gray-800 border border-nhs-grey-4 dark:border-gray-600">
-            <p className="text-xs text-nhs-grey-3 dark:text-gray-500 uppercase tracking-wide mb-0.5">Drug</p>
-            <p className="text-sm font-medium text-nhs-grey-1 dark:text-gray-100">{med.drugName}</p>
+          <div className="px-3 py-2 rounded bg-nhs-grey-5 dark:bg-surface border border-nhs-grey-4 dark:border-line-strong">
+            <p className="text-xs text-nhs-grey-3 dark:text-muted uppercase tracking-wide mb-0.5">Drug</p>
+            <p className="text-sm font-medium text-nhs-grey-1 dark:text-ink">{med.drugName}</p>
           </div>
         )}
-        <div className="rounded border border-nhs-blue/30 dark:border-blue-700/50 bg-nhs-blue/5 dark:bg-blue-900/20 px-3 py-2 text-xs text-nhs-blue dark:text-blue-300">
+        <div className="rounded border border-nhs-blue/30 dark:border-accent-line bg-nhs-blue/5 dark:bg-accent-soft px-3 py-2 text-xs text-nhs-blue dark:text-accent">
           All {count} issues will be created with the dates and instructions below.
           Start dates are calculated automatically — each issue begins where the previous ends.
         </div>
@@ -271,7 +271,7 @@ export function MedicationCard({
             Repeats allowed{med.prescriptionType === 'repeat-dispensing' && <span className="text-nhs-red ml-0.5">*</span>}
           </label>
           {med.prescriptionType === 'acute' ? (
-            <div className="w-full rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-2 py-1.5 text-sm bg-nhs-grey-5 dark:bg-gray-800 text-nhs-grey-3 dark:text-gray-600 italic">
+            <div className="w-full rounded border border-nhs-grey-4 dark:border-line-strong px-2 py-1.5 text-sm bg-nhs-grey-5 dark:bg-surface text-nhs-grey-3 dark:text-muted italic">
               N/A — acute
             </div>
           ) : (
@@ -279,7 +279,7 @@ export function MedicationCard({
               type="number"
               value={med.numberOfRepeatsAllowed ?? ''}
               onChange={e => upd({ numberOfRepeatsAllowed: e.target.value ? Number(e.target.value) : undefined })}
-              className="w-full rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-2 py-1.5 text-sm text-nhs-grey-1 dark:bg-gray-800 focus:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue"
+              className="w-full rounded border border-nhs-grey-4 dark:border-line-strong px-2 py-1.5 text-sm text-nhs-grey-1 dark:bg-surface focus:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue"
             />
           )}
         </div>
@@ -355,9 +355,9 @@ export function MedicationDisplayRow({
 
   const statusBadge = status ? (
     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-      status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
-      status === 'stopped' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400' :
-      'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+      status === 'active' ? 'bg-green-100 text-green-800 dark:bg-ok-bg dark:text-ok' :
+      status === 'stopped' ? 'bg-amber-100 text-amber-800 dark:bg-warn-bg dark:text-warn' :
+      'bg-gray-100 text-gray-600 dark:bg-raised dark:text-muted'
     }`}>{isReauthStopped ? 'Stopped — Reauthorised' : status}</span>
   ) : null
 
@@ -463,28 +463,28 @@ export function MedicationDisplayRow({
     : null
 
   return (
-    <div className={`border rounded-lg mb-2 overflow-hidden border-nhs-grey-4 dark:border-nhs-grey-2 ${isReauthStopped ? 'opacity-75' : ''}`}>
+    <div className={`border rounded-lg mb-2 overflow-hidden border-nhs-grey-4 dark:border-line-strong ${isReauthStopped ? 'opacity-75' : ''}`}>
       {/* Medication header row */}
-      <div className="bg-nhs-grey-5 dark:bg-gray-800 px-3 py-2 flex items-start justify-between gap-2">
+      <div className="bg-nhs-grey-5 dark:bg-surface px-3 py-2 flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-medium text-nhs-grey-1 dark:text-gray-100">
+            <span className="text-sm font-medium text-nhs-grey-1 dark:text-ink">
               {med.drugName || 'Unnamed medication'}
             </span>
             {statusBadge}
             {med.reauthorisedFromTempId && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 font-medium">
+              <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-accent-soft dark:text-accent font-medium">
                 ↑ Reauthorisation
               </span>
             )}
           </div>
           {med.dosageInstruction && (
-            <p className="text-xs text-nhs-grey-3 dark:text-gray-400 mt-0.5">
+            <p className="text-xs text-nhs-grey-3 dark:text-muted mt-0.5">
               <span className="opacity-70">Dosage instruction:</span> {med.dosageInstruction}
             </p>
           )}
           {(med.dose || med.frequency || med.route) && (
-            <p className="text-xs text-nhs-grey-3 dark:text-gray-400 flex flex-wrap gap-x-3">
+            <p className="text-xs text-nhs-grey-3 dark:text-muted flex flex-wrap gap-x-3">
               {med.dose && <span><span className="opacity-70">Dose:</span> {med.dose}</span>}
               {med.frequency && <span><span className="opacity-70">Frequency:</span> {med.frequency}</span>}
               {med.route && <span><span className="opacity-70">Route:</span> {med.route}</span>}
@@ -492,28 +492,28 @@ export function MedicationDisplayRow({
           )}
           <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
             {(med.startDate || med.endDate) && (
-              <span className="text-xs text-nhs-grey-3 dark:text-gray-400">
+              <span className="text-xs text-nhs-grey-3 dark:text-muted">
                 {med.startDate && <><span className="opacity-70">Start:</span> {isoToDisplay(med.startDate)}</>}
                 {med.endDate && <><span className="opacity-70 ml-1.5">End:</span> {isoToDisplay(med.endDate)}</>}
               </span>
             )}
             {qtyParts && (
-              <span className="text-xs text-nhs-grey-3 dark:text-gray-400">
+              <span className="text-xs text-nhs-grey-3 dark:text-muted">
                 <span className="opacity-70">Qty:</span> {qtyParts}
               </span>
             )}
             {supplyParts && (
-              <span className="text-xs text-nhs-grey-3 dark:text-gray-400">
+              <span className="text-xs text-nhs-grey-3 dark:text-muted">
                 <span className="opacity-70">Supply:</span> {supplyParts}
               </span>
             )}
             {isStopped && med.stopReason && med.stopReason !== 'reauthorisation' && (
-              <span className="text-xs text-amber-700 dark:text-amber-400">
+              <span className="text-xs text-amber-700 dark:text-warn">
                 <span className="opacity-70">Stopped:</span> {med.stopReason}
               </span>
             )}
             {prescriberName && (
-              <span className="text-xs text-nhs-grey-3 dark:text-gray-400">
+              <span className="text-xs text-nhs-grey-3 dark:text-muted">
                 <span className="opacity-70">Prescriber:</span> {prescriberName}
               </span>
             )}
@@ -533,7 +533,7 @@ export function MedicationDisplayRow({
             <button
               type="button"
               onClick={() => setConfirmStop('')}
-              className="text-xs border border-amber-500 dark:border-amber-600 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded hover:bg-amber-50 dark:hover:bg-amber-900/20"
+              className="text-xs border border-amber-500 dark:border-warn-line text-amber-600 dark:text-warn px-2 py-0.5 rounded hover:bg-amber-50 dark:hover:bg-warn-bg"
             >
               Stop
             </button>
@@ -541,11 +541,11 @@ export function MedicationDisplayRow({
           <button
             type="button"
             onClick={onEdit}
-            className="text-xs border border-nhs-blue text-nhs-blue px-2 py-0.5 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
+            className="text-xs border border-nhs-blue text-nhs-blue px-2 py-0.5 rounded hover:bg-blue-50 dark:hover:bg-accent-soft"
           >
             Edit
           </button>
-          <span className="w-px h-4 bg-nhs-grey-4 dark:bg-gray-600 mx-1 shrink-0" />
+          <span className="w-px h-4 bg-nhs-grey-4 dark:bg-line-strong mx-1 shrink-0" />
           <button
             type="button"
             onClick={onDelete}
@@ -574,7 +574,7 @@ export function MedicationDisplayRow({
             <button
               type="button"
               onClick={() => setConfirmReauth(false)}
-              className="text-xs text-nhs-grey-2 dark:text-gray-400 hover:underline"
+              className="text-xs text-nhs-grey-2 dark:text-muted hover:underline"
             >
               Cancel
             </button>
@@ -584,8 +584,8 @@ export function MedicationDisplayRow({
 
       {/* Stop confirmation */}
       {confirmStop !== null && (
-        <div className="bg-amber-50 dark:bg-amber-900/20 border-t border-amber-200 dark:border-amber-800 px-3 py-2">
-          <p className="text-xs text-amber-800 dark:text-amber-200 mb-2 font-medium">
+        <div className="bg-amber-50 dark:bg-warn-bg border-t border-amber-200 dark:border-warn-line px-3 py-2">
+          <p className="text-xs text-amber-800 dark:text-warn mb-2 font-medium">
             Stop medication — please provide a reason:
           </p>
           <input
@@ -595,7 +595,7 @@ export function MedicationDisplayRow({
             onChange={e => setConfirmStop(e.target.value)}
             placeholder="Reason for stopping…"
             autoFocus
-            className="w-full rounded border border-amber-300 dark:border-amber-700 px-2 py-1.5 text-sm bg-white dark:bg-gray-800 text-nhs-grey-1 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-amber-500 mb-2"
+            className="w-full rounded border border-amber-300 dark:border-warn-line px-2 py-1.5 text-sm bg-white dark:bg-surface text-nhs-grey-1 dark:text-ink focus:outline-none focus:ring-1 focus:ring-amber-500 mb-2"
           />
           <datalist id={`stop-reasons-${med._tempId}`}>
             {STOP_REASON_SUGGESTIONS.map(r => <option key={r} value={r} />)}
@@ -612,7 +612,7 @@ export function MedicationDisplayRow({
             <button
               type="button"
               onClick={() => setConfirmStop(null)}
-              className="text-xs text-nhs-grey-2 dark:text-gray-400 hover:underline"
+              className="text-xs text-nhs-grey-2 dark:text-muted hover:underline"
             >
               Cancel
             </button>
@@ -621,10 +621,10 @@ export function MedicationDisplayRow({
       )}
 
       {/* Issues */}
-      <div className="bg-white dark:bg-gray-900 px-3 py-2">
+      <div className="bg-white dark:bg-canvas px-3 py-2">
         {/* Issue counter summary */}
         <div className="flex items-center gap-2 mb-2">
-          <span className={`text-xs font-medium ${overLimit ? 'text-amber-600 dark:text-amber-400' : 'text-nhs-grey-3 dark:text-gray-500'}`}>
+          <span className={`text-xs font-medium ${overLimit ? 'text-amber-600 dark:text-warn' : 'text-nhs-grey-3 dark:text-muted'}`}>
             {maxIssues !== undefined
               ? `${issues.length} of ${maxIssues} issued${overLimit ? ' — limit reached' : ''}`
               : `${issues.length} issued`}
@@ -640,12 +640,12 @@ export function MedicationDisplayRow({
                   key={issue._tempId}
                   className={`flex items-center justify-between text-xs rounded px-2 py-1 ${
                     isCancelled
-                      ? 'bg-nhs-grey-5 dark:bg-gray-800 text-nhs-grey-3 dark:text-gray-600 opacity-70'
-                      : 'bg-nhs-grey-5 dark:bg-gray-800 text-nhs-grey-2 dark:text-gray-400'
+                      ? 'bg-nhs-grey-5 dark:bg-surface text-nhs-grey-3 dark:text-muted opacity-70'
+                      : 'bg-nhs-grey-5 dark:bg-surface text-nhs-grey-2 dark:text-muted'
                   }`}
                 >
                   <span className="flex items-center gap-2 flex-wrap">
-                    <span className={`font-medium ${isCancelled ? 'line-through text-nhs-grey-3 dark:text-gray-600' : 'text-nhs-grey-1 dark:text-gray-300'}`}>
+                    <span className={`font-medium ${isCancelled ? 'line-through text-nhs-grey-3 dark:text-muted' : 'text-nhs-grey-1 dark:text-ink-2'}`}>
                       #{idx + 1}
                     </span>
                     {issue.issueDate && (
@@ -658,7 +658,7 @@ export function MedicationDisplayRow({
                       <span><span className="opacity-60">End:</span> {isoToDisplay(issue.endDate)}</span>
                     )}
                     {isCancelled && (
-                      <span className="px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 font-medium text-[11px]">
+                      <span className="px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-warn-bg text-amber-700 dark:text-warn font-medium text-[11px]">
                         Cancelled
                       </span>
                     )}
@@ -671,7 +671,7 @@ export function MedicationDisplayRow({
                           type: 'CANCEL_MEDICATION_ISSUE',
                           payload: { medTempId: med._tempId, issueTempId: issue._tempId, cascade: isRepeatDispensing },
                         })}
-                        className="text-amber-600 dark:text-amber-400 hover:opacity-70 text-[11px] font-medium px-1"
+                        className="text-amber-600 dark:text-warn hover:opacity-70 text-[11px] font-medium px-1"
                         title={isRepeatDispensing ? 'Cancel this and all subsequent issues' : 'Cancel issue'}
                       >
                         Cancel
@@ -707,8 +707,8 @@ export function MedicationDisplayRow({
 
         {/* Over-limit confirmation */}
         {confirmOverLimit && (
-          <div className="mb-2 rounded border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-3 py-2">
-            <p className="text-xs text-amber-800 dark:text-amber-200 mb-2">
+          <div className="mb-2 rounded border border-amber-200 dark:border-warn-line bg-amber-50 dark:bg-warn-bg px-3 py-2">
+            <p className="text-xs text-amber-800 dark:text-warn mb-2">
               Maximum issues reached ({maxIssues}). Add an additional issue anyway?
             </p>
             <div className="flex gap-2">
@@ -722,7 +722,7 @@ export function MedicationDisplayRow({
               <button
                 type="button"
                 onClick={() => setConfirmOverLimit(false)}
-                className="text-xs text-nhs-grey-2 dark:text-gray-400 hover:underline"
+                className="text-xs text-nhs-grey-2 dark:text-muted hover:underline"
               >
                 Cancel
               </button>
@@ -733,11 +733,11 @@ export function MedicationDisplayRow({
         {/* Repeat-dispensing footer */}
         {isRepeatDispensing && !isStopped && (
           allIssued ? (
-            <p className="text-xs text-nhs-grey-3 dark:text-gray-500 italic">
+            <p className="text-xs text-nhs-grey-3 dark:text-muted italic">
               All {maxIssues} issues dispensed — reauthorise to issue again.
             </p>
           ) : rdMissingData ? (
-            <p className="text-xs text-amber-600 dark:text-amber-400">
+            <p className="text-xs text-amber-600 dark:text-warn">
               Set number of issues and supply duration before issuing.
             </p>
           ) : (
@@ -822,15 +822,15 @@ function MedicationSection({
   return (
     <div className="mb-4">
       <div className="flex items-center gap-2 mb-2">
-        <h4 className="text-xs font-semibold text-nhs-grey-2 dark:text-gray-400 uppercase tracking-wide">
+        <h4 className="text-xs font-semibold text-nhs-grey-2 dark:text-muted uppercase tracking-wide">
           {label}
         </h4>
-        <span className="text-xs px-1.5 py-0.5 rounded-full bg-nhs-grey-4 dark:bg-gray-700 text-nhs-grey-2 dark:text-gray-400">
+        <span className="text-xs px-1.5 py-0.5 rounded-full bg-nhs-grey-4 dark:bg-raised text-nhs-grey-2 dark:text-muted">
           {meds.length}
         </span>
       </div>
       {meds.length === 0 ? (
-        <p className="text-xs text-nhs-grey-3 dark:text-gray-500 italic pl-1">No {label.toLowerCase()} medications</p>
+        <p className="text-xs text-nhs-grey-3 dark:text-muted italic pl-1">No {label.toLowerCase()} medications</p>
       ) : (
         meds.map(med => (
           <MedicationDisplayRow
@@ -925,7 +925,7 @@ export function MedicationForm({ draft, dispatch }: Props) {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-nhs-grey-4 dark:border-gray-700 mb-4">
+      <div className="flex border-b border-nhs-grey-4 dark:border-line mb-4">
         {(['active', 'past'] as const).map(t => (
           <button
             key={t}
@@ -933,15 +933,15 @@ export function MedicationForm({ draft, dispatch }: Props) {
             onClick={() => setTab(t)}
             className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
               tab === t
-                ? 'border-nhs-blue text-nhs-blue dark:text-blue-300 dark:border-blue-300'
-                : 'border-transparent text-nhs-grey-2 dark:text-gray-400 hover:text-nhs-grey-1 dark:hover:text-gray-200'
+                ? 'border-nhs-blue text-nhs-blue dark:text-accent dark:border-accent-line'
+                : 'border-transparent text-nhs-grey-2 dark:text-muted hover:text-nhs-grey-1 dark:hover:text-ink'
             }`}
           >
             {t === 'active' ? 'Active' : 'Past'}
             <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${
               tab === t
-                ? 'bg-nhs-blue/10 dark:bg-blue-900/30 text-nhs-blue dark:text-blue-300'
-                : 'bg-nhs-grey-4 dark:bg-gray-700 text-nhs-grey-3 dark:text-gray-500'
+                ? 'bg-nhs-blue/10 dark:bg-accent-soft text-nhs-blue dark:text-accent'
+                : 'bg-nhs-grey-4 dark:bg-raised text-nhs-grey-3 dark:text-muted'
             }`}>
               {t === 'active' ? activeCount : pastCount}
             </span>

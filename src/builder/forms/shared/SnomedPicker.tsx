@@ -105,38 +105,38 @@ const DEFAULT_SERVER_URL = import.meta.env.DEV ? 'http://localhost:3001' : windo
 function SnomedInfoModal({ serverUrl, onClose }: { serverUrl: string; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl border border-nhs-grey-4 dark:border-nhs-grey-2 w-full max-w-md mx-4 p-5">
+      <div className="bg-white dark:bg-canvas rounded-lg shadow-xl border border-nhs-grey-4 dark:border-line-strong w-full max-w-md mx-4 p-5">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-semibold text-nhs-grey-1 dark:text-gray-100">
+          <h2 className="text-sm font-semibold text-nhs-grey-1 dark:text-ink">
             SNOMED CT — Connection Status
           </h2>
-          <button type="button" onClick={onClose} className="text-nhs-grey-3 hover:text-nhs-grey-1 dark:hover:text-gray-200">
+          <button type="button" onClick={onClose} className="text-nhs-grey-3 hover:text-nhs-grey-1 dark:hover:text-ink">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
 
-        <div className="flex items-center gap-2 mb-4 text-xs font-medium text-green-700 dark:text-green-400">
+        <div className="flex items-center gap-2 mb-4 text-xs font-medium text-green-700 dark:text-ok">
           <svg className="w-3.5 h-3.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
             <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
           </svg>
           Connected via NHS Terminology Server proxy
         </div>
 
-        <p className="text-xs text-nhs-grey-3 dark:text-gray-400 leading-relaxed">
+        <p className="text-xs text-nhs-grey-3 dark:text-muted leading-relaxed">
           This application uses SNOMED Clinical Terms® (SNOMED CT®). SNOMED CT® is the intellectual
           property of SNOMED International. All rights reserved. SNOMED CT® was originally created
           by the College of American Pathologists. "SNOMED" and "SNOMED CT" are registered
           trademarks of SNOMED International.
         </p>
-        <p className="text-xs text-nhs-grey-3 dark:text-gray-400 mt-2 leading-relaxed">
+        <p className="text-xs text-nhs-grey-3 dark:text-muted mt-2 leading-relaxed">
           SNOMED CT content is licensed through the NHS Terminology Server. Terminology searches are
           proxied server-side; no credentials are stored in your browser.
         </p>
 
-        <div className="mt-3 pt-3 border-t border-nhs-grey-4 dark:border-gray-700">
-          <p className="text-xs text-nhs-grey-3 dark:text-gray-500 font-mono truncate">{serverUrl}/api/snomed</p>
+        <div className="mt-3 pt-3 border-t border-nhs-grey-4 dark:border-line">
+          <p className="text-xs text-nhs-grey-3 dark:text-muted font-mono truncate">{serverUrl}/api/snomed</p>
         </div>
 
         <button
@@ -208,12 +208,12 @@ function ConfigModal({ onClose, onSaved }: ConfigModalProps) {
   }
 
   const inputCls =
-    'w-full rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-2 py-1.5 text-sm ' +
-    'text-nhs-grey-1 dark:bg-gray-800 focus:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue'
+    'w-full rounded border border-nhs-grey-4 dark:border-line-strong px-2 py-1.5 text-sm ' +
+    'text-nhs-grey-1 dark:bg-surface focus:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue'
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl border border-nhs-grey-4 dark:border-nhs-grey-2 w-full max-w-md mx-4 p-5">
+      <div className="bg-white dark:bg-canvas rounded-lg shadow-xl border border-nhs-grey-4 dark:border-line-strong w-full max-w-md mx-4 p-5">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-semibold text-nhs-grey-1">
             Connect to Terminology Server
@@ -463,7 +463,7 @@ export function SnomedPicker({ value, onChange, code, label = 'SNOMED CT', seman
   }
   const tagCls = (tag: string) =>
     tagColour[Object.keys(tagColour).find(k => tag.includes(k)) ?? ''] ??
-    'bg-nhs-grey-5 text-nhs-grey-2 dark:bg-gray-700'
+    'bg-nhs-grey-5 text-nhs-grey-2 dark:bg-raised'
 
   return (
     <>
@@ -484,8 +484,8 @@ export function SnomedPicker({ value, onChange, code, label = 'SNOMED CT', seman
                   required={required}
                   title={value}
                   className={
-                    'w-full rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-2 py-1.5 text-sm truncate ' +
-                    'text-nhs-grey-1 dark:bg-gray-800 ' +
+                    'w-full rounded border border-nhs-grey-4 dark:border-line-strong px-2 py-1.5 text-sm truncate ' +
+                    'text-nhs-grey-1 dark:bg-surface ' +
                     (code ? 'pr-14 ' : 'pr-8 ') +
                     'focus:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue'
                   }
@@ -504,7 +504,7 @@ export function SnomedPicker({ value, onChange, code, label = 'SNOMED CT', seman
                     // A fixed-width checkmark can never overflow; the code
                     // and term are still available via the tooltip.
                     <span
-                      className="flex items-center gap-1 shrink-0 px-1 py-0.5 rounded bg-nhs-blue/10 text-nhs-blue dark:bg-blue-900/40 dark:text-blue-300"
+                      className="flex items-center gap-1 shrink-0 px-1 py-0.5 rounded bg-nhs-blue/10 text-nhs-blue dark:bg-accent-soft dark:text-accent"
                       title={`${value} — SNOMED CT ${code} — click × to unlink and keep as free text`}
                     >
                       <svg className="w-3.5 h-3.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
@@ -527,8 +527,8 @@ export function SnomedPicker({ value, onChange, code, label = 'SNOMED CT', seman
                 className={
                   'shrink-0 p-1.5 rounded border transition-colors ' +
                   (isConnected
-                    ? 'border-green-400 text-green-600 dark:border-green-600 dark:text-green-400 hover:border-nhs-blue hover:text-nhs-blue'
-                    : 'border-nhs-grey-4 dark:border-nhs-grey-2 text-nhs-grey-3 hover:border-nhs-blue hover:text-nhs-blue')
+                    ? 'border-green-400 text-green-600 dark:border-ok-line dark:text-ok hover:border-nhs-blue hover:text-nhs-blue'
+                    : 'border-nhs-grey-4 dark:border-line-strong text-nhs-grey-3 hover:border-nhs-blue hover:text-nhs-blue')
                 }
               >
                 {isConnected ? (
@@ -549,7 +549,7 @@ export function SnomedPicker({ value, onChange, code, label = 'SNOMED CT', seman
             {error && <p className="mt-1 text-xs text-nhs-red">{error}</p>}
 
             {import.meta.env.DEV && debugInfo && (
-              <div className="mt-1 border border-dashed border-nhs-grey-4 dark:border-nhs-grey-2 rounded text-xs">
+              <div className="mt-1 border border-dashed border-nhs-grey-4 dark:border-line-strong rounded text-xs">
                 <button
                   type="button"
                   onClick={() => setDebugOpen(o => !o)}
@@ -559,7 +559,7 @@ export function SnomedPicker({ value, onChange, code, label = 'SNOMED CT', seman
                   <span>{debugOpen ? '▲' : '▼'}</span>
                 </button>
                 {debugOpen && (
-                  <div className="border-t border-dashed border-nhs-grey-4 dark:border-nhs-grey-2 p-2 space-y-2">
+                  <div className="border-t border-dashed border-nhs-grey-4 dark:border-line-strong p-2 space-y-2">
                     <p className="font-mono text-nhs-grey-3 break-all">{debugInfo.url}</p>
                     {lookupDetail && (
                       <table className="w-full text-[11px]">
@@ -567,7 +567,7 @@ export function SnomedPicker({ value, onChange, code, label = 'SNOMED CT', seman
                           {lookupDetail.designations.length > 0 && (
                             <tr>
                               <td className="pr-2 text-nhs-grey-3 align-top whitespace-nowrap">Synonyms</td>
-                              <td className="text-nhs-grey-1 dark:text-gray-200">
+                              <td className="text-nhs-grey-1 dark:text-ink">
                                 {lookupDetail.designations.map((d, i) => (
                                   <div key={i}>{d.value}{d.use && <span className="text-nhs-grey-3"> ({d.use})</span>}</div>
                                 ))}
@@ -577,7 +577,7 @@ export function SnomedPicker({ value, onChange, code, label = 'SNOMED CT', seman
                           {lookupDetail.attributes.length > 0 && (
                             <tr>
                               <td className="pr-2 text-nhs-grey-3 align-top whitespace-nowrap">Attributes</td>
-                              <td className="text-nhs-grey-1 dark:text-gray-200">
+                              <td className="text-nhs-grey-1 dark:text-ink">
                                 {lookupDetail.attributes.map((a, i) => (
                                   <div key={i}>
                                     {a.attributeName}: {a.valueDisplay ?? a.valueNumber ?? a.valueCode}
@@ -588,22 +588,22 @@ export function SnomedPicker({ value, onChange, code, label = 'SNOMED CT', seman
                           )}
                           <tr>
                             <td className="pr-2 text-nhs-grey-3 align-top whitespace-nowrap">Parents</td>
-                            <td className="text-nhs-grey-1 dark:text-gray-200 font-mono">{lookupDetail.parentCodes.join(', ') || '—'}</td>
+                            <td className="text-nhs-grey-1 dark:text-ink font-mono">{lookupDetail.parentCodes.join(', ') || '—'}</td>
                           </tr>
                           <tr>
                             <td className="pr-2 text-nhs-grey-3 align-top whitespace-nowrap">Children</td>
-                            <td className="text-nhs-grey-1 dark:text-gray-200 font-mono">{lookupDetail.childCodes.join(', ') || '—'}</td>
+                            <td className="text-nhs-grey-1 dark:text-ink font-mono">{lookupDetail.childCodes.join(', ') || '—'}</td>
                           </tr>
                           {lookupDetail.inactive !== undefined && (
                             <tr>
                               <td className="pr-2 text-nhs-grey-3 align-top whitespace-nowrap">Inactive</td>
-                              <td className="text-nhs-grey-1 dark:text-gray-200">{String(lookupDetail.inactive)}</td>
+                              <td className="text-nhs-grey-1 dark:text-ink">{String(lookupDetail.inactive)}</td>
                             </tr>
                           )}
                         </tbody>
                       </table>
                     )}
-                    <pre className="max-h-64 overflow-auto bg-nhs-grey-5 dark:bg-gray-800 rounded p-2 font-mono text-[11px] text-nhs-grey-1 dark:text-gray-200">
+                    <pre className="max-h-64 overflow-auto bg-nhs-grey-5 dark:bg-surface rounded p-2 font-mono text-[11px] text-nhs-grey-1 dark:text-ink">
                       {JSON.stringify(debugInfo.raw, null, 2)}
                     </pre>
                   </div>
@@ -617,7 +617,7 @@ export function SnomedPicker({ value, onChange, code, label = 'SNOMED CT', seman
               <div
                 ref={dropdownRef}
                 style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, width: widenDropdown(dropdownPos) }}
-                className="z-50 max-h-80 overflow-y-auto bg-white dark:bg-gray-900 border border-nhs-grey-4 dark:border-nhs-grey-2 rounded-lg shadow-lg"
+                className="z-50 max-h-80 overflow-y-auto bg-white dark:bg-canvas border border-nhs-grey-4 dark:border-line-strong rounded-lg shadow-lg"
               >
                 {results.map((r, idx) => (
                   <button
@@ -626,11 +626,11 @@ export function SnomedPicker({ value, onChange, code, label = 'SNOMED CT', seman
                     onMouseDown={e => { e.preventDefault(); handleSelect(r) }}
                     onMouseEnter={() => setActiveIdx(idx)}
                     className={
-                      'w-full text-left px-3 py-2 text-sm flex items-start gap-2 border-b border-nhs-grey-5 dark:border-gray-700 last:border-0 transition-colors ' +
-                      (idx === activeIdx ? 'bg-nhs-grey-5 dark:bg-gray-800' : 'hover:bg-nhs-grey-5 dark:hover:bg-gray-800')
+                      'w-full text-left px-3 py-2 text-sm flex items-start gap-2 border-b border-nhs-grey-5 dark:border-line last:border-0 transition-colors ' +
+                      (idx === activeIdx ? 'bg-nhs-grey-5 dark:bg-surface' : 'hover:bg-nhs-grey-5 dark:hover:bg-raised')
                     }
                   >
-                    <span className="font-mono text-xs text-nhs-blue dark:text-blue-400 shrink-0 mt-0.5 w-24 truncate">{r.code}</span>
+                    <span className="font-mono text-xs text-nhs-blue dark:text-accent shrink-0 mt-0.5 w-24 truncate">{r.code}</span>
                     <span className="flex-1 min-w-0">
                       <span className="text-nhs-grey-1 block truncate">{r.display_term}</span>
                       {r.fully_specified_name !== r.display_term && (

@@ -144,26 +144,26 @@ function ListCard({ list }: ListCardProps) {
   const count = list.entries.length
 
   return (
-    <div className={`border ${list.secondary ? 'border-purple-200 dark:border-purple-900 border-l-4 border-l-purple-400 dark:border-l-purple-600' : 'border-nhs-grey-4 dark:border-gray-700 border-l-4 border-l-nhs-grey-3 dark:border-l-gray-500'} rounded-md overflow-hidden`}>
+    <div className={`border ${list.secondary ? 'border-purple-200 dark:border-purple-900 border-l-4 border-l-purple-400 dark:border-l-purple-600' : 'border-nhs-grey-4 dark:border-line border-l-4 border-l-nhs-grey-3 dark:border-l-line-strong'} rounded-md overflow-hidden`}>
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="w-full flex items-center gap-2 px-3 py-2 bg-nhs-grey-5 dark:bg-gray-800 hover:bg-nhs-grey-4 dark:hover:bg-gray-700 transition-colors text-left"
+        className="w-full flex items-center gap-2 px-3 py-2 bg-nhs-grey-5 dark:bg-surface hover:bg-nhs-grey-4 dark:hover:bg-raised transition-colors text-left"
         aria-expanded={open}
       >
         <ChevronRight
-          className={`h-4 w-4 flex-shrink-0 text-nhs-grey-2 dark:text-gray-400 transition-transform duration-150 ${open ? 'rotate-90' : ''}`}
+          className={`h-4 w-4 flex-shrink-0 text-nhs-grey-2 dark:text-muted transition-transform duration-150 ${open ? 'rotate-90' : ''}`}
         />
-        <span className="flex-1 text-sm font-medium text-nhs-grey-1 dark:text-gray-200">
+        <span className="flex-1 text-sm font-medium text-nhs-grey-1 dark:text-ink">
           {list.name}
         </span>
         <span
           className={`text-xs px-2 py-0.5 rounded-full font-medium ${
             count === 0
-              ? 'bg-nhs-grey-4 dark:bg-gray-700 text-nhs-grey-3 dark:text-gray-500'
+              ? 'bg-nhs-grey-4 dark:bg-raised text-nhs-grey-3 dark:text-muted'
               : list.secondary
                 ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
-                : 'bg-nhs-blue/10 dark:bg-blue-900/30 text-nhs-blue dark:text-blue-300'
+                : 'bg-nhs-blue/10 dark:bg-accent-soft text-nhs-blue dark:text-accent'
           }`}
         >
           {count === 1 ? '1 entry' : `${count} entries`}
@@ -171,14 +171,14 @@ function ListCard({ list }: ListCardProps) {
       </button>
 
       {open && (
-        <div className="px-3 py-2 bg-white dark:bg-gray-900">
+        <div className="px-3 py-2 bg-white dark:bg-canvas">
           {count === 0 ? (
-            <p className="text-xs text-nhs-grey-3 dark:text-gray-500 italic py-1">No entries</p>
+            <p className="text-xs text-nhs-grey-3 dark:text-muted italic py-1">No entries</p>
           ) : (
             <ul className="space-y-1">
               {list.entries.map((label, idx) => (
-                <li key={idx} className="flex items-start gap-2 text-sm text-nhs-grey-2 dark:text-gray-400">
-                  <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-nhs-grey-3 dark:bg-gray-600" />
+                <li key={idx} className="flex items-start gap-2 text-sm text-nhs-grey-2 dark:text-muted">
+                  <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-nhs-grey-3 dark:bg-line-strong" />
                   <span>{label}</span>
                 </li>
               ))}
@@ -197,21 +197,21 @@ export function ListsSection({ draft }: { draft: DraftRecord }) {
   return (
     <div>
       <div className="flex items-center gap-2 mb-3">
-        <h3 className="text-sm font-semibold text-nhs-grey-2 dark:text-gray-300">
+        <h3 className="text-sm font-semibold text-nhs-grey-2 dark:text-ink-2">
           Auto-generated Lists
         </h3>
-        <span className="text-xs px-2 py-0.5 bg-nhs-grey-4 dark:bg-gray-700 text-nhs-grey-2 dark:text-gray-400 rounded-full">
+        <span className="text-xs px-2 py-0.5 bg-nhs-grey-4 dark:bg-raised text-nhs-grey-2 dark:text-muted rounded-full">
           Read only
         </span>
         <InfoHint topic="builder.lists-readonly" />
       </div>
-      <p className="text-xs text-nhs-grey-3 dark:text-gray-500 mb-4">
+      <p className="text-xs text-nhs-grey-3 dark:text-muted mb-4">
         These FHIR Lists are generated automatically as you build the record. They cannot be edited
         directly.
       </p>
 
       <div className="mb-4">
-        <p className="text-xs font-semibold text-nhs-grey-2 dark:text-gray-400 uppercase tracking-wide mb-2">
+        <p className="text-xs font-semibold text-nhs-grey-2 dark:text-muted uppercase tracking-wide mb-2">
           Primary Lists
         </p>
         <div className="space-y-2">
@@ -223,10 +223,10 @@ export function ListsSection({ draft }: { draft: DraftRecord }) {
 
       {secondaryLists.length > 0 && (
         <div>
-          <p className="text-xs font-semibold text-nhs-grey-2 dark:text-gray-400 uppercase tracking-wide mb-1">
+          <p className="text-xs font-semibold text-nhs-grey-2 dark:text-muted uppercase tracking-wide mb-1">
             Secondary Lists
           </p>
-          <p className="text-xs text-nhs-grey-3 dark:text-gray-500 mb-2">
+          <p className="text-xs text-nhs-grey-3 dark:text-muted mb-2">
             Generated from problem and consultation linkage set in each item's form.
           </p>
           <div className="space-y-2">
@@ -238,7 +238,7 @@ export function ListsSection({ draft }: { draft: DraftRecord }) {
       )}
 
       {secondaryLists.length === 0 && (draft.problems.length > 0 || draft.consultations.length > 0) && (
-        <p className="text-xs text-nhs-grey-3 dark:text-gray-500 italic">
+        <p className="text-xs text-nhs-grey-3 dark:text-muted italic">
           No secondary lists yet — link clinical items to problems or consultations using the "GP Connect Linkage" section in each item's edit form.
         </p>
       )}

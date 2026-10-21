@@ -15,7 +15,7 @@ import { ListsView } from './ListsView'
 import { type DomainId, DOMAIN_MAP } from './domains'
 import type { GpConnectBundle } from '../../fhir/types'
 import { PatientBanner } from './PatientBanner'
-import { useDomainWarnings, DomainWarningBanner } from './DomainWarningBanner'
+import { useDomainWarnings, DomainWarningBanner, OperationOutcomeBanner } from './DomainWarningBanner'
 
 interface Props {
   record: GpConnectBundle
@@ -95,6 +95,7 @@ export function ClinicalView({ record, onJumpToSource, onOpenTraining }: Props) 
             </button>
           </div>
         )}
+        <OperationOutcomeBanner issues={record.operationIssues} />
         {domainWarnings[activeDomain] && (
           <DomainWarningBanner warning={domainWarnings[activeDomain]!} />
         )}
@@ -129,7 +130,7 @@ export function ClinicalView({ record, onJumpToSource, onOpenTraining }: Props) 
           <DocumentsView bundle={record} selectedId={selectedId} onSelect={handleSelect} onJumpToSource={onJumpToSource} onJumpToRecord={handleJumpToRecord} />
         )}
         {activeDomain === 'supporting-resources' && (
-          <SupportingResourcesView bundle={record} selectedId={selectedId} onSelect={handleSelect} onJumpToSource={onJumpToSource} />
+          <SupportingResourcesView bundle={record} selectedId={selectedId} onSelect={handleSelect} onJumpToSource={onJumpToSource} onJumpToRecord={handleJumpToRecord} />
         )}
         {activeDomain === 'lists' && (
           <ListsView bundle={record} selectedId={selectedId} onSelect={handleSelect} onJumpToSource={onJumpToSource} onJumpToRecord={handleJumpToRecord} />

@@ -29,8 +29,8 @@ export function FormField({ label, required, children, className }: FormFieldPro
 // ---------------------------------------------------------------------------
 
 export const INPUT_CLS =
-  'w-full rounded border border-nhs-grey-4 dark:border-nhs-grey-2 px-2 py-1.5 text-sm ' +
-  'text-nhs-grey-1 dark:bg-gray-800 ' +
+  'w-full rounded border border-nhs-grey-4 dark:border-line-strong px-2 py-1.5 text-sm ' +
+  'text-nhs-grey-1 dark:bg-surface ' +
   'focus:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue'
 
 export interface FieldProps {
@@ -68,7 +68,7 @@ export function Field({
         placeholder={placeholder}
         required={required && !disabled}
         disabled={disabled}
-        className={`${INPUT_CLS} disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-nhs-grey-5 dark:disabled:bg-gray-800`}
+        className={`${INPUT_CLS} disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-nhs-grey-5 dark:disabled:bg-raised`}
         list={listId}
         autoComplete="off"
       />

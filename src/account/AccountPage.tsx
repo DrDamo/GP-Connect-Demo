@@ -9,9 +9,9 @@ const ACCOUNT_TOURS: TourId[] = ['home', 'clinical-view', 'inspector', 'builder'
 
 function SectionCard({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-lg border border-nhs-grey-4 dark:border-gray-700 p-5">
-      <h3 className="text-sm font-semibold text-nhs-grey-1 dark:text-gray-100">{title}</h3>
-      {description && <p className="text-xs text-nhs-grey-3 dark:text-gray-500 mt-0.5 mb-4">{description}</p>}
+    <div className="bg-white dark:bg-canvas rounded-lg border border-nhs-grey-4 dark:border-line p-5">
+      <h3 className="text-sm font-semibold text-nhs-grey-1 dark:text-ink">{title}</h3>
+      {description && <p className="text-xs text-nhs-grey-3 dark:text-muted mt-0.5 mb-4">{description}</p>}
       <div className={description ? '' : 'mt-4'}>{children}</div>
     </div>
   )
@@ -20,13 +20,13 @@ function SectionCard({ title, description, children }: { title: string; descript
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-nhs-grey-1 dark:text-gray-300 mb-1">{label}</label>
+      <label className="block text-sm font-medium text-nhs-grey-1 dark:text-ink-2 mb-1">{label}</label>
       {children}
     </div>
   )
 }
 
-const inputClass = 'w-full rounded border border-nhs-grey-4 dark:border-gray-600 px-3 py-2 text-sm text-nhs-grey-1 dark:text-gray-100 dark:bg-gray-800 focus:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue'
+const inputClass = 'w-full rounded border border-nhs-grey-4 dark:border-line-strong px-3 py-2 text-sm text-nhs-grey-1 dark:text-ink dark:bg-surface focus:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue'
 
 export function AccountPage() {
   const { profile, organisation, updateProfile, updateOrganisationName, changePassword } = useAuth()
@@ -140,7 +140,7 @@ export function AccountPage() {
               </div>
             </Field>
             {!isAdmin && (
-              <p className="text-xs text-nhs-grey-3 dark:text-gray-500">Only an organisation admin can rename your organisation.</p>
+              <p className="text-xs text-nhs-grey-3 dark:text-muted">Only an organisation admin can rename your organisation.</p>
             )}
             {isAdmin && (
               <div className="flex items-center gap-3">
@@ -179,18 +179,18 @@ export function AccountPage() {
         </SectionCard>
 
         <SectionCard title="Billing" description="Manage your plan and view payment history.">
-          <div className="flex items-center justify-between bg-nhs-grey-5 dark:bg-gray-800 rounded-lg p-4">
+          <div className="flex items-center justify-between bg-nhs-grey-5 dark:bg-surface rounded-lg p-4">
             <div>
-              <p className="text-sm font-medium text-nhs-grey-1 dark:text-gray-100 flex items-center gap-1">
+              <p className="text-sm font-medium text-nhs-grey-1 dark:text-ink flex items-center gap-1">
                 Free plan
                 <InfoHint topic="account.billing-placeholder" />
               </p>
-              <p className="text-xs text-nhs-grey-3 dark:text-gray-500 mt-0.5">No payment method on file · Payment history will appear here</p>
+              <p className="text-xs text-nhs-grey-3 dark:text-muted mt-0.5">No payment method on file · Payment history will appear here</p>
             </div>
             <button
               disabled
               title="Coming soon"
-              className="text-sm font-medium px-3 py-1.5 rounded border border-nhs-grey-4 dark:border-gray-600 text-nhs-grey-3 dark:text-gray-500 opacity-60 cursor-not-allowed"
+              className="text-sm font-medium px-3 py-1.5 rounded border border-nhs-grey-4 dark:border-line-strong text-nhs-grey-3 dark:text-muted opacity-60 cursor-not-allowed"
             >
               Upgrade — coming soon
             </button>
@@ -213,7 +213,7 @@ function OnboardingSectionCard() {
         <ul className="space-y-2">
           {ACCOUNT_TOURS.map(id => (
             <li key={id} className="flex items-center justify-between text-sm">
-              <span className="flex items-center gap-2 text-nhs-grey-1 dark:text-gray-100">
+              <span className="flex items-center gap-2 text-nhs-grey-1 dark:text-ink">
                 {TOURS[id].label}
                 {isTourCompleted(id) && (
                   <span className="text-xs text-nhs-green">✓ Completed</span>
@@ -221,17 +221,17 @@ function OnboardingSectionCard() {
               </span>
               <button
                 onClick={() => restartTour(id)}
-                className="text-xs px-2.5 py-1 rounded border border-nhs-grey-4 dark:border-gray-600 text-nhs-grey-2 dark:text-gray-300 hover:border-nhs-blue hover:text-nhs-blue transition-colors"
+                className="text-xs px-2.5 py-1 rounded border border-nhs-grey-4 dark:border-line-strong text-nhs-grey-2 dark:text-ink-2 hover:border-nhs-blue hover:text-nhs-blue transition-colors"
               >
                 Restart tour
               </button>
             </li>
           ))}
         </ul>
-        <div className="flex items-center gap-3 pt-2 border-t border-nhs-grey-4 dark:border-gray-700">
+        <div className="flex items-center gap-3 pt-2 border-t border-nhs-grey-4 dark:border-line">
           <button
             onClick={resetAllHints}
-            className="text-xs px-2.5 py-1.5 rounded border border-nhs-grey-4 dark:border-gray-600 text-nhs-grey-2 dark:text-gray-300 hover:border-nhs-blue hover:text-nhs-blue transition-colors"
+            className="text-xs px-2.5 py-1.5 rounded border border-nhs-grey-4 dark:border-line-strong text-nhs-grey-2 dark:text-ink-2 hover:border-nhs-blue hover:text-nhs-blue transition-colors"
           >
             Reset dismissed hints
           </button>

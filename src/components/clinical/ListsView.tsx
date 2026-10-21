@@ -120,11 +120,12 @@ function ListDetail({
         <h3 className="text-sm font-semibold text-nhs-grey-1">{list.title ?? 'List'}</h3>
         <StatusBadge value={list.status} />
       </div>
-      <div className="grid grid-cols-2 gap-x-8 gap-y-1.5">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,max(20rem,calc(50%_-_1rem))),1fr))] gap-x-8 gap-y-1.5">
         {list.date      && <DetailRow label="Date"       value={list.date} />}
         {list.mode      && <DetailRow label="Mode"       value={list.mode} />}
         {list.orderedBy && <DetailRow label="Ordered by" value={list.orderedBy} />}
-        {list.note      && <div className="col-span-2"><DetailRow label="Note" value={list.note} /></div>}
+        {list.clinicalSetting && <DetailRow label="Clinical setting" value={list.clinicalSetting} />}
+        {list.note      && <div className="col-span-full"><DetailRow label="Note" value={list.note} /></div>}
       </div>
       {entries.length > 0 && (
         <div className="overflow-x-auto">

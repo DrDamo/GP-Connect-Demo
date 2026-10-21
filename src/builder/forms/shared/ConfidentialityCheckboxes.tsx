@@ -22,18 +22,18 @@ export function ConfidentialityCheckboxes({ confidential, notForPfs, onChange }:
           type="checkbox"
           checked={confidential ?? false}
           onChange={e => onChange({ confidential: e.target.checked })}
-          className="rounded border-nhs-grey-4 dark:border-nhs-grey-2 text-nhs-blue focus:ring-nhs-blue"
+          className="rounded border-nhs-grey-4 dark:border-line-strong text-nhs-blue focus:ring-nhs-blue"
         />
-        <span className="text-nhs-grey-2 dark:text-gray-300">Confidential</span>
+        <span className="text-nhs-grey-2 dark:text-ink-2">Confidential</span>
       </label>
       <label className="flex items-center gap-1.5 cursor-pointer" title="Output as normal, but tagged with a NOPAT security label so patient-facing services withhold it.">
         <input
           type="checkbox"
           checked={notForPfs ?? false}
           onChange={e => onChange({ notForPfs: e.target.checked })}
-          className="rounded border-nhs-grey-4 dark:border-nhs-grey-2 text-nhs-blue focus:ring-nhs-blue"
+          className="rounded border-nhs-grey-4 dark:border-line-strong text-nhs-blue focus:ring-nhs-blue"
         />
-        <span className="text-nhs-grey-2 dark:text-gray-300">Not for PFS</span>
+        <span className="text-nhs-grey-2 dark:text-ink-2">Not for PFS</span>
       </label>
     </div>
   )

@@ -10,6 +10,9 @@ import { formatCodedDataValue } from '../../fhir/utils'
 import { DomainTable } from './DomainTable'
 import type { DomainColumn } from './DomainTable'
 import { ReferencedResources } from './ReferencedResources'
+import { ReferencedBy } from './ReferencedBy'
+import { VisualiseButton } from './VisualiseButton'
+import { buildConsultationGraph } from '../../fhir/relationshipGraph'
 import { ReferenceChip } from './ResourceCard'
 import { type DomainId } from './domains'
 import { InfoHint } from '../../onboarding/InfoHint'
@@ -554,8 +557,15 @@ function ConsultationDetail({
       <div className="flex items-center gap-3">
         <h3 className="text-sm font-semibold text-nhs-grey-1">{consultation.type ?? 'Consultation'}</h3>
         {consultation.date && <span className="text-xs text-nhs-grey-3">{consultation.date}</span>}
+        <VisualiseButton
+          record={bundle}
+          build={fhir => buildConsultationGraph(fhir, consultation.id)}
+          onJumpToSource={onJumpToSource}
+          onJumpToRecord={onJumpToRecord}
+          className="ml-auto"
+        />
       </div>
-      <div className="grid grid-cols-2 gap-x-8 gap-y-1.5">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,max(20rem,calc(50%_-_1rem))),1fr))] gap-x-8 gap-y-1.5">
         <DetailRow label="Date"     value={consultation.date} />
         <DetailRow label="End date" value={consultation.endDate} />
         <DetailRow label="Type"     value={consultation.type} />
@@ -590,16 +600,6 @@ function ConsultationDetail({
             : undefined
         } />
       </div>
-      <ReferencedResources
-        refs={refs}
-        practitioners={bundle.practitioners}
-        organisations={bundle.organisations}
-        healthcareServices={bundle.healthcareServices}
-        locations={bundle.locations}
-        highlightedId={openResourceId ?? undefined}
-        onJumpToSource={onJumpToSource}
-        onJumpToRecord={onJumpToRecord}
-      />
       {hasContent && (
         <div className="border-t border-nhs-blue/20 pt-3 space-y-4">
           <div className="space-y-1.5">
@@ -632,6 +632,22 @@ function ConsultationDetail({
           ))}
         </div>
       )}
+      <ReferencedResources
+        refs={refs}
+        practitioners={bundle.practitioners}
+        organisations={bundle.organisations}
+        healthcareServices={bundle.healthcareServices}
+        locations={bundle.locations}
+        highlightedId={openResourceId ?? undefined}
+        onJumpToSource={onJumpToSource}
+        onJumpToRecord={onJumpToRecord}
+      />
+      <ReferencedBy
+        record={bundle}
+        self={`Encounter/${consultation.id}`}
+        onJumpToSource={onJumpToSource}
+        onJumpToRecord={onJumpToRecord}
+      />
     </div>
   )
 }

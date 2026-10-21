@@ -21,7 +21,9 @@ import { HelpMenu } from './onboarding/HelpMenu'
 import { InfoHint } from './onboarding/InfoHint'
 import { AppGuideView, type GuidePageId } from './onboarding/AppGuideView'
 import type { DraftRecord } from './builder/types'
-import { parseBundle, normalizePastedJson } from './fhir/parser'
+import { parseBundle, normalizePastedJson, stripBom } from './fhir/parser'
+import { extractOperationIssues } from './fhir/operationOutcomes'
+import { buildIncomingRefs } from './fhir/incomingRefs'
 import { validateMedicationsBundle, cleanDanglingRefs } from './fhir/validator'
 import { validateSnomedCodes, applyTransferDegrade, buildUnmutatedIssues, passedSnomedMessage, checkSnomedStatuses } from './fhir/snomedDegrade'
 import type { SnomedCodingRef } from './fhir/snomedDegrade'
@@ -199,6 +201,9 @@ function AppContent() {
     healthcareServices: extractHealthcareServices(data),
     locations: extractLocations(data),
     lists: extractLists(data),
+    operationIssues: extractOperationIssues(data),
+    incomingRefs: buildIncomingRefs(data),
+    fhir: data,
   }), [])
 
   const handleLoad = useCallback((text: string, filename: string, label?: string, initialTab: ActiveTab = 'inspector') => {
@@ -209,6 +214,10 @@ function AppContent() {
       setParseError(parsed.error)
       return
     }
+    // Keep `source` in step with the parsed bundle: drop any BOM, and
+    // re-serialise when a bare resource/array was wrapped into a Bundle so
+    // the Inspector's line index points at the bundle actually rendered.
+    text = parsed.wrapped ? JSON.stringify(parsed.data, null, 2) : stripBom(text)
     const validation = validateMedicationsBundle(parsed.data)
     const record = buildRecordFromBundle(parsed.data)
     setLoaded({ source: text, filename, label: label ?? filename, format: parsed.format, validation, record })
@@ -390,8 +399,8 @@ function AppContent() {
 
   if (isSupabaseConfigured && isLoading) {
     return (
-      <div className="h-screen flex items-center justify-center bg-nhs-grey-5 dark:bg-gray-950">
-        <div className="text-sm text-nhs-grey-3 dark:text-gray-500">Loading…</div>
+      <div className="h-screen flex items-center justify-center bg-nhs-grey-5 dark:bg-canvas">
+        <div className="text-sm text-nhs-grey-3 dark:text-muted">Loading…</div>
       </div>
     )
   }
@@ -405,11 +414,11 @@ function AppContent() {
     <div className="h-screen flex flex-col bg-nhs-grey-5 overflow-hidden">
       <TourOverlay currentTab={tab} setTab={setTab} />
       {/* NHS-style header */}
-      <header className="bg-nhs-blue text-white shadow-md shrink-0">
+      <header className="gpc-chrome bg-nhs-blue text-white shadow-md shrink-0">
         <div className="max-w-screen-2xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {/* NHS logo mark */}
-            <div className="bg-white text-nhs-blue font-extrabold text-sm px-2 py-1 rounded leading-tight">NHS</div>
+            <div className="gpc-nhs-logo bg-white text-nhs-blue font-extrabold text-sm px-2 py-1 rounded leading-tight">NHS</div>
             <div>
               <h1 className="text-base font-semibold leading-tight">GP Connect Demonstrator</h1>
               <p className="text-xs opacity-75 leading-tight flex items-center flex-wrap gap-x-1">
@@ -619,24 +628,24 @@ function AppContent() {
         <main className="flex-1 overflow-y-auto p-6">
           <div className="max-w-5xl mx-auto space-y-6">
             <div className="text-center">
-              <h2 className="text-xl font-semibold text-nhs-grey-1 dark:text-gray-100">Get started</h2>
-              <p className="text-sm text-nhs-grey-3 dark:text-gray-500 mt-1">
+              <h2 className="text-xl font-semibold text-nhs-grey-1 dark:text-ink">Get started</h2>
+              <p className="text-sm text-nhs-grey-3 dark:text-muted mt-1">
                 Open a bundle, create a new record, or explore the training guides
               </p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
               {/* Open a bundle */}
-              <section className="lg:col-span-2 bg-white dark:bg-gray-900 rounded-xl border border-nhs-grey-4 dark:border-gray-700 p-6 space-y-4">
+              <section className="lg:col-span-2 bg-white dark:bg-canvas rounded-xl border border-nhs-grey-4 dark:border-line p-6 space-y-4">
                 <div className="flex items-start gap-3">
-                  <div className="shrink-0 w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-950 text-nhs-blue flex items-center justify-center">
+                  <div className="shrink-0 w-9 h-9 rounded-lg bg-blue-50 dark:bg-accent-soft text-nhs-blue flex items-center justify-center">
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                   </div>
                   <div>
-                    <h3 className="font-semibold text-nhs-grey-1 dark:text-gray-100">Open a bundle</h3>
-                    <p className="text-xs text-nhs-grey-3 dark:text-gray-500">FHIR STU3 · JSON or XML · Access Record Structured</p>
+                    <h3 className="font-semibold text-nhs-grey-1 dark:text-ink">Open a bundle</h3>
+                    <p className="text-xs text-nhs-grey-3 dark:text-muted">FHIR STU3 · JSON or XML · Access Record Structured</p>
                   </div>
                 </div>
 
@@ -649,7 +658,7 @@ function AppContent() {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => setShowPaste(true)}
-                        className="flex-1 py-2 px-4 border border-nhs-grey-4 dark:border-gray-600 text-nhs-grey-2 dark:text-gray-300 rounded-lg text-sm hover:border-nhs-blue hover:text-nhs-blue transition-colors"
+                        className="flex-1 py-2 px-4 border border-nhs-grey-4 dark:border-line-strong text-nhs-grey-2 dark:text-ink-2 rounded-lg text-sm hover:border-nhs-blue hover:text-nhs-blue transition-colors"
                       >
                         Paste FHIR JSON
                       </button>
@@ -662,7 +671,7 @@ function AppContent() {
                         onChange={e => setPasteText(e.target.value)}
                         placeholder="Paste a FHIR Bundle, partial bundle, or individual resource (JSON)…"
                         rows={6}
-                        className="w-full rounded-lg border border-nhs-grey-4 dark:border-gray-600 bg-white dark:bg-gray-800 p-3 font-mono text-xs text-nhs-grey-1 dark:text-gray-100 placeholder-nhs-grey-3 focus:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue resize-y"
+                        className="w-full rounded-lg border border-nhs-grey-4 dark:border-line-strong bg-white dark:bg-surface p-3 font-mono text-xs text-nhs-grey-1 dark:text-ink placeholder-nhs-grey-3 focus:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue resize-y"
                         autoFocus
                       />
                       <div className="flex gap-2">
@@ -675,7 +684,7 @@ function AppContent() {
                         </button>
                         <button
                           onClick={() => { setShowPaste(false); setPasteText('') }}
-                          className="py-2 px-4 border border-nhs-grey-4 dark:border-gray-600 text-nhs-grey-2 dark:text-gray-300 rounded-lg text-sm hover:border-nhs-grey-2 transition-colors"
+                          className="py-2 px-4 border border-nhs-grey-4 dark:border-line-strong text-nhs-grey-2 dark:text-ink-2 rounded-lg text-sm hover:border-nhs-grey-2 transition-colors"
                         >
                           Cancel
                         </button>
@@ -685,13 +694,13 @@ function AppContent() {
                 </div>
 
                 {parseError && (
-                  <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-800 rounded text-sm text-nhs-red dark:text-red-400">
+                  <div className="p-3 bg-red-50 dark:bg-bad-bg border border-red-300 dark:border-bad-line rounded text-sm text-nhs-red dark:text-bad">
                     <strong>Parse error:</strong> {parseError}
                   </div>
                 )}
 
-                <div className="border-t border-nhs-grey-4 dark:border-gray-700 pt-4 space-y-2" data-tour="home-sample-data">
-                  <p className="text-xs font-medium text-nhs-grey-2 dark:text-gray-400 uppercase tracking-wide">Sample data</p>
+                <div className="border-t border-nhs-grey-4 dark:border-line pt-4 space-y-2" data-tour="home-sample-data">
+                  <p className="text-xs font-medium text-nhs-grey-2 dark:text-muted uppercase tracking-wide">Sample data</p>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={handleLoadFullSample}
@@ -700,18 +709,18 @@ function AppContent() {
                       Load full GP Connect sample
                       <span className="ml-2 opacity-75 text-xs font-normal">all domains · 2.4 MB</span>
                     </button>
-                    <InfoHint topic="home.sample-full" className="text-nhs-grey-2 dark:text-gray-400" />
+                    <InfoHint topic="home.sample-full" className="text-nhs-grey-2 dark:text-muted" />
                   </div>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={handleLoadSample}
-                      className="flex-1 py-2 px-4 border border-nhs-grey-4 dark:border-gray-600 text-nhs-grey-2 dark:text-gray-300 rounded-lg text-sm hover:border-nhs-blue hover:text-nhs-blue transition-colors"
+                      className="flex-1 py-2 px-4 border border-nhs-grey-4 dark:border-line-strong text-nhs-grey-2 dark:text-ink-2 rounded-lg text-sm hover:border-nhs-blue hover:text-nhs-blue transition-colors"
                     >
                       Load small GP Connect sample
                     </button>
-                    <InfoHint topic="home.sample-meds" className="text-nhs-grey-2 dark:text-gray-400" />
+                    <InfoHint topic="home.sample-meds" className="text-nhs-grey-2 dark:text-muted" />
                   </div>
-                  <p className="text-xs text-nhs-grey-3 dark:text-gray-500">
+                  <p className="text-xs text-nhs-grey-3 dark:text-muted">
                     Full sample covers all clinical domains: Medications, Allergies, Problems, Consultations, Immunisations, Investigations, Referrals, Diary Entries &amp; Coded Data
                   </p>
                 </div>
@@ -719,16 +728,16 @@ function AppContent() {
 
               {/* Create a record + Training + Tools */}
               <div className="flex flex-col gap-5">
-                <section className="bg-white dark:bg-gray-900 rounded-xl border border-nhs-grey-4 dark:border-gray-700 p-6 space-y-3">
+                <section className="bg-white dark:bg-canvas rounded-xl border border-nhs-grey-4 dark:border-line p-6 space-y-3">
                   <div className="flex items-start gap-3">
-                    <div className="shrink-0 w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-950 text-nhs-blue flex items-center justify-center">
+                    <div className="shrink-0 w-9 h-9 rounded-lg bg-blue-50 dark:bg-accent-soft text-nhs-blue flex items-center justify-center">
                       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v6m3-3H9m4.5 8.25a8.25 8.25 0 100-16.5 8.25 8.25 0 000 16.5z" />
                       </svg>
                     </div>
                     <div>
-                      <h3 className="font-semibold text-nhs-grey-1 dark:text-gray-100">Create a record</h3>
-                      <p className="text-xs text-nhs-grey-3 dark:text-gray-500">Compose a new patient, or reuse one your team has built</p>
+                      <h3 className="font-semibold text-nhs-grey-1 dark:text-ink">Create a record</h3>
+                      <p className="text-xs text-nhs-grey-3 dark:text-muted">Compose a new patient, or reuse one your team has built</p>
                     </div>
                   </div>
                   <button
@@ -742,23 +751,23 @@ function AppContent() {
                     <button
                       onClick={() => setTab('patients')}
                       data-tour="home-shared-patients"
-                      className="w-full py-2 px-4 border border-nhs-grey-4 dark:border-gray-600 text-nhs-grey-2 dark:text-gray-300 rounded-lg text-sm hover:border-nhs-blue hover:text-nhs-blue transition-colors"
+                      className="w-full py-2 px-4 border border-nhs-grey-4 dark:border-line-strong text-nhs-grey-2 dark:text-ink-2 rounded-lg text-sm hover:border-nhs-blue hover:text-nhs-blue transition-colors"
                     >
                       Shared patients →
                     </button>
                   )}
                 </section>
 
-                <section className="bg-white dark:bg-gray-900 rounded-xl border border-nhs-grey-4 dark:border-gray-700 p-6 space-y-3">
+                <section className="bg-white dark:bg-canvas rounded-xl border border-nhs-grey-4 dark:border-line p-6 space-y-3">
                   <div className="flex items-start gap-3">
-                    <div className="shrink-0 w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-950 text-nhs-blue flex items-center justify-center">
+                    <div className="shrink-0 w-9 h-9 rounded-lg bg-blue-50 dark:bg-accent-soft text-nhs-blue flex items-center justify-center">
                       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
                       </svg>
                     </div>
                     <div>
-                      <h3 className="font-semibold text-nhs-grey-1 dark:text-gray-100">Training</h3>
-                      <p className="text-xs text-nhs-grey-3 dark:text-gray-500">GP Connect FHIR STU3 domain guides — no bundle needed</p>
+                      <h3 className="font-semibold text-nhs-grey-1 dark:text-ink">Training</h3>
+                      <p className="text-xs text-nhs-grey-3 dark:text-muted">GP Connect FHIR STU3 domain guides — no bundle needed</p>
                     </div>
                   </div>
                   <button
@@ -769,16 +778,16 @@ function AppContent() {
                   </button>
                 </section>
 
-                <section className="bg-white dark:bg-gray-900 rounded-xl border border-nhs-grey-4 dark:border-gray-700 p-6 space-y-3">
+                <section className="bg-white dark:bg-canvas rounded-xl border border-nhs-grey-4 dark:border-line p-6 space-y-3">
                   <div className="flex items-start gap-3">
-                    <div className="shrink-0 w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-950 text-nhs-blue flex items-center justify-center">
+                    <div className="shrink-0 w-9 h-9 rounded-lg bg-blue-50 dark:bg-accent-soft text-nhs-blue flex items-center justify-center">
                       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437l1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008z" />
                       </svg>
                     </div>
                     <div>
-                      <h3 className="font-semibold text-nhs-grey-1 dark:text-gray-100">Tools</h3>
-                      <p className="text-xs text-nhs-grey-3 dark:text-gray-500">Standalone utilities for working with FHIR data</p>
+                      <h3 className="font-semibold text-nhs-grey-1 dark:text-ink">Tools</h3>
+                      <p className="text-xs text-nhs-grey-3 dark:text-muted">Standalone utilities for working with FHIR data</p>
                     </div>
                   </div>
                   <button
