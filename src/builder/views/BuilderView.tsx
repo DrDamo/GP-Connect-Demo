@@ -78,6 +78,9 @@ export function BuilderView({
   const [showSaveDialog, setShowSaveDialog] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+  // Set when a save was refused because the shared draft changed (or was
+  // deleted) since this copy was loaded — the save would have overwritten it.
+  const [saveConflict, setSaveConflict] = useState<string | null>(null)
 
   // Dirty tracking: saveMarker holds JSON at last shared save / load / clear
   const [saveMarker, setSaveMarker] = useState<string>(() => JSON.stringify(draft))
@@ -222,6 +225,7 @@ export function BuilderView({
   const doSaveToShared = useCallback(async (name?: string, description?: string) => {
     if (!supabase) return
     setSaveError(null)
+    setSaveConflict(null)
     setSaveSuccess(false)
 
     const patientName = [draft.patient.prefix, draft.patient.givenName, draft.patient.familyName]
@@ -259,9 +263,11 @@ export function BuilderView({
         setTimeout(() => setSaveSuccess(false), 3000)
       }
     } else {
-      // Subsequent save — update existing record, bump version
+      // Subsequent save — update existing record, bump version. The update
+      // only matches the version this copy was loaded at, so a save can't
+      // silently overwrite a newer version someone else saved meanwhile.
       const newVersion = currentVersion + 1
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('patient_drafts')
         .update({
           patient_name: patientName,
@@ -270,9 +276,20 @@ export function BuilderView({
           version: newVersion,
         })
         .eq('id', currentDraftId)
+        .eq('version', currentVersion)
+        .select('id')
 
       if (error) {
         setSaveError(error.message)
+      } else if (!data || data.length === 0) {
+        const { data: latest } = await supabase
+          .from('patient_drafts')
+          .select('version')
+          .eq('id', currentDraftId)
+          .maybeSingle()
+        setSaveConflict(latest
+          ? `Not saved — someone else saved v${latest.version} of this patient after you opened v${currentVersion}. Saving now would overwrite their changes.`
+          : 'Not saved — this shared patient has been deleted or you no longer have access to it.')
       } else {
         setCurrentVersion(newVersion)
         setSaveMarker(JSON.stringify(draft))
@@ -289,6 +306,15 @@ export function BuilderView({
       doSaveToShared()
     }
   }, [currentDraftId, doSaveToShared])
+
+  // Conflict recovery: keep this copy as a new shared patient rather than
+  // overwriting the newer version.
+  const handleSaveAsCopy = useCallback(() => {
+    setSaveConflict(null)
+    setCurrentDraftId(null)
+    setCurrentVersion(0)
+    setShowSaveDialog(true)
+  }, [])
 
   const handleSaveDialogConfirm = useCallback((name: string, description: string) => {
     setShowSaveDialog(false)
@@ -442,6 +468,14 @@ export function BuilderView({
               {saveError && (
                 <span className="text-xs px-1.5 py-0.5 bg-red-100 dark:bg-bad-bg text-red-700 dark:text-bad rounded font-medium" title={saveError}>
                   Save failed
+                </span>
+              )}
+              {saveConflict && (
+                <span role="alert" className="text-xs px-1.5 py-0.5 bg-red-100 dark:bg-bad-bg text-red-700 dark:text-bad rounded font-medium inline-flex items-center gap-2">
+                  {saveConflict}
+                  <button type="button" onClick={handleSaveAsCopy} className="underline hover:no-underline">
+                    Save as a new copy
+                  </button>
                 </span>
               )}
             </div>

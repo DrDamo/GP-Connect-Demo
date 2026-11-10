@@ -1,4 +1,4 @@
-import { XMLParser } from 'fast-xml-parser'
+import { fhirXmlToJson } from './xmlToFhir'
 
 export type ParseResult =
   /** `wrapped`: the JSON wasn't a Bundle and was wrapped into one, so the
@@ -11,98 +11,6 @@ function detectFormat(text: string): 'json' | 'xml' | 'unknown' {
   if (trimmed.startsWith('{') || trimmed.startsWith('[')) return 'json'
   if (trimmed.startsWith('<')) return 'xml'
   return 'unknown'
-}
-
-function parseXmlBundle(text: string): fhir3.Bundle {
-  const parser = new XMLParser({
-    ignoreAttributes: false,
-    attributeNamePrefix: '_',
-    textNodeName: 'value',
-    parseAttributeValue: false,
-    parseTagValue: false,
-    isArray: (name) =>
-      ['entry', 'extension', 'coding', 'identifier', 'name', 'address',
-       'telecom', 'dosage', 'note', 'reasonCode', 'performer',
-       'basedOn', 'partOf', 'category', 'statusReason'].includes(name),
-  })
-  const raw = parser.parse(text)
-  const bundle = raw['Bundle']
-  if (!bundle) throw new Error('Root element is not a <Bundle>')
-  return xmlBundleToFhir(bundle)
-}
-
-// Convert fast-xml-parser output to FHIR JSON structure
-// This handles the FHIR XML serialisation format where values are attributes
-function xmlNodeToFhir(node: Record<string, unknown>): unknown {
-  if (node === null || typeof node !== 'object') return node
-
-  // FHIR XML primitive: <status value="active"/> → { _value: "active" }
-  if ('_value' in node && Object.keys(node).filter(k => !k.startsWith('_') && k !== 'value').length === 0) {
-    return (node as Record<string, unknown>)['_value']
-  }
-
-  const result: Record<string, unknown> = {}
-  for (const [key, val] of Object.entries(node)) {
-    if (key.startsWith('_') && key !== '_value') continue  // skip XML attributes except value
-    if (key === '_value') {
-      result['value'] = val
-      continue
-    }
-    if (Array.isArray(val)) {
-      result[key] = val.map(item =>
-        typeof item === 'object' && item !== null ? xmlNodeToFhir(item as Record<string, unknown>) : item
-      )
-    } else if (typeof val === 'object' && val !== null) {
-      result[key] = xmlNodeToFhir(val as Record<string, unknown>)
-    } else {
-      result[key] = val
-    }
-  }
-  return result
-}
-
-function xmlBundleToFhir(raw: Record<string, unknown>): fhir3.Bundle {
-  // Extract resourceType from XML tag name (already 'Bundle')
-  const bundle: Record<string, unknown> = { resourceType: 'Bundle' }
-
-  const typeNode = raw['type'] as Record<string, unknown> | undefined
-  if (typeNode) bundle['type'] = typeNode['_value'] ?? typeNode['value'] ?? typeNode
-
-  const idNode = raw['id'] as Record<string, unknown> | undefined
-  if (idNode) bundle['id'] = idNode['_value'] ?? idNode['value'] ?? idNode
-
-  const metaNode = raw['meta'] as Record<string, unknown> | undefined
-  if (metaNode) bundle['meta'] = xmlNodeToFhir(metaNode)
-
-  const rawEntries = raw['entry']
-  if (!Array.isArray(rawEntries)) return bundle as unknown as fhir3.Bundle
-
-  bundle['entry'] = rawEntries.map((entry: Record<string, unknown>) => {
-    const fhirEntry: Record<string, unknown> = {}
-
-    const fullUrl = entry['fullUrl'] as Record<string, unknown> | undefined
-    if (fullUrl) fhirEntry['fullUrl'] = fullUrl['_value'] ?? fullUrl['value'] ?? fullUrl
-
-    const resource = entry['resource'] as Record<string, unknown> | undefined
-    if (resource) {
-      // The actual resource type is the key inside <resource>
-      const resourceTypeKey = Object.keys(resource).find(k => !k.startsWith('_') && k !== 'value')
-      if (resourceTypeKey) {
-        const resourceNode = resource[resourceTypeKey] as Record<string, unknown>
-        fhirEntry['resource'] = {
-          resourceType: resourceTypeKey,
-          ...xmlNodeToFhir({ ...resourceNode }) as object,
-        }
-      }
-    }
-
-    const search = entry['search'] as Record<string, unknown> | undefined
-    if (search) fhirEntry['search'] = xmlNodeToFhir(search)
-
-    return fhirEntry
-  })
-
-  return bundle as unknown as fhir3.Bundle
 }
 
 // Windows editors (Notepad, PowerShell Out-File) often save JSON with a UTF-8
@@ -195,11 +103,19 @@ export function parseBundle(text: string): ParseResult {
     return { ok: true, data: normalized.data, format: 'json', wrapped: normalized.wrapped }
   }
 
-  // XML
+  // XML. FHIR forbids DTDs, and refusing them up front rules out entity
+  // expansion ("billion laughs") before the parser sees the text.
+  if (/<!DOCTYPE/i.test(text)) {
+    return { ok: false, error: 'XML parse error: DOCTYPE declarations are not allowed in FHIR XML', format: 'xml' }
+  }
+  let root: Record<string, unknown>
   try {
-    const data = parseXmlBundle(text)
-    return { ok: true, data, format: 'xml' }
+    root = fhirXmlToJson(text)
   } catch (e) {
     return { ok: false, error: `XML parse error: ${(e as Error).message}`, format: 'xml' }
   }
+  const normalized = normalizeFhirJson(root)
+  if (!normalized.ok) return { ...normalized, format: 'xml' }
+  // `wrapped` is left unset: the Inspector keeps showing the original XML.
+  return { ok: true, data: normalized.data, format: 'xml' }
 }

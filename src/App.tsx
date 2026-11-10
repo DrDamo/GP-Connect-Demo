@@ -218,8 +218,19 @@ function AppContent() {
     // re-serialise when a bare resource/array was wrapped into a Bundle so
     // the Inspector's line index points at the bundle actually rendered.
     text = parsed.wrapped ? JSON.stringify(parsed.data, null, 2) : stripBom(text)
-    const validation = validateMedicationsBundle(parsed.data)
-    const record = buildRecordFromBundle(parsed.data)
+    // The validators and domain extractors assume well-formed FHIR; a bundle
+    // shaped in a way they don't expect must surface as an error, not leave
+    // the screen unchanged with the exception lost in the console.
+    let validation: ReturnType<typeof validateMedicationsBundle>
+    let record: ReturnType<typeof buildRecordFromBundle>
+    try {
+      validation = validateMedicationsBundle(parsed.data)
+      record = buildRecordFromBundle(parsed.data)
+    } catch (e) {
+      console.error('[load] could not read bundle', e)
+      setParseError(`The file parsed as FHIR ${parsed.format.toUpperCase()} but could not be read as a GP Connect record: ${(e as Error).message ?? String(e)}`)
+      return
+    }
     setLoaded({ source: text, filename, label: label ?? filename, format: parsed.format, validation, record })
     setShowOriginalSource(false)
     setDegradePrompt(null)
