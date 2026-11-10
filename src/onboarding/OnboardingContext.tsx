@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
-import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { api, isAuthEnabled } from '../lib/api'
 import { useAuth } from '../auth/AuthContext'
 import { TOURS, type TourId } from './tourDefinitions'
 
@@ -60,19 +60,17 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
   const activeTour = active?.tourId ?? null
   const activeStepIndex = active?.stepIndex ?? 0
 
-  // Load per-user progress from Supabase on login.
+  // Load per-user progress from the server on login.
   useEffect(() => {
-    if (!isSupabaseConfigured || !supabase || !user) return
+    if (!isAuthEnabled || !user) return
     let cancelled = false
-    ;(async () => {
-      const [{ data: tourRows }, { data: hintRows }] = await Promise.all([
-        supabase!.from('user_tour_progress').select('tour_id').eq('user_id', user.id),
-        supabase!.from('user_hint_dismissals').select('hint_id').eq('user_id', user.id),
-      ])
-      if (cancelled) return
-      if (tourRows) setCompletedTours(new Set(tourRows.map((r: { tour_id: string }) => r.tour_id)))
-      if (hintRows) setDismissedHints(new Set(hintRows.map((r: { hint_id: string }) => r.hint_id)))
-    })()
+    api.get<{ tours: string[]; hints: string[] }>('/me/onboarding')
+      .then(({ tours, hints }) => {
+        if (cancelled) return
+        setCompletedTours(new Set(tours))
+        setDismissedHints(new Set(hints))
+      })
+      .catch(() => { /* keep the defaults; progress is a convenience */ })
     return () => { cancelled = true }
   }, [user])
 
@@ -83,11 +81,11 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     setCompletedTours(prev => {
       const next = new Set(prev)
       next.add(tourId)
-      if (!isSupabaseConfigured) writeLocalSet(LOCAL_TOURS_KEY, next)
+      if (!isAuthEnabled) writeLocalSet(LOCAL_TOURS_KEY, next)
       return next
     })
-    if (isSupabaseConfigured && supabase && user) {
-      supabase.from('user_tour_progress').insert({ user_id: user.id, tour_id: tourId }).then(() => {})
+    if (isAuthEnabled && user) {
+      api.put(`/me/tours/${encodeURIComponent(tourId)}`).catch(() => {})
     }
   }, [user])
 
@@ -99,11 +97,11 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     setCompletedTours(prev => {
       const next = new Set(prev)
       next.delete(tourId)
-      if (!isSupabaseConfigured) writeLocalSet(LOCAL_TOURS_KEY, next)
+      if (!isAuthEnabled) writeLocalSet(LOCAL_TOURS_KEY, next)
       return next
     })
-    if (isSupabaseConfigured && supabase && user) {
-      supabase.from('user_tour_progress').delete().eq('user_id', user.id).eq('tour_id', tourId).then(() => {})
+    if (isAuthEnabled && user) {
+      api.delete(`/me/tours/${encodeURIComponent(tourId)}`).catch(() => {})
     }
     setActive({ tourId, stepIndex: 0 })
   }, [user])
@@ -141,20 +139,20 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     setDismissedHints(prev => {
       const next = new Set(prev)
       next.add(hintId)
-      if (!isSupabaseConfigured) writeLocalSet(LOCAL_HINTS_KEY, next)
+      if (!isAuthEnabled) writeLocalSet(LOCAL_HINTS_KEY, next)
       return next
     })
-    if (isSupabaseConfigured && supabase && user) {
-      supabase.from('user_hint_dismissals').insert({ user_id: user.id, hint_id: hintId }).then(() => {})
+    if (isAuthEnabled && user) {
+      api.put(`/me/hints/${encodeURIComponent(hintId)}`).catch(() => {})
     }
   }, [user])
 
   const resetAllHints = useCallback(() => {
     const ids = [...dismissedHints]
     setDismissedHints(new Set())
-    if (!isSupabaseConfigured) writeLocalSet(LOCAL_HINTS_KEY, new Set())
-    if (isSupabaseConfigured && supabase && user && ids.length > 0) {
-      supabase.from('user_hint_dismissals').delete().eq('user_id', user.id).then(() => {})
+    if (!isAuthEnabled) writeLocalSet(LOCAL_HINTS_KEY, new Set())
+    if (isAuthEnabled && user && ids.length > 0) {
+      api.delete('/me/hints').catch(() => {})
     }
   }, [dismissedHints, user])
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '../../../lib/supabase'
+import { api } from '../../../lib/api'
 import { useAuth } from '../../../auth/AuthContext'
 
 export interface TrainingNote {
@@ -19,14 +19,14 @@ export function useTrainingNotes() {
   const [loading, setLoading] = useState(true)
 
   const refetch = useCallback(async () => {
-    if (!supabase || !profile) { setLoading(false); return }
+    if (!profile) { setLoading(false); return }
     setLoading(true)
-    const { data } = await supabase
-      .from('training_notes')
-      .select('id, org_id, page_id, created_by, body, created_at, updated_at, profiles(username, display_name)')
-      .order('created_at', { ascending: true })
+    let data: TrainingNote[] = []
+    try {
+      data = await api.get<TrainingNote[]>('/training-notes')
+    } catch { /* shown as no notes; the panel stays usable */ }
     const grouped: Record<string, TrainingNote[]> = {}
-    for (const row of (data ?? []) as unknown as TrainingNote[]) {
+    for (const row of data) {
       (grouped[row.page_id] ??= []).push(row)
     }
     setNotesByPage(grouped)
@@ -36,26 +36,28 @@ export function useTrainingNotes() {
   useEffect(() => { refetch() }, [refetch])
 
   const addNote = useCallback(async (pageId: string, body: string) => {
-    if (!supabase || !profile) return
-    await supabase.from('training_notes').insert({
-      page_id: pageId,
-      org_id: profile.org_id,
-      created_by: profile.id,
-      body,
-    })
-    await refetch()
+    if (!profile) return
+    try {
+      await api.post('/training-notes', { page_id: pageId, body })
+    } finally {
+      await refetch()
+    }
   }, [profile, refetch])
 
   const updateNote = useCallback(async (id: string, body: string) => {
-    if (!supabase) return
-    await supabase.from('training_notes').update({ body }).eq('id', id)
-    await refetch()
+    try {
+      await api.patch(`/training-notes/${id}`, { body })
+    } finally {
+      await refetch()
+    }
   }, [refetch])
 
   const deleteNote = useCallback(async (id: string) => {
-    if (!supabase) return
-    await supabase.from('training_notes').delete().eq('id', id)
-    await refetch()
+    try {
+      await api.delete(`/training-notes/${id}`)
+    } finally {
+      await refetch()
+    }
   }, [refetch])
 
   return { notesByPage, loading, refetch, addNote, updateNote, deleteNote }

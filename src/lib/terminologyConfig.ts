@@ -14,17 +14,20 @@ export interface TerminologyConfig {
 const CONFIG_KEY = 'gpc-snomed-config'
 const CHANGE_EVENT = 'gpc-terminology-config-change'
 
-/** The proxy's default location: the separate dev proxy on :3001 in
- *  development, the same origin in production. */
-export const DEFAULT_TERMINOLOGY_URL = import.meta.env.DEV ? 'http://localhost:3001' : window.location.origin
+/** The proxy's default location: the page's own origin. In development Vite
+ *  forwards /api to the server on :3001, so the session cookie goes with it. */
+export const DEFAULT_TERMINOLOGY_URL = window.location.origin
 
 function readStored(): Partial<TerminologyConfig> {
   try {
     const raw = localStorage.getItem(CONFIG_KEY)
     if (!raw) return {}
     const parsed = JSON.parse(raw) as Partial<TerminologyConfig>
-    // The dev proxy moved from :3000 to :3001.
-    if (parsed.serverUrl === 'http://localhost:3000') parsed.serverUrl = 'http://localhost:3001'
+    // The old default addresses of the dev proxy. Calling it directly would
+    // leave out the session cookie, so use the page origin (Vite's proxy).
+    if (parsed.serverUrl === 'http://localhost:3000' || parsed.serverUrl === 'http://localhost:3001') {
+      parsed.serverUrl = window.location.origin
+    }
     return parsed
   } catch {
     return {}

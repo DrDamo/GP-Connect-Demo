@@ -37,7 +37,7 @@ export async function migrate(databaseUrl: string): Promise<string[]> {
         await client.query('commit')
       } catch (err) {
         await client.query('rollback').catch(() => {})
-        throw new Error(`Migration ${file} failed: ${err instanceof Error ? err.message : String(err)}`)
+        throw new Error(`Migration ${file} failed: ${err instanceof Error ? err.message : String(err)}`, { cause: err })
       }
       applied.push(file)
     }

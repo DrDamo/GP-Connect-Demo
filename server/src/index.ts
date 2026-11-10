@@ -69,6 +69,8 @@ if (config.staticDir) {
 }
 
 // Last resort: log the detail, tell the client only that it failed.
+// Express recognises an error handler by its four parameters.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   const e = err as { type?: string; status?: number; message?: string }
   if (e?.type === 'entity.too.large') {
@@ -77,6 +79,11 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   }
   if (e?.type === 'entity.parse.failed') {
     res.status(400).json({ error: 'Invalid JSON' })
+    return
+  }
+  // e.g. a missing file under /assets (404) from express.static
+  if (typeof e?.status === 'number' && e.status >= 400 && e.status < 500) {
+    res.status(e.status).end()
     return
   }
   console.error('[server]', err)

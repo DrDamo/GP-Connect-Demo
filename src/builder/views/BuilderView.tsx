@@ -22,7 +22,7 @@ import { DiaryEntryForm } from '../forms/DiaryEntryForm'
 import { CodedDataForm } from '../forms/CodedDataForm'
 import { DocumentForm } from '../forms/DocumentForm'
 import { useAuth } from '../../auth/AuthContext'
-import { supabase, isSupabaseConfigured } from '../../lib/supabase'
+import { api, ApiError, errorMessage, isAuthEnabled } from '../../lib/api'
 import type { ValidationIssue } from '../../fhir/types'
 import type { DraftRecord } from '../types'
 import { InfoHint } from '../../onboarding/InfoHint'
@@ -205,7 +205,6 @@ export function BuilderView({
 
   // Save to shared — insert (first time) or update (subsequent)
   const doSaveToShared = useCallback(async (name?: string, description?: string) => {
-    if (!supabase) return
     setSaveError(null)
     setSaveConflict(null)
     setSaveSuccess(false)
@@ -219,64 +218,46 @@ export function BuilderView({
     }
 
     if (!currentDraftId) {
-      // First save — insert
-      const { data, error } = await supabase
-        .from('patient_drafts')
-        .insert({
-          org_id: profile.org_id,
-          created_by: profile.id,
+      // First save — create
+      try {
+        const saved = await api.post<{ id: string; version: number }>('/drafts', {
           patient_name: patientName,
           nhs_number: draft.patient.nhsNumber || null,
           name: name ?? null,
           description: description ?? null,
-          version: 1,
           draft_data: draft,
         })
-        .select('id')
-        .single()
-
-      if (error) {
-        setSaveError(error.message)
-      } else {
-        setCurrentDraftId(data.id)
-        setCurrentVersion(1)
+        setCurrentDraftId(saved.id)
+        setCurrentVersion(saved.version)
         setSaveMarker(JSON.stringify(draft))
         setSaveSuccess(true)
         setTimeout(() => setSaveSuccess(false), 3000)
+      } catch (err) {
+        setSaveError(errorMessage(err))
       }
     } else {
-      // Subsequent save — update existing record, bump version. The update
-      // only matches the version this copy was loaded at, so a save can't
-      // silently overwrite a newer version someone else saved meanwhile.
-      const newVersion = currentVersion + 1
-      const { data, error } = await supabase
-        .from('patient_drafts')
-        .update({
+      // Subsequent save — a new version. The server only accepts it if this
+      // copy is still the latest (409 otherwise), so a save can't silently
+      // overwrite a newer version someone else saved meanwhile.
+      try {
+        const saved = await api.put<{ id: string; version: number }>(`/drafts/${currentDraftId}`, {
+          expectedVersion: currentVersion,
           patient_name: patientName,
           nhs_number: draft.patient.nhsNumber || null,
           draft_data: draft,
-          version: newVersion,
         })
-        .eq('id', currentDraftId)
-        .eq('version', currentVersion)
-        .select('id')
-
-      if (error) {
-        setSaveError(error.message)
-      } else if (!data || data.length === 0) {
-        const { data: latest } = await supabase
-          .from('patient_drafts')
-          .select('version')
-          .eq('id', currentDraftId)
-          .maybeSingle()
-        setSaveConflict(latest
-          ? `Not saved — someone else saved v${latest.version} of this patient after you opened v${currentVersion}. Saving now would overwrite their changes.`
-          : 'Not saved — this shared patient has been deleted or you no longer have access to it.')
-      } else {
-        setCurrentVersion(newVersion)
+        setCurrentVersion(saved.version)
         setSaveMarker(JSON.stringify(draft))
         setSaveSuccess(true)
         setTimeout(() => setSaveSuccess(false), 3000)
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 409) {
+          setSaveConflict(`Not saved — someone else saved v${String(err.body.currentVersion)} of this patient after you opened v${currentVersion}. Saving now would overwrite their changes.`)
+        } else if (err instanceof ApiError && err.status === 404) {
+          setSaveConflict('Not saved — this shared patient has been deleted or you no longer have access to it.')
+        } else {
+          setSaveError(errorMessage(err))
+        }
       }
     }
   }, [draft, profile, currentDraftId, currentVersion])
@@ -418,7 +399,7 @@ export function BuilderView({
             </button>
             <InfoHint topic="builder.clear-all" />
           </span>
-          {isSupabaseConfigured && user && (
+          {isAuthEnabled && user && (
             <div className="flex items-center gap-1.5" data-tour="builder-save-shared">
               <button
                 type="button"

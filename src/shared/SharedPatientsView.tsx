@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '../lib/supabase'
+import { api, errorMessage } from '../lib/api'
 import { useAuth } from '../auth/AuthContext'
 import { TrashIcon } from '../builder/components/Icons'
 import { DeleteConfirmDialog } from '../builder/components/DeleteConfirmDialog'
@@ -30,36 +30,38 @@ export function SharedPatientsView({ onLoadDraft }: Props) {
   const [loadingId, setLoadingId] = useState<string | null>(null)
 
   const fetchRows = useCallback(async () => {
-    if (!supabase || !profile) return
+    if (!profile) return
     setLoading(true)
     setError(null)
-    const { data, error: err } = await supabase
-      .from('patient_drafts')
-      .select('id, name, description, version, patient_name, nhs_number, created_at, updated_at, profiles(username, display_name)')
-      .order('updated_at', { ascending: false })
-    if (err) setError(err.message)
-    else setRows((data ?? []) as unknown as PatientRow[])
+    try {
+      setRows(await api.get<PatientRow[]>('/drafts'))
+    } catch (err) {
+      setError(errorMessage(err))
+    }
     setLoading(false)
   }, [profile])
 
   useEffect(() => { fetchRows() }, [fetchRows])
 
   const handleLoad = async (id: string) => {
-    if (!supabase) return
     setLoadingId(id)
-    const { data, error: err } = await supabase
-      .from('patient_drafts')
-      .select('draft_data, version')
-      .eq('id', id)
-      .single()
+    setError(null)
+    try {
+      const data = await api.get<{ draft_data: DraftRecord; version: number }>(`/drafts/${id}`)
+      onLoadDraft(data.draft_data, id, data.version)
+    } catch (err) {
+      setError(`Could not open the patient: ${errorMessage(err)}`)
+    }
     setLoadingId(null)
-    if (err || !data?.draft_data) return
-    onLoadDraft(data.draft_data as DraftRecord, id, data.version as number)
   }
 
   const handleDeleteConfirm = async () => {
-    if (!supabase || !deleteTarget) return
-    await supabase.from('patient_drafts').delete().eq('id', deleteTarget.id)
+    if (!deleteTarget) return
+    try {
+      await api.delete(`/drafts/${deleteTarget.id}`)
+    } catch (err) {
+      setError(`Could not delete the patient: ${errorMessage(err)}`)
+    }
     setDeleteTarget(null)
     fetchRows()
   }

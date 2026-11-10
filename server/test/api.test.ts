@@ -70,7 +70,8 @@ class Client {
       this.cookie = pair.endsWith('=') ? '' : pair
     }
     const text = await res.text()
-    let json: any = null
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test responses are checked field by field
+    let json: any
     try { json = text ? JSON.parse(text) : null } catch { json = text }
     return { status: res.status, json, headers: res.headers }
   }

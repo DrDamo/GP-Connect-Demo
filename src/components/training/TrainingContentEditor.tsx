@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { supabase } from '../../lib/supabase'
+import { api, errorMessage } from '../../lib/api'
 import { useAuth } from '../../auth/AuthContext'
 import { BuilderModal } from '../../builder/components/BuilderModal'
 import { MarkdownContent } from './MarkdownContent'
@@ -24,44 +24,31 @@ export function TrainingContentEditor({ pageId, title, initialContent, hasOverri
   const [saveSuccess, setSaveSuccess] = useState(false)
 
   const doSave = useCallback(async () => {
-    if (!supabase || !profile) { setSaveError('Your profile has not loaded — try refreshing the page.'); return }
+    if (!profile) { setSaveError('Your profile has not loaded — try refreshing the page.'); return }
     setSaving(true)
     setSaveError(null)
     setSaveSuccess(false)
-
-    if (!hasOverride) {
-      const { error } = await supabase
-        .from('training_content')
-        .insert({ page_id: pageId, content: draftContent, version: 1, updated_by: profile.id })
-      if (error) setSaveError(error.message)
-      else {
-        setSaveSuccess(true)
-        setTimeout(() => setSaveSuccess(false), 3000)
-        onSaved()
-      }
-    } else {
-      const { error } = await supabase
-        .from('training_content')
-        .update({ content: draftContent, updated_by: profile.id })
-        .eq('page_id', pageId)
-      if (error) setSaveError(error.message)
-      else {
-        setSaveSuccess(true)
-        setTimeout(() => setSaveSuccess(false), 3000)
-        onSaved()
-      }
+    try {
+      await api.put(`/training-content/${encodeURIComponent(pageId)}`, { content: draftContent })
+      setSaveSuccess(true)
+      setTimeout(() => setSaveSuccess(false), 3000)
+      onSaved()
+    } catch (err) {
+      setSaveError(errorMessage(err))
     }
     setSaving(false)
-  }, [profile, hasOverride, pageId, draftContent, onSaved])
+  }, [profile, pageId, draftContent, onSaved])
 
   const doRevert = useCallback(async () => {
-    if (!supabase) return
     setSaving(true)
     setSaveError(null)
-    const { error } = await supabase.from('training_content').delete().eq('page_id', pageId)
+    try {
+      await api.delete(`/training-content/${encodeURIComponent(pageId)}`)
+      onReverted()
+    } catch (err) {
+      setSaveError(errorMessage(err))
+    }
     setSaving(false)
-    if (error) setSaveError(error.message)
-    else onReverted()
   }, [pageId, onReverted])
 
   return (
