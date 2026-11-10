@@ -17,41 +17,42 @@ Everything is FHIR **STU3** with GP Connect / CareConnect profiles, not R4 or UK
 | `src/components/` | Viewer UI |
 | `src/builder/` | Record builder: forms, draft reducer (`hooks/draft/`) and bundle generation |
 | `src/lib/` | Shared browser helpers (terminology config and auth headers, downloads, local data) |
-| `server/` | Express proxy for the NHS England Terminology Server, which holds the system-to-system credentials |
-| `api/`, `supabase/` | Current hosted deployment (serverless functions, database migrations); being replaced |
+| `server/` | Express backend: sign-in and sessions, the data API, and the proxy for the NHS England Terminology Server (which holds the system-to-system credentials) |
+| `server/migrations/` | Postgres schema, including the row-level security policies |
+| `Dockerfile`, `.github/workflows/` | The container image and the CI that tests, builds and publishes it |
+| `api/`, `supabase/` | The old Vercel + Supabase deployment, kept until the move to the VPS is complete |
 
 ## Running locally
 
-Requirements: Node 22 or later, and NHS England Terminology Server system-to-system credentials for the terminology features.
+Requirements: Node 22 or later, Postgres 18, and NHS England Terminology Server system-to-system credentials for the terminology features.
+
+Full steps, including creating the database roles and a first account, are in [docs/deployment-vps.md](docs/deployment-vps.md#local-development). In short:
 
 ```sh
 npm install
 npm run server:install
+cp server/.env.example server/.env    # DATABASE_URL, NHS_CLIENT_ID / NHS_CLIENT_SECRET
 
-cp server/.env.example server/.env    # add NHS_CLIENT_ID / NHS_CLIENT_SECRET
-cp .env.example .env.local            # frontend settings
-
-npm run server    # terminology proxy on http://127.0.0.1:3001
+npm run server    # backend on http://127.0.0.1:3001
 npm run dev       # app on http://localhost:5173 (proxies /api to :3001)
 ```
 
-Without terminology credentials the viewer and builder still work. Code verification reports that the server is unavailable.
+A static build without the backend (`VITE_AUTH=off`) still has the viewer and the builder. It has no sign-in, shared patients or code verification.
 
-## Terminology proxy (`server/`)
+## Backend (`server/`)
 
-The browser never sees the NHS credentials. Every call goes through the proxy, which:
+- **Sign-in**: email (or username) and password. Sessions are HttpOnly cookies, and the database stores only a hash of each session token. Self-service signup creates a new organisation and needs email confirmation.
+- **Data**: shared patients, training content and notes, profiles and onboarding progress. Each request runs as the `gpc_app` database role with the user's id set, so Postgres row-level security decides what every user can see and change.
+- **Terminology proxy**: signed-in users only. It is rate-limited per IP, bounds every input, and returns generic errors; upstream detail goes to the server log only.
+- **Hosting**: listens on `127.0.0.1` by default (`HOST`), and should sit behind a reverse proxy (`TRUST_PROXY=1`). The container serves the built frontend too.
 
-- listens on `127.0.0.1` by default (`HOST`). Put a reverse proxy in front of it rather than exposing it directly.
-- allows cross-origin calls only from `CORS_ORIGINS`.
-- rate-limits each client IP (`RATE_LIMIT_MAX` per `RATE_LIMIT_WINDOW_MS`). Set `TRUST_PROXY` when it sits behind a reverse proxy.
-- bounds every input (code-list size, query length, SCTID format) and returns generic errors. Upstream detail goes to the server log only.
-
-**It has no user authentication of its own yet.** Before exposing it beyond localhost, put it behind the app's sign-in. See `server/.env.example` for all settings.
+Production runs on a VPS behind Caddy: see [docs/deployment-vps.md](docs/deployment-vps.md). All settings are listed in `server/.env.example`.
 
 ## Checks
 
 ```sh
 npm run lint                       # ESLint (0 errors expected)
 npm run build                      # type-check and production build
-(cd server && npx tsc --noEmit)    # proxy type-check
+(cd server && npx tsc --noEmit)    # backend type-check
+(cd server && npm test)            # backend tests; needs DATABASE_URL to a scratch database
 ```

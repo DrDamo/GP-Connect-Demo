@@ -1,0 +1,18 @@
+**/node_modules
+**/dist
+**/.env
+**/.env.*
+.git
+.github
+.claude
+.vercel
+api
+supabase
+scripts
+docs
+test-results
+JSON Examples
+server/test
+*.log
+*.png
+patch*_log.txt
