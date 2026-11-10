@@ -4,13 +4,13 @@ import { getEntries, formatDate, resolvePractitionerRef, extractSnomedCode, extr
 export function extractDiaryEntries(bundle: fhir3.Bundle): GpConnectDiaryEntry[] {
   return getEntries<fhir3.ProcedureRequest>(bundle, 'ProcedureRequest')
     .sort((a, b) => fhirDateKey(
-      b.authoredOn ?? (b as any).occurrenceDateTime ?? (b as any).occurrencePeriod?.start
+      b.authoredOn ?? b.occurrenceDateTime ?? b.occurrencePeriod?.start
     ).localeCompare(fhirDateKey(
-      a.authoredOn ?? (a as any).occurrenceDateTime ?? (a as any).occurrencePeriod?.start
+      a.authoredOn ?? a.occurrenceDateTime ?? a.occurrencePeriod?.start
     )))
     .map(resource => {
     const req = resource as unknown as { requester?: { agent?: fhir3.Reference } }
-    const cast = resource as unknown as Record<string, any>
+    const cast = resource
     const coding = resource.code?.coding
     const { name: clinician, id: clinicianId } = resolvePractitionerRef(bundle, req.requester?.agent?.reference)
     const contextRef = (resource as unknown as { context?: { reference?: string } }).context?.reference

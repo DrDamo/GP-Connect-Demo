@@ -164,13 +164,13 @@ function AppContent() {
     try {
       const stored = localStorage.getItem('theme')
       if (stored === 'light' || stored === 'dark' || stored === 'system') return stored
-    } catch {}
+    } catch { /* storage unavailable */ }
     return 'system'
   })
 
   useEffect(() => {
     const apply = (isDark: boolean) => document.documentElement.classList.toggle('dark', isDark)
-    try { localStorage.setItem('theme', themeMode) } catch {}
+    try { localStorage.setItem('theme', themeMode) } catch { /* storage unavailable */ }
     if (themeMode === 'dark') { apply(true); return }
     if (themeMode === 'light') { apply(false); return }
     const mq = window.matchMedia('(prefers-color-scheme: dark)')

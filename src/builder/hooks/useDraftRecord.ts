@@ -1349,14 +1349,14 @@ export function useDraftRecord() {
       if (stored) {
         return migrateDraft(JSON.parse(stored) as DraftRecord)
       }
-    } catch {}
+    } catch { /* storage unavailable */ }
     return createEmptyDraft()
   })
 
   useEffect(() => {
     try {
       localStorage.setItem(BUILDER_DRAFT_STORAGE_KEY, JSON.stringify(draft))
-    } catch {}
+    } catch { /* storage unavailable */ }
   }, [draft])
 
   return { draft, dispatch }

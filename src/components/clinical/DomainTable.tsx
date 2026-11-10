@@ -1,3 +1,4 @@
+import { DEGRADED_TEXT_PATTERN } from './degradedText'
 import { Fragment, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type React from 'react'
@@ -97,7 +98,6 @@ export function CodeStatusBadge({ status }: { status?: CodeStatus }) {
 // CodeableConcept.text when a SNOMED CT concept ID can't be verified — kept
 // in the FHIR text itself so the original code/term survives even outside
 // this app, and parsed back out here purely for display styling.
-const DEGRADED_TEXT_PATTERN = /^(.*) \(degraded from SNOMED CT (\d+)\)$/
 
 // Amber "Degrade" tag — matches the pre-existing badge used elsewhere for
 // GP2GP records that arrived already degraded (see CodedDataView.tsx /
@@ -153,16 +153,6 @@ export function DegradedTermText({ text }: { text?: string }) {
       <DegradeBadge originalCode={originalCode} originalTerm={originalTerm} />
     </>
   )
-}
-
-// Whether DegradedTermText will already render an interactive "Degrade" tag
-// for this text (i.e. it carries the marker this app appends when it degrades
-// a code itself). Callers that separately show a plain "Degrade" tag for
-// isTransferDegraded (records that arrived already degraded from GP2GP) must
-// check this first, otherwise codes degraded by this app get both — the
-// interactive one from here and a second, non-interactive one from them.
-export function hasDegradeMarker(text?: string): boolean {
-  return !!text && DEGRADED_TEXT_PATTERN.test(text)
 }
 
 // Flattens a possibly-nested item list (via getChildren) into a single array

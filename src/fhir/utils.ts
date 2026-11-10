@@ -181,12 +181,31 @@ export function resolvePractitionerName(bundle: fhir3.Bundle, ref: string | unde
   return [prefix, given, family].filter(Boolean).join(' ')
 }
 
+/** The fields resolveItemDisplay reads, across the resource types it labels. */
+interface ItemDisplayFields {
+  resourceType: string
+  type?: fhir3.CodeableConcept[] | fhir3.CodeableConcept
+  code?: fhir3.CodeableConcept
+  vaccineCode?: fhir3.CodeableConcept
+  medicationCodeableConcept?: fhir3.CodeableConcept
+  medicationReference?: fhir3.Reference
+  extension?: fhir3.Extension[]
+  description?: string
+  valueString?: string
+  valueQuantity?: fhir3.Quantity
+  valueCodeableConcept?: fhir3.CodeableConcept
+  valueBoolean?: boolean
+  component?: fhir3.ObservationComponent[]
+  name?: fhir3.HumanName[] | string
+  reasonCode?: fhir3.CodeableConcept[]
+}
+
 /** Resolve a human-readable label for any clinical resource referenced by a FHIR reference string. */
 export function resolveItemDisplay(bundle: fhir3.Bundle, ref: string | undefined): string | undefined {
   if (!ref) return undefined
-  const resource = resolveReference(bundle, ref) as AnyResource & Record<string, any> | undefined
+  const resource = resolveReference(bundle, ref)
   if (!resource) return undefined
-  const r = resource as Record<string, any>
+  const r = resource as ItemDisplayFields
 
   // Encounter: type is an array — pick first entry's original term text
   if (resource.resourceType === 'Encounter') {
@@ -200,8 +219,8 @@ export function resolveItemDisplay(bundle: fhir3.Bundle, ref: string | undefined
     if (inline) return inline
     const medRef = (r.medicationReference as { reference?: string } | undefined)?.reference
     if (medRef) {
-      const med = resolveReference(bundle, medRef) as Record<string, any> | undefined
-      return extractOriginalTermText(med?.code as fhir3.CodeableConcept | undefined)
+      const med = resolveReference(bundle, medRef) as { code?: fhir3.CodeableConcept } | undefined
+      return extractOriginalTermText(med?.code)
     }
     return undefined
   }
@@ -239,10 +258,10 @@ export function resolveItemDisplay(bundle: fhir3.Bundle, ref: string | undefined
       valueStr = r.valueBoolean ? 'Yes' : 'No'
     } else if (r.component?.length) {
       // e.g. blood pressure — show as "val1 / val2 unit"
-      const parts = (r.component as any[]).map(c => {
+      const parts = r.component.map(c => {
         const v = c.valueQuantity?.value
         const u = c.valueQuantity?.unit ?? ''
-        return v !== undefined ? `${v} ${u}`.trim() : undefined
+        return v !== undefined ? `${v}\u202F${u}`.trim() : undefined
       }).filter(Boolean)
       if (parts.length) valueStr = parts.join(' / ')
     }
@@ -251,7 +270,7 @@ export function resolveItemDisplay(bundle: fhir3.Bundle, ref: string | undefined
   }
 
   if (resource.resourceType === 'Practitioner') {
-    const name = r.name?.[0]
+    const name = (r.name as fhir3.HumanName[] | undefined)?.[0]
     if (name) return [name.prefix?.join(' '), name.given?.join(' '), name.family].filter(Boolean).join(' ')
   }
   if (resource.resourceType === 'Organization') return r.name as string | undefined
@@ -277,7 +296,7 @@ export function extractPatientInfo(bundle: fhir3.Bundle): GpConnectPatient | und
   const nhsVerifyExt = (nhsIdentifier?.extension ?? []).find(e =>
     e.url?.includes('NHSNumberVerificationStatus')
   )
-  const nhsVerifyCoding = (nhsVerifyExt?.valueCodeableConcept as any)?.coding?.[0]
+  const nhsVerifyCoding = nhsVerifyExt?.valueCodeableConcept?.coding?.[0]
   const nhsNumberVerified = nhsVerifyCoding !== undefined ? nhsVerifyCoding.code === '01' : undefined
   const nhsNumberVerificationDisplay = nhsVerifyCoding?.display as string | undefined
 
@@ -290,7 +309,7 @@ export function extractPatientInfo(bundle: fhir3.Bundle): GpConnectPatient | und
 
   // Registration extension
   const regExt = (patient.extension ?? []).find(e => e.url?.includes('RegistrationDetails'))
-  const regSubExts = (regExt as any)?.extension as Array<{ url: string; [k: string]: any }> | undefined ?? []
+  const regSubExts: fhir3.Extension[] = regExt?.extension ?? []
   const registrationType = regSubExts.find(e => e.url === 'registrationType')
     ?.valueCodeableConcept?.coding?.[0]?.display as string | undefined
   const regPeriodStart = regSubExts.find(e => e.url === 'registrationPeriod')
@@ -302,7 +321,7 @@ export function extractPatientInfo(bundle: fhir3.Bundle): GpConnectPatient | und
     ?.valueReference?.reference as string | undefined
   const branchId = extractId(branchRef)
   const branchResource = branchId
-    ? (bundle.entry ?? []).find(e => (e.resource as any)?.id === branchId)?.resource as any
+    ? (bundle.entry ?? []).find(e => e.resource?.id === branchId)?.resource as { name?: string } | undefined
     : undefined
   const preferredBranchSurgery = branchResource?.name as string | undefined
 
@@ -321,7 +340,7 @@ export function extractPatientInfo(bundle: fhir3.Bundle): GpConnectPatient | und
   const gpRef = (patient.generalPractitioner as fhir3.Reference[] | undefined)?.[0]?.reference
   const gpId = gpRef ? extractId(gpRef) : undefined
   const gpResource = gpId
-    ? (bundle.entry ?? []).find(e => (e.resource as any)?.id === gpId)?.resource as fhir3.Practitioner | undefined
+    ? (bundle.entry ?? []).find(e => e.resource?.id === gpId)?.resource as fhir3.Practitioner | undefined
     : undefined
   const gpName = gpResource
     ? (() => {
@@ -339,7 +358,7 @@ export function extractPatientInfo(bundle: fhir3.Bundle): GpConnectPatient | und
   // Preferred spoken/written language (NHSCommunication extension)
   const commExts = (patient.extension ?? []).filter(e => e.url?.includes('NHSCommunication'))
   const commSubExtsList = commExts.map(
-    e => (e as any).extension as Array<{ url: string; [k: string]: any }> | undefined ?? []
+    (e): fhir3.Extension[] => e.extension ?? []
   )
   const preferredCommSubExts =
     commSubExtsList.find(subs => subs.find(s => s.url === 'preferred')?.valueBoolean === true) ??

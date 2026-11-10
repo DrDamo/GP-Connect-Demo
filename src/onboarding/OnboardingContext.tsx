@@ -20,7 +20,7 @@ function readLocalSet(key: string): Set<string> {
 function writeLocalSet(key: string, set: Set<string>) {
   try {
     localStorage.setItem(key, JSON.stringify([...set]))
-  } catch {}
+  } catch { /* storage unavailable */ }
 }
 
 interface OnboardingContextValue {

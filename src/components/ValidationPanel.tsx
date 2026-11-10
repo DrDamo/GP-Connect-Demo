@@ -248,14 +248,16 @@ export function ValidationPanel({ result, onCleanRefs }: Props) {
   const toggleSeverity = (s: ValidationSeverity) =>
     setOpenSeverities(prev => {
       const next = new Set(prev)
-      next.has(s) ? next.delete(s) : next.add(s)
+      if (next.has(s)) next.delete(s)
+      else next.add(s)
       return next
     })
 
   const toggleGroup = (key: string) =>
     setOpenGroups(prev => {
       const next = new Set(prev)
-      next.has(key) ? next.delete(key) : next.add(key)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
       return next
     })
 

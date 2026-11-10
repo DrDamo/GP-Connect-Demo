@@ -55,8 +55,8 @@ export function extractImmunisations(bundle: fhir3.Bundle): GpConnectImmunisatio
     const locationResource = resolveReference(bundle, cast2.location?.reference) as fhir3.Location | undefined
     const locationName = locationResource?.name
 
-    const explanationReason = (cast.explanation as any)?.reason?.[0] as fhir3.CodeableConcept | undefined
-    const explanationReasonNotGiven = (cast.explanation as any)?.reasonNotGiven?.[0] as fhir3.CodeableConcept | undefined
+    const explanationReason = resource.explanation?.reason?.[0] as fhir3.CodeableConcept | undefined
+    const explanationReasonNotGiven = resource.explanation?.reasonNotGiven?.[0] as fhir3.CodeableConcept | undefined
     // When the vaccine wasn't given, the clinically meaningful reason lives in
     // explanation.reasonNotGiven (e.g. "Did not attend") rather than explanation.reason.
     const chosenExplanation = explanationReasonNotGiven ?? explanationReason

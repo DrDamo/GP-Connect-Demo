@@ -4,9 +4,9 @@ import { getEntries, formatDate, resolvePractitionerRef, resolveReference, extra
 export function extractDocuments(bundle: fhir3.Bundle): GpConnectDocument[] {
   return getEntries<fhir3.DocumentReference>(bundle, 'DocumentReference')
     .sort((a, b) => fhirDateKey(
-      b.created ?? (b.content?.[0]?.attachment as any)?.creation
+      b.created ?? b.content?.[0]?.attachment?.creation
     ).localeCompare(fhirDateKey(
-      a.created ?? (a.content?.[0]?.attachment as any)?.creation
+      a.created ?? a.content?.[0]?.attachment?.creation
     )))
     .map(resource => {
     const attachment = resource.content?.[0]?.attachment

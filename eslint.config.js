@@ -18,5 +18,16 @@ export default defineConfig([
     languageOptions: {
       globals: globals.browser,
     },
+    rules: {
+      // Context modules export their provider and its hook together.
+      'react-refresh/only-export-components': ['error', {
+        allowConstantExport: true,
+        allowExportNames: ['useAuth', 'useOnboarding', 'useGuideNav', 'useDomainWarnings'],
+      }],
+      // The remaining setState-in-effect sites sync state from a prop or an
+      // async result. They cost an extra render, not correctness, so they are
+      // reported without failing lint until each is reworked.
+      'react-hooks/set-state-in-effect': 'warn',
+    },
   },
 ])

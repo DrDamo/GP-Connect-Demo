@@ -305,7 +305,8 @@ export function InspectorView({ record, source, format, jumpToId, onJumpHandled,
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault()
-      e.shiftKey ? handleSearchPrev() : handleSearchNext()
+      if (e.shiftKey) handleSearchPrev()
+      else handleSearchNext()
     }
     if (e.key === 'Escape') {
       setSearchQuery('')

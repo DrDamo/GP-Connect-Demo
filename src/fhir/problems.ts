@@ -1,19 +1,30 @@
 import type { GpConnectProblem, GpConnectLinkedItem, GpConnectRelatedProblem } from './types'
 import { getEntries, resolveReference, formatDate, getExtensionValue, resolvePractitionerRef, extractSnomedCode, extractOriginalTermText, extractId, fhirDateKey, hasNopatSecurity } from './utils'
 
+/** The fields resolveLinkedDescription reads, across the types it labels. */
+interface LinkedResourceFields {
+  code?: fhir3.CodeableConcept
+  /** Encounter.type repeats; ReferralRequest.type is a single concept. */
+  type?: fhir3.CodeableConcept[] | fhir3.CodeableConcept
+  period?: fhir3.Period
+  medicationReference?: fhir3.Reference
+  medicationCodeableConcept?: fhir3.CodeableConcept
+  description?: string
+}
+
 function resolveLinkedDescription(bundle: fhir3.Bundle, resourceType: string, id: string): string | undefined {
-  const resource = resolveReference(bundle, `${resourceType}/${id}`) as any
+  const resource = resolveReference(bundle, `${resourceType}/${id}`) as LinkedResourceFields | undefined
   if (!resource) return undefined
   switch (resourceType) {
     case 'Observation':
       return extractOriginalTermText(resource.code)
     case 'Encounter':
-      return resource.type?.[0]?.text ?? formatDate(resource.period?.start)
+      return (resource.type as fhir3.CodeableConcept[] | undefined)?.[0]?.text ?? formatDate(resource.period?.start)
     case 'MedicationRequest':
     case 'MedicationStatement': {
       const medRef = resource.medicationReference?.reference
       if (medRef) {
-        const med = resolveReference(bundle, medRef) as any
+        const med = resolveReference(bundle, medRef) as { code?: fhir3.CodeableConcept } | undefined
         return extractOriginalTermText(med?.code)
       }
       return extractOriginalTermText(resource.medicationCodeableConcept)
@@ -23,7 +34,7 @@ function resolveLinkedDescription(bundle: fhir3.Bundle, resourceType: string, id
     case 'DiagnosticReport':
       return extractOriginalTermText(resource.code)
     case 'ReferralRequest':
-      return resource.description ?? extractOriginalTermText(resource.type)
+      return resource.description ?? extractOriginalTermText(resource.type as fhir3.CodeableConcept | undefined)
     default:
       return undefined
   }
@@ -40,7 +51,7 @@ export function extractProblems(bundle: fhir3.Bundle): GpConnectProblem[] {
     )))
     .map(resource => {
     const coding = resource.code?.coding
-    const cast = resource as unknown as Record<string, any>
+    const cast = resource
 
     const sigExt = getExtensionValue(resource.extension, 'Extension-CareConnect-ProblemSignificance-1')
     const sigCode = sigExt?.valueCode as string | undefined
