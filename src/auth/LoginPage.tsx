@@ -1,13 +1,15 @@
 import { useState } from 'react'
 import { useAuth } from './AuthContext'
-import { isSupabaseConfigured } from '../lib/supabase'
+import { isAuthEnabled } from '../lib/api'
 
 interface LoginPageProps {
+  /** Shown above the form, e.g. after following an email confirmation link. */
+  notice?: string | null
   onSwitchToSignup: () => void
   onBackToLanding: () => void
 }
 
-export function LoginPage({ onSwitchToSignup, onBackToLanding }: LoginPageProps) {
+export function LoginPage({ notice, onSwitchToSignup, onBackToLanding }: LoginPageProps) {
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -45,19 +47,24 @@ export function LoginPage({ onSwitchToSignup, onBackToLanding }: LoginPageProps)
             <div className="px-6 py-5 border-b border-nhs-grey-4 dark:border-line">
               <h2 className="text-lg font-semibold text-nhs-grey-1 dark:text-ink">Sign in</h2>
               <p className="text-sm text-nhs-grey-3 dark:text-muted mt-0.5">
-                {isSupabaseConfigured ? 'Enter your email (or username) and password' : 'Authentication not yet configured'}
+                {isAuthEnabled ? 'Enter your email (or username) and password' : 'Authentication not yet configured'}
               </p>
             </div>
 
-            {!isSupabaseConfigured ? (
+            {!isAuthEnabled ? (
               <div className="px-6 py-5">
                 <div className="bg-amber-50 dark:bg-warn-bg border border-amber-200 dark:border-warn-line rounded p-3 text-sm text-amber-800 dark:text-warn">
                   <p className="font-medium mb-1">Setup required</p>
-                  <p className="text-xs">Add <code className="bg-amber-100 dark:bg-warn-bg px-1 rounded">VITE_SUPABASE_URL</code> and <code className="bg-amber-100 dark:bg-warn-bg px-1 rounded">VITE_SUPABASE_ANON_KEY</code> to your environment.</p>
+                  <p className="text-xs">This build has sign-in turned off (<code className="bg-amber-100 dark:bg-warn-bg px-1 rounded">VITE_AUTH=off</code>).</p>
                 </div>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
+                {notice && (
+                  <div role="status" className="bg-blue-50 dark:bg-surface border border-blue-200 dark:border-line rounded p-3 text-xs text-nhs-grey-1 dark:text-ink">
+                    {notice}
+                  </div>
+                )}
                 {error && (
                   <div className="bg-red-50 dark:bg-bad-bg border border-red-200 dark:border-bad-line text-nhs-red dark:text-bad px-3 py-2 rounded text-sm">
                     {error}

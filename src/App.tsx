@@ -13,7 +13,7 @@ import { AuthProvider, useAuth } from './auth/AuthContext'
 import { AuthGate } from './auth/AuthGate'
 import { SharedPatientsView } from './shared/SharedPatientsView'
 import { AccountPage } from './account/AccountPage'
-import { isSupabaseConfigured } from './lib/supabase'
+import { isAuthEnabled } from './lib/api'
 import { OnboardingProvider, useOnboarding } from './onboarding/OnboardingContext'
 import { GuideNavProvider } from './onboarding/GuideNavContext'
 import { TourOverlay } from './onboarding/TourOverlay'
@@ -415,7 +415,7 @@ function AppContent() {
     setLoadedFromBuilder(true)
   }, [handleLoad])
 
-  if (isSupabaseConfigured && isLoading) {
+  if (isAuthEnabled && isLoading) {
     return (
       <div className="h-screen flex items-center justify-center bg-nhs-grey-5 dark:bg-canvas">
         <div className="text-sm text-nhs-grey-3 dark:text-muted">Loading…</div>
@@ -423,7 +423,7 @@ function AppContent() {
     )
   }
 
-  if (isSupabaseConfigured && !user) {
+  if (isAuthEnabled && !user) {
     return <AuthGate />
   }
 
@@ -765,7 +765,7 @@ function AppContent() {
                   >
                     Build a patient record →
                   </button>
-                  {isSupabaseConfigured && (
+                  {isAuthEnabled && (
                     <button
                       onClick={() => setTab('patients')}
                       data-tour="home-shared-patients"

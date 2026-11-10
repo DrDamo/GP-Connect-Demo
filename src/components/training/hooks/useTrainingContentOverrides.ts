@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '../../../lib/supabase'
+import { api } from '../../../lib/api'
 import { useAuth } from '../../../auth/AuthContext'
 
 export interface TrainingContentOverride {
@@ -15,13 +15,14 @@ export function useTrainingContentOverrides() {
   const [loading, setLoading] = useState(true)
 
   const refetch = useCallback(async () => {
-    if (!supabase || !user) { setLoading(false); return }
+    if (!user) { setLoading(false); return }
     setLoading(true)
-    const { data } = await supabase
-      .from('training_content')
-      .select('page_id, content, version, updated_at')
+    let data: TrainingContentOverride[] = []
+    try {
+      data = await api.get<TrainingContentOverride[]>('/training-content')
+    } catch { /* fall back to the built-in content */ }
     const byPage: Record<string, TrainingContentOverride> = {}
-    for (const row of (data ?? []) as TrainingContentOverride[]) {
+    for (const row of data) {
       byPage[row.page_id] = row
     }
     setOverrides(byPage)

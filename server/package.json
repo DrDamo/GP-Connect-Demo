@@ -1,22 +1,30 @@
 {
-  "name": "nhs-terminology-proxy",
+  "name": "gp-connect-demo-server",
   "version": "1.0.0",
-  "description": "Thin proxy for NHS England Terminology Server — SNOMED CT + dm+d",
+  "description": "GP Connect Demonstrator backend: sign-in, data API and NHS terminology proxy",
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
-    "build": "tsc"
+    "build": "tsc",
+    "test": "node --test --import tsx test/*.test.ts",
+    "migrate": "node dist/migrate.js",
+    "create-user": "node dist/createUser.js"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
-    "express": "^4.22.3"
+    "express": "^4.22.3",
+    "nodemailer": "^10.5.0",
+    "pg": "^8.23.1"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.3",
     "@types/node": "^22.15.21",
+    "@types/nodemailer": "^8.0.2",
+    "@types/pg": "^8.23.1",
     "tsx": "^4.19.3",
     "typescript": "^5.8.3"
   }

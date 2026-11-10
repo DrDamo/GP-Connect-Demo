@@ -6,7 +6,12 @@ import type { Request, Response, NextFunction } from 'express'
 
 interface Window { start: number; count: number }
 
-export function rateLimit({ windowMs, max }: { windowMs: number; max: number }) {
+export function rateLimit({ windowMs, max, key: keyOf }: {
+  windowMs: number
+  max: number
+  /** Bucket key; defaults to the client IP. */
+  key?: (req: Request) => string
+}) {
   const windows = new Map<string, Window>()
 
   // Drop expired windows so the map can't grow without bound.
@@ -18,7 +23,7 @@ export function rateLimit({ windowMs, max }: { windowMs: number; max: number }) 
 
   return (req: Request, res: Response, next: NextFunction) => {
     // req.ip honours X-Forwarded-For only when `trust proxy` is configured.
-    const key = req.ip ?? 'unknown'
+    const key = keyOf ? keyOf(req) : (req.ip ?? 'unknown')
     const now = Date.now()
     let w = windows.get(key)
     if (!w || now - w.start >= windowMs) {
