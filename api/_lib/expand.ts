@@ -1,5 +1,6 @@
 import { config } from './config'
 import { getToken } from './auth'
+import { UpstreamError } from './errors'
 import type { FhirContains, FhirValueSetExpansion } from './types'
 
 export async function expandValueSet(valueSetUrl: string, filter: string, count = 10): Promise<FhirContains[]> {
@@ -21,7 +22,7 @@ export async function expandValueSet(valueSetUrl: string, filter: string, count 
 
   if (!res.ok) {
     const text = await res.text()
-    throw new Error(`FHIR $expand failed (HTTP ${res.status}): ${text}`)
+    throw new UpstreamError(res.status, `FHIR $expand failed (HTTP ${res.status}): ${text}`)
   }
 
   const body = await res.json() as FhirValueSetExpansion

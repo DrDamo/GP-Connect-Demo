@@ -1,4 +1,5 @@
 import { useReducer, useEffect } from 'react'
+import { BUILDER_DRAFT_STORAGE_KEY } from '../../lib/localPatientData'
 import type {
   DraftRecord,
   DraftPatient,
@@ -1344,7 +1345,7 @@ function draftReducer(state: DraftRecord, action: DraftAction): DraftRecord {
 export function useDraftRecord() {
   const [draft, dispatch] = useReducer(draftReducer, undefined, () => {
     try {
-      const stored = localStorage.getItem('gpc-builder-draft')
+      const stored = localStorage.getItem(BUILDER_DRAFT_STORAGE_KEY)
       if (stored) {
         return migrateDraft(JSON.parse(stored) as DraftRecord)
       }
@@ -1354,7 +1355,7 @@ export function useDraftRecord() {
 
   useEffect(() => {
     try {
-      localStorage.setItem('gpc-builder-draft', JSON.stringify(draft))
+      localStorage.setItem(BUILDER_DRAFT_STORAGE_KEY, JSON.stringify(draft))
     } catch {}
   }, [draft])
 

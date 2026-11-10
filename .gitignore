@@ -13,7 +13,6 @@ dist-ssr
 *.local
 .env
 .env.*
-!.env.example
 server/.env
 
 # Claude Code internal files
@@ -33,3 +32,11 @@ test-results/
 *.njsproj
 *.sln
 *.sw?
+.vercel
+.env*
+# Must come after every .env pattern above so the example stays tracked.
+!.env.example
+!server/.env.example
+
+# Local GP Connect test bundles (test-environment records, kept out of git)
+JSON Examples/

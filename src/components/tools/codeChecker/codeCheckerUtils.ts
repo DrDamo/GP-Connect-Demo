@@ -2,6 +2,8 @@
 // checks, delimited-file parsing for the import dialog, the terminology
 // server call, and CSV export of the results.
 
+import { terminologyHeaders } from '../../../lib/terminologyAuth'
+
 export interface CodeInput {
   code: string
   /** Term supplied alongside the code in an imported file, if one was mapped. */
@@ -312,7 +314,7 @@ export async function checkCodes(
     const chunk = toLookup.slice(i, i + REQUEST_CHUNK_SIZE)
     const res = await fetch(`${serverUrl}/api/snomed/check-batch`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await terminologyHeaders(undefined, { 'Content-Type': 'application/json' }),
       body: JSON.stringify({ codes: chunk.map(c => c.code) }),
       signal,
     })

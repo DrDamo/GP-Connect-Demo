@@ -25,7 +25,7 @@ import { parseBundle, normalizePastedJson, stripBom } from './fhir/parser'
 import { extractOperationIssues } from './fhir/operationOutcomes'
 import { buildIncomingRefs } from './fhir/incomingRefs'
 import { validateMedicationsBundle, cleanDanglingRefs } from './fhir/validator'
-import { validateSnomedCodes, applyTransferDegrade, buildUnmutatedIssues, passedSnomedMessage, checkSnomedStatuses } from './fhir/snomedDegrade'
+import { validateSnomedCodes, applyTransferDegrade, buildUnmutatedIssues, passedSnomedMessage, checkSnomedStatuses, uncheckedCodesIssues } from './fhir/snomedDegrade'
 import type { SnomedCodingRef } from './fhir/snomedDegrade'
 import { SnomedCheckingBanner } from './components/SnomedCheckingBanner'
 import { SnomedDegradePrompt } from './components/SnomedDegradePrompt'
@@ -253,8 +253,14 @@ function AppContent() {
 
         if (validation.uniqueCodesChecked === 0) return
 
+        // Codes the server gave no verdict on are reported, never degraded.
+        const unchecked = uncheckedCodesIssues(validation.uncheckedCodes)
+        if (unchecked.length > 0) {
+          setLoaded(prev => prev ? { ...prev, validation: { ...prev.validation, issues: [...prev.validation.issues, ...unchecked] } } : prev)
+        }
+
         if (validation.invalidRefs.length === 0) {
-          const passed = passedSnomedMessage(validation.uniqueCodesChecked, 0)
+          const passed = passedSnomedMessage(validation.uniqueCodesChecked, 0, validation.uncheckedCodes.length)
           setLoaded(prev => prev ? { ...prev, validation: { ...prev.validation, passed: [...prev.validation.passed, ...passed] } } : prev)
           return
         }
@@ -930,11 +936,20 @@ function AppContent() {
   )
 }
 
+// Keyed on the signed-in user so that signing out (or a different user
+// signing in on the same browser) remounts the workspace with empty state —
+// the previously loaded bundle, pasted text and shared draft never carry
+// over to the next session. Token refreshes keep the same id, so they don't.
+function SessionScopedContent() {
+  const { user } = useAuth()
+  return <AppContent key={user?.id ?? 'signed-out'} />
+}
+
 export default function App() {
   return (
     <AuthProvider>
       <OnboardingProvider>
-        <AppContent />
+        <SessionScopedContent />
       </OnboardingProvider>
     </AuthProvider>
   )

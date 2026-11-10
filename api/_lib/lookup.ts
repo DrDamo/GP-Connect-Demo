@@ -3,6 +3,7 @@ import { getToken } from './auth'
 import type { FhirParameters } from './types'
 import { extractCodeStatus, extractInactive, dmdMembershipValueSetUrl, snomedValueSetUrl, type CodeStatus } from './mappers'
 import { expandValueSet } from './expand'
+import { UpstreamError } from './errors'
 
 const SNOMED_SYSTEM = 'http://snomed.info/sct'
 const VALIDATE_CODE_BATCH_CHUNK_SIZE = 200
@@ -59,7 +60,7 @@ export async function lookupCode(system: string, code: string): Promise<FhirPara
 
   if (!res.ok) {
     const text = await res.text()
-    throw new Error(`FHIR $lookup failed (HTTP ${res.status}): ${text}`)
+    throw new UpstreamError(res.status, `FHIR $lookup failed (HTTP ${res.status}): ${text}`)
   }
 
   return (await res.json()) as FhirParameters
@@ -74,6 +75,25 @@ interface FhirBatchResponse {
   resourceType: 'Bundle'
   type: 'batch-response'
   entry?: FhirBatchResponseEntry[]
+}
+
+/**
+ * The `result` boolean of one $validate-code batch entry, or undefined when
+ * the entry itself failed (non-2xx — e.g. a per-entry 429/500), is missing
+ * (truncated response) or carries no boolean. Undefined means "could not
+ * check", which callers must never report as "invalid": the frontend
+ * offers to transfer-degrade every code reported as false.
+ */
+function batchEntryResult(entry: FhirBatchResponseEntry | undefined): boolean | undefined {
+  if (!entry?.response?.status?.startsWith('2') || !entry.resource) return undefined
+  const result = entry.resource.parameter?.find(p => p.name === 'result')?.valueBoolean
+  return typeof result === 'boolean' ? result : undefined
+}
+
+/** A per-entry 4xx that means "the server doesn't know this code", as
+ *  opposed to auth, timeout or rate-limit failures, which are also 4xx. */
+function isUnknownCodeStatus(status: string): boolean {
+  return status.startsWith('4') && !/^(401|403|408|429)\b/.test(status)
 }
 
 // Validates a batch of SNOMED CT concept IDs in as few round trips as
@@ -114,15 +134,14 @@ export async function validateCodesBatch(codes: string[]): Promise<Record<string
 
     if (!res.ok) {
       const text = await res.text()
-      throw new Error(`FHIR batch $validate-code failed (HTTP ${res.status}): ${text}`)
+      throw new UpstreamError(res.status, `FHIR batch $validate-code failed (HTTP ${res.status}): ${text}`)
     }
 
     const batchResponse = (await res.json()) as FhirBatchResponse
     const entries = batchResponse.entry ?? []
     chunk.forEach((code, idx) => {
-      const params = entries[idx]?.resource?.parameter ?? []
-      const result = params.find(p => p.name === 'result')?.valueBoolean
-      results[code] = result === true
+      const result = batchEntryResult(entries[idx])
+      if (result !== undefined) results[code] = result // unchecked codes are left out
     })
   }
 
@@ -166,15 +185,14 @@ export async function validateDmdCodesBatch(codes: string[]): Promise<Record<str
 
     if (!res.ok) {
       const text = await res.text()
-      throw new Error(`FHIR batch ValueSet $validate-code failed (HTTP ${res.status}): ${text}`)
+      throw new UpstreamError(res.status, `FHIR batch ValueSet $validate-code failed (HTTP ${res.status}): ${text}`)
     }
 
     const batchResponse = (await res.json()) as FhirBatchResponse
     const entries = batchResponse.entry ?? []
     chunk.forEach((code, idx) => {
-      const params = entries[idx]?.resource?.parameter ?? []
-      const result = params.find(p => p.name === 'result')?.valueBoolean
-      results[code] = result === true
+      const result = batchEntryResult(entries[idx])
+      if (result !== undefined) results[code] = result // unchecked codes are left out
     })
   }
 
@@ -225,7 +243,7 @@ export async function lookupStatusBatch(
 
     if (!res.ok) {
       const text = await res.text()
-      throw new Error(`FHIR batch $lookup failed (HTTP ${res.status}): ${text}`)
+      throw new UpstreamError(res.status, `FHIR batch $lookup failed (HTTP ${res.status}): ${text}`)
     }
 
     const batchResponse = (await res.json()) as FhirBatchResponse
@@ -291,7 +309,7 @@ export async function checkCodesBatch(codes: string[]): Promise<Record<string, C
 
     if (!res.ok) {
       const text = await res.text()
-      throw new Error(`FHIR batch $lookup failed (HTTP ${res.status}): ${text}`)
+      throw new UpstreamError(res.status, `FHIR batch $lookup failed (HTTP ${res.status}): ${text}`)
     }
 
     const batchResponse = (await res.json()) as FhirBatchResponse
@@ -299,7 +317,7 @@ export async function checkCodesBatch(codes: string[]): Promise<Record<string, C
     chunk.forEach((code, idx) => {
       const entry = entries[idx]
       const status = entry?.response?.status ?? ''
-      if (status.startsWith('4')) { results[code] = { found: false }; return }
+      if (isUnknownCodeStatus(status)) { results[code] = { found: false }; return }
       if (!status.startsWith('2') || !entry?.resource) {
         throw new Error(`FHIR batch $lookup returned an unexpected status for code ${code}: ${status || 'no response'}`)
       }

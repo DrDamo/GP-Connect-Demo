@@ -7,6 +7,16 @@ import { ReferenceChip } from './ResourceCard'
 import { type DomainId } from './domains'
 import { SearchFilterBox } from './SearchFilterBox'
 
+/** True only for absolute http(s) URLs — the only kind safe to render as a link. */
+function isWebUrl(value: string): boolean {
+  try {
+    const { protocol } = new URL(value)
+    return protocol === 'https:' || protocol === 'http:'
+  } catch {
+    return false
+  }
+}
+
 function documentSearchText(d: GpConnectDocument): string {
   return [
     d.date, d.type, d.description, d.author, d.mimeType, d.status, d.custodian, d.attachmentTitle, d.url,
@@ -109,10 +119,16 @@ function DocumentDetail({ document, bundle, onJumpToSource, onJumpToRecord }: { 
         {document.url && (
           <div className="col-span-full flex gap-2 min-w-0">
             <span className="text-xs text-nhs-grey-3 shrink-0 w-36">URL</span>
-            <a href={document.url} target="_blank" rel="noopener noreferrer"
-               className="text-xs text-nhs-blue underline hover:no-underline truncate">
-              {document.url}
-            </a>
+            {isWebUrl(document.url) ? (
+              <a href={document.url} target="_blank" rel="noopener noreferrer"
+                 className="text-xs text-nhs-blue underline hover:no-underline truncate">
+                {document.url}
+              </a>
+            ) : (
+              // Not http(s) — e.g. a data:, file: or javascript: URL from an
+              // untrusted bundle. Shown as text so it can't be opened.
+              <span className="text-xs text-nhs-grey-1 font-mono break-all">{document.url}</span>
+            )}
           </div>
         )}
       </div>

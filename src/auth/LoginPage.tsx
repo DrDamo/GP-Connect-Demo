@@ -53,7 +53,7 @@ export function LoginPage({ onSwitchToSignup, onBackToLanding }: LoginPageProps)
               <div className="px-6 py-5">
                 <div className="bg-amber-50 dark:bg-warn-bg border border-amber-200 dark:border-warn-line rounded p-3 text-sm text-amber-800 dark:text-warn">
                   <p className="font-medium mb-1">Setup required</p>
-                  <p className="text-xs">Add <code className="bg-amber-100 dark:bg-warn-bg px-1 rounded">VITE_SUPABASE_URL</code> and <code className="bg-amber-100 dark:bg-warn-bg px-1 rounded">VITE_SUPABASE_ANON_KEY</code> to your environment, then run the setup endpoint.</p>
+                  <p className="text-xs">Add <code className="bg-amber-100 dark:bg-warn-bg px-1 rounded">VITE_SUPABASE_URL</code> and <code className="bg-amber-100 dark:bg-warn-bg px-1 rounded">VITE_SUPABASE_ANON_KEY</code> to your environment.</p>
                 </div>
               </div>
             ) : (

@@ -425,8 +425,9 @@ export function TrainingView({ initialPage, onNavigate, onLoadExample }: Props) 
   const [page, setPage] = useState<PageId | null>(initialPage ?? null)
   const [editingPage, setEditingPage] = useState<PageId | null>(null)
 
-  const { profile } = useAuth()
-  const isAdmin = profile?.role === 'admin'
+  // Training content is one global copy shared by every organisation, so
+  // editing is for platform admins, not org admins.
+  const { isPlatformAdmin: isAdmin } = useAuth()
   const { overrides, refetch: refetchOverrides } = useTrainingContentOverrides()
   const { notesByPage, addNote, updateNote, deleteNote } = useTrainingNotes()
   const { isHintDismissed, dismissHint } = useOnboarding()

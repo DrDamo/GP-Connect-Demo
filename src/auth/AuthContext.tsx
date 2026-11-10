@@ -1,6 +1,28 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import type { User } from '@supabase/supabase-js'
+import type { AuthError, User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
+import { clearLocalPatientData } from '../lib/localPatientData'
+
+/**
+ * Signup errors shown to the user. Deliberately generic for anything that
+ * could reveal whether an address is already registered.
+ */
+function signupErrorMessage(error: AuthError): string | null {
+  switch (error.code) {
+    case 'user_already_exists':
+    case 'email_exists':
+      return null // treated as success: "check your email" — see signup()
+    case 'weak_password':
+      return error.message
+    case 'over_email_send_rate_limit':
+    case 'over_request_rate_limit':
+      return 'Too many attempts — please wait a few minutes and try again.'
+    case 'email_address_invalid':
+      return 'Please enter a valid email address.'
+    default:
+      return 'Could not create the account. Please try again.'
+  }
+}
 
 export interface Profile {
   id: string
@@ -29,6 +51,8 @@ interface AuthContextValue {
   user: User | null
   profile: Profile | null
   organisation: Organisation | null
+  /** May edit the global training content (public.platform_admins). */
+  isPlatformAdmin: boolean
   isLoading: boolean
   login: (identifier: string, password: string) => Promise<{ error?: string }>
   signup: (params: { email: string; password: string; displayName: string; orgName: string }) => Promise<{ error?: string; needsConfirmation?: boolean }>
@@ -44,6 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [organisation, setOrganisation] = useState<Organisation | null>(null)
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
 
   const loadProfile = async (userId: string) => {
@@ -65,6 +90,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .eq('id', (profileData as Profile).org_id)
       .single()
     if (orgData) setOrganisation(orgData as Organisation)
+
+    // UI hint only — the training_content write policies enforce it.
+    const { data: platformAdmin } = await supabase.rpc('is_platform_admin')
+    setIsPlatformAdmin(platformAdmin === true)
   }
 
   useEffect(() => {
@@ -80,13 +109,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsLoading(false)
       }
     })
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') clearLocalPatientData()
       setUser(session?.user ?? null)
       if (session?.user) {
         loadProfile(session.user.id)
       } else {
         setProfile(null)
         setOrganisation(null)
+        setIsPlatformAdmin(false)
       }
     })
     return () => subscription.unsubscribe()
@@ -119,7 +150,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         },
       },
     })
-    if (error) return { error: error.message }
+    if (error) {
+      const message = signupErrorMessage(error)
+      // An already-registered address gets the same "check your email"
+      // screen as a new one, so the form can't be used to probe for accounts.
+      return message ? { error: message } : { needsConfirmation: true }
+    }
     return { needsConfirmation: !data.session }
   }
 
@@ -162,7 +198,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, profile, organisation, isLoading, login, signup, updateProfile, updateOrganisationName, changePassword, logout }}>
+    <AuthContext.Provider value={{ user, profile, organisation, isPlatformAdmin, isLoading, login, signup, updateProfile, updateOrganisationName, changePassword, logout }}>
       {children}
     </AuthContext.Provider>
   )

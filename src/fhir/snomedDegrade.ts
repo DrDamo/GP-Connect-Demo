@@ -1,5 +1,6 @@
 import type { ValidationIssue, SnomedStatusMap } from './types'
 import { extractOriginalTermText } from './utils'
+import { terminologyHeaders } from '../lib/terminologyAuth'
 
 // ---------------------------------------------------------------------------
 // SNOMED CT concept ID validation + GP2GP transfer-degrade conversion.
@@ -137,8 +138,7 @@ function getServerConfig(): { serverUrl: string; token?: string } {
 async function validateCodesBatch(codes: string[]): Promise<Record<string, boolean>> {
   if (codes.length === 0) return {}
   const { serverUrl, token } = getServerConfig()
-  const headers: HeadersInit = { 'Content-Type': 'application/json' }
-  if (token) headers['Authorization'] = `Bearer ${token}`
+  const headers = await terminologyHeaders(token, { 'Content-Type': 'application/json' })
 
   const res = await fetch(`${serverUrl}/api/snomed/validate-batch`, {
     method: 'POST',
@@ -157,8 +157,7 @@ const MEDICATION_RESOURCE_TYPES = new Set(['MedicationStatement', 'MedicationReq
 async function validateDmdCodesBatch(codes: string[]): Promise<Record<string, boolean>> {
   if (codes.length === 0) return {}
   const { serverUrl, token } = getServerConfig()
-  const headers: HeadersInit = { 'Content-Type': 'application/json' }
-  if (token) headers['Authorization'] = `Bearer ${token}`
+  const headers = await terminologyHeaders(token, { 'Content-Type': 'application/json' })
 
   const res = await fetch(`${serverUrl}/api/dmd/validate-batch`, {
     method: 'POST',
@@ -192,8 +191,7 @@ export async function checkSnomedStatuses(bundle: fhir3.Bundle): Promise<SnomedS
   )]
 
   const { serverUrl, token } = getServerConfig()
-  const headers: HeadersInit = { 'Content-Type': 'application/json' }
-  if (token) headers['Authorization'] = `Bearer ${token}`
+  const headers = await terminologyHeaders(token, { 'Content-Type': 'application/json' })
 
   const [statusResult, dmdResult] = await Promise.all([
     fetch(`${serverUrl}/api/snomed/status-batch`, {
@@ -231,8 +229,23 @@ export interface SnomedValidationOutcome {
    * — candidates for transfer-degrade, but not yet mutated. */
   invalidRefs: SnomedCodingRef[]
   uniqueCodesChecked: number
+  /** Codes the terminology server returned no verdict for (a failed or
+   * missing batch entry). Neither valid nor invalid — never degraded. */
+  uncheckedCodes: string[]
   checkFailed: boolean
   errorMessage?: string
+}
+
+/** Info issue for codes the server couldn't give a verdict on, if any. */
+export function uncheckedCodesIssues(uncheckedCodes: string[]): ValidationIssue[] {
+  if (uncheckedCodes.length === 0) return []
+  const n = uncheckedCodes.length
+  const sample = uncheckedCodes.slice(0, 5).join(', ') + (n > 5 ? ', …' : '')
+  return [{
+    severity: 'info',
+    message: `${n} SNOMED CT code${n === 1 ? '' : 's'} could not be verified — the terminology server did not return a result (${sample}). ${n === 1 ? 'It was' : 'They were'} left unchanged.`,
+    path: 'Bundle',
+  }]
 }
 
 /**
@@ -246,7 +259,7 @@ export async function validateSnomedCodes(bundle: fhir3.Bundle): Promise<SnomedV
   const uniqueCodes = [...new Set(refs.map(r => r.coding.code).filter((c): c is string => !!c))]
 
   if (uniqueCodes.length === 0) {
-    return { refs, invalidRefs: [], uniqueCodesChecked: 0, checkFailed: false }
+    return { refs, invalidRefs: [], uniqueCodesChecked: 0, uncheckedCodes: [], checkFailed: false }
   }
 
   let results: Record<string, boolean>
@@ -257,13 +270,17 @@ export async function validateSnomedCodes(bundle: fhir3.Bundle): Promise<SnomedV
       refs,
       invalidRefs: [],
       uniqueCodesChecked: uniqueCodes.length,
+      uncheckedCodes: uniqueCodes,
       checkFailed: true,
       errorMessage: err instanceof Error ? err.message : String(err),
     }
   }
 
+  // Only an explicit `false` is invalid. A code missing from `results` got no
+  // verdict from the server and must not be offered for transfer-degrade.
   const invalidRefs = refs.filter(r => r.coding.code && results[r.coding.code] === false)
-  return { refs, invalidRefs, uniqueCodesChecked: uniqueCodes.length, checkFailed: false }
+  const uncheckedCodes = uniqueCodes.filter(c => typeof results[c] !== 'boolean')
+  return { refs, invalidRefs, uniqueCodesChecked: uniqueCodes.length, uncheckedCodes, checkFailed: false }
 }
 
 function findAllergyCategory(bundle: fhir3.Bundle, resourceId: string | undefined): string[] | undefined {
@@ -324,8 +341,8 @@ export function buildUnmutatedIssues(invalidRefs: SnomedCodingRef[], reason: 'ke
   }))
 }
 
-export function passedSnomedMessage(uniqueCodesChecked: number, invalidCount: number): string[] {
-  if (uniqueCodesChecked === 0 || invalidCount > 0) return []
+export function passedSnomedMessage(uniqueCodesChecked: number, invalidCount: number, uncheckedCount = 0): string[] {
+  if (uniqueCodesChecked === 0 || invalidCount > 0 || uncheckedCount > 0) return []
   return [`All ${uniqueCodesChecked} SNOMED CT concept ID${uniqueCodesChecked === 1 ? '' : 's'} verified against the terminology server`]
 }
 
@@ -358,12 +375,13 @@ export async function checkAndDegradeSnomedCodes(
     return { issues: [], degradedCount: 0, checkFailed: false, passed: [] }
   }
 
-  const passed = passedSnomedMessage(validation.uniqueCodesChecked, validation.invalidRefs.length)
+  const passed = passedSnomedMessage(validation.uniqueCodesChecked, validation.invalidRefs.length, validation.uncheckedCodes.length)
+  const unchecked = uncheckedCodesIssues(validation.uncheckedCodes)
 
   if (mutate) {
     const { issues, degradedCount } = applyTransferDegrade(bundle, validation.invalidRefs)
-    return { issues, degradedCount, checkFailed: false, passed }
+    return { issues: [...issues, ...unchecked], degradedCount, checkFailed: false, passed }
   }
 
-  return { issues: buildUnmutatedIssues(validation.invalidRefs, 'xml'), degradedCount: 0, checkFailed: false, passed }
+  return { issues: [...buildUnmutatedIssues(validation.invalidRefs, 'xml'), ...unchecked], degradedCount: 0, checkFailed: false, passed }
 }

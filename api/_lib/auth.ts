@@ -1,4 +1,5 @@
 import { config } from './config'
+import { UpstreamError } from './errors'
 
 interface TokenCache {
   token: string
@@ -24,7 +25,7 @@ export async function getToken(): Promise<string> {
 
   if (!res.ok) {
     const text = await res.text()
-    throw new Error(`OAuth2 token exchange failed (HTTP ${res.status}): ${text}`)
+    throw new UpstreamError(res.status, `OAuth2 token exchange failed (HTTP ${res.status}): ${text}`)
   }
 
   const json = await res.json() as { access_token: string; expires_in: number }
@@ -33,11 +34,4 @@ export async function getToken(): Promise<string> {
     expiresAt: Date.now() + json.expires_in * 1000,
   }
   return cached.token
-}
-
-export function tokenStatus(): { hasToken: boolean; expiresInSeconds: number | null } {
-  if (!cached) return { hasToken: false, expiresInSeconds: null }
-  const expiresIn = Math.round((cached.expiresAt - Date.now()) / 1000)
-  if (expiresIn <= 0) return { hasToken: false, expiresInSeconds: null }
-  return { hasToken: true, expiresInSeconds: expiresIn }
 }

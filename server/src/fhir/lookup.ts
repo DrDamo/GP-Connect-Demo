@@ -76,6 +76,17 @@ interface FhirBatchResponse {
   entry?: FhirBatchResponseEntry[]
 }
 
+// Kept in step with api/_lib/lookup.ts — see the comments there.
+function batchEntryResult(entry: FhirBatchResponseEntry | undefined): boolean | undefined {
+  if (!entry?.response?.status?.startsWith('2') || !entry.resource) return undefined
+  const result = entry.resource.parameter?.find(p => p.name === 'result')?.valueBoolean
+  return typeof result === 'boolean' ? result : undefined
+}
+
+function isUnknownCodeStatus(status: string): boolean {
+  return status.startsWith('4') && !/^(401|403|408|429)\b/.test(status)
+}
+
 // Validates a batch of SNOMED CT concept IDs in as few round trips as
 // possible. Uses CodeSystem/$validate-code (not $lookup) because it always
 // returns HTTP 200 with a `result` boolean — $lookup throws on unknown
@@ -122,9 +133,8 @@ export async function validateCodesBatch(codes: string[]): Promise<Record<string
     const batchResponse = (await res.json()) as FhirBatchResponse
     const entries = batchResponse.entry ?? []
     chunk.forEach((code, idx) => {
-      const params = entries[idx]?.resource?.parameter ?? []
-      const result = params.find(p => p.name === 'result')?.valueBoolean
-      results[code] = result === true
+      const result = batchEntryResult(entries[idx])
+      if (result !== undefined) results[code] = result // unchecked codes are left out
     })
   }
 
@@ -175,9 +185,8 @@ export async function validateDmdCodesBatch(codes: string[]): Promise<Record<str
     const batchResponse = (await res.json()) as FhirBatchResponse
     const entries = batchResponse.entry ?? []
     chunk.forEach((code, idx) => {
-      const params = entries[idx]?.resource?.parameter ?? []
-      const result = params.find(p => p.name === 'result')?.valueBoolean
-      results[code] = result === true
+      const result = batchEntryResult(entries[idx])
+      if (result !== undefined) results[code] = result // unchecked codes are left out
     })
   }
 
@@ -304,7 +313,7 @@ export async function checkCodesBatch(codes: string[]): Promise<Record<string, C
     chunk.forEach((code, idx) => {
       const entry = entries[idx]
       const status = entry?.response?.status ?? ''
-      if (status.startsWith('4')) { results[code] = { found: false }; return }
+      if (isUnknownCodeStatus(status)) { results[code] = { found: false }; return }
       if (!status.startsWith('2') || !entry?.resource) {
         throw new Error(`FHIR batch $lookup returned an unexpected status for code ${code}: ${status || 'no response'}`)
       }

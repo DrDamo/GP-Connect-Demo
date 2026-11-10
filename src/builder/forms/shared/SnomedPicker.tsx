@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { FormField } from './FormField'
 import { useAnchoredDropdown, widenDropdown } from '../../../hooks/useAnchoredDropdown'
 import { InfoHint } from '../../../onboarding/InfoHint'
+import { terminologyHeaders } from '../../../lib/terminologyAuth'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -349,15 +350,16 @@ export function SnomedPicker({ value, onChange, code, label = 'SNOMED CT', seman
       const params = new URLSearchParams({ q, limit: '10', sort: 'relevance' })
       if (semanticTag) params.set('semantic_tag', semanticTag)
       const url = `${cfg.serverUrl}/api/snomed/search?${params}`
-      const headers: HeadersInit = {}
-      if (cfg.token) headers['Authorization'] = `Bearer ${cfg.token}`
+      const headers = await terminologyHeaders(cfg.token)
       const res = await fetch(url, { headers, signal: controller.signal })
       if (import.meta.env.DEV) {
         const cloned = res.clone()
         cloned.json().then(raw => { setDebugInfo({ url, status: res.status, raw }); setLookupDetail(null) }).catch(() => {})
       }
       if (res.status === 401) {
-        setError('Token expired — reconnect via the settings icon')
+        setError(import.meta.env.DEV
+          ? 'Token rejected — reconnect via the settings icon'
+          : 'Your session has expired — sign in again to search SNOMED CT')
         setResults([])
         return
       }
@@ -433,8 +435,7 @@ export function SnomedPicker({ value, onChange, code, label = 'SNOMED CT', seman
     try {
       const params = new URLSearchParams({ code })
       const url = `${config.serverUrl}/api/snomed/lookup?${params}`
-      const headers: HeadersInit = {}
-      if (config.token) headers['Authorization'] = `Bearer ${config.token}`
+      const headers = await terminologyHeaders(config.token)
       const res = await fetch(url, { headers })
       const body = await res.json() as { raw: unknown; detail?: SnomedDetail }
       setDebugInfo({ url, status: res.status, raw: body })
