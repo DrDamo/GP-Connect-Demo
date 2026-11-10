@@ -7,7 +7,9 @@ export default defineConfig({
   base: process.env.VITE_BASE_URL ?? '/',
   server: {
     proxy: {
-      '/api': 'http://localhost:3001',
+      // 127.0.0.1, not localhost: the proxy binds IPv4 loopback and Node may
+      // resolve localhost to ::1.
+      '/api': 'http://127.0.0.1:3001',
     },
   },
 })

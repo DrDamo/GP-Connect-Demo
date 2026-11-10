@@ -482,9 +482,6 @@ export function validateBundle(bundle: fhir3.Bundle): ValidationResult {
   return { valid: !hasErrors, issues, resourceCounts, passed: tracker.passedTitles() }
 }
 
-// Backward-compat alias
-export const validateMedicationsBundle = validateBundle
-
 // Remove all unresolvable references from a bundle.
 // Returns the cleaned bundle and the number of reference strings removed.
 // Local contained refs (#id) and absolute URLs (http/https/urn) are left untouched.

@@ -35,6 +35,8 @@ const ECL_FOR_TAG: Record<string, string> = {
   situation:  '<< 243796009',
   event:      '<< 272379006',
   body:       '<< 123037004',
+  // Pre-coordinated allergy/intolerance/adverse-reaction concepts (e.g. "allergy to penicillin")
+  allergy:    '<< 420134006',
 }
 
 // dm+d hierarchy roots within SNOMED CT UK edition

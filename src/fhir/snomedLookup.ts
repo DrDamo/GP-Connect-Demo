@@ -1,10 +1,6 @@
 import type { SnomedDetail } from './types'
 import { terminologyHeaders } from '../lib/terminologyAuth'
-
-// Same dev/prod base-URL logic as checkSnomedStatuses (snomedDegrade.ts) and
-// SnomedPicker — the dev Express proxy runs on :3001, everywhere else the
-// Vercel functions are same-origin.
-const DEFAULT_SERVER_URL = import.meta.env.DEV ? 'http://localhost:3001' : window.location.origin
+import { DEFAULT_TERMINOLOGY_URL as DEFAULT_SERVER_URL } from '../lib/terminologyConfig'
 
 const SNOMED_SYSTEM = 'http://snomed.info/sct'
 

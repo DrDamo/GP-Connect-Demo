@@ -25,3 +25,11 @@ export function isValidNhsNumber(value: string | undefined | null): boolean {
   const checkDigit = nhsNumberCheckDigit(digits.slice(0, 9))
   return checkDigit !== null && checkDigit === Number(digits[9])
 }
+
+/**
+ * True for numbers in the 999 range NHS England reserves for test data, which
+ * is never issued to a real patient. Valid numbers outside it may be real.
+ */
+export function isTestRangeNhsNumber(value: string | undefined | null): boolean {
+  return !!value && value.replace(/\s/g, '').startsWith('999')
+}

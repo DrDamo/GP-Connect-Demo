@@ -1,5 +1,6 @@
 import { config } from '../config.js'
 import { getToken } from '../auth.js'
+import { UpstreamError } from '../errors.js'
 import type { FhirContains, FhirValueSetExpansion } from './types.js'
 
 export async function expandValueSet(
@@ -25,7 +26,7 @@ export async function expandValueSet(
 
   if (!res.ok) {
     const text = await res.text()
-    throw new Error(`FHIR $expand failed (HTTP ${res.status}): ${text}`)
+    throw new UpstreamError(res.status, `FHIR $expand failed (HTTP ${res.status}): ${text}`)
   }
 
   const body = (await res.json()) as FhirValueSetExpansion

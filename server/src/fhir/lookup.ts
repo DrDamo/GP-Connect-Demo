@@ -1,5 +1,6 @@
 import { config } from '../config.js'
 import { getToken } from '../auth.js'
+import { UpstreamError } from '../errors.js'
 import type { FhirParameters } from './types.js'
 import { extractCodeStatus, extractInactive, dmdMembershipValueSetUrl, snomedValueSetUrl, type CodeStatus } from './mappers.js'
 import { expandValueSet } from './expand.js'
@@ -59,7 +60,7 @@ export async function lookupCode(system: string, code: string): Promise<FhirPara
 
   if (!res.ok) {
     const text = await res.text()
-    throw new Error(`FHIR $lookup failed (HTTP ${res.status}): ${text}`)
+    throw new UpstreamError(res.status, `FHIR $lookup failed (HTTP ${res.status}): ${text}`)
   }
 
   return (await res.json()) as FhirParameters
@@ -127,7 +128,7 @@ export async function validateCodesBatch(codes: string[]): Promise<Record<string
 
     if (!res.ok) {
       const text = await res.text()
-      throw new Error(`FHIR batch $validate-code failed (HTTP ${res.status}): ${text}`)
+      throw new UpstreamError(res.status, `FHIR batch $validate-code failed (HTTP ${res.status}): ${text}`)
     }
 
     const batchResponse = (await res.json()) as FhirBatchResponse
@@ -179,7 +180,7 @@ export async function validateDmdCodesBatch(codes: string[]): Promise<Record<str
 
     if (!res.ok) {
       const text = await res.text()
-      throw new Error(`FHIR batch ValueSet $validate-code failed (HTTP ${res.status}): ${text}`)
+      throw new UpstreamError(res.status, `FHIR batch ValueSet $validate-code failed (HTTP ${res.status}): ${text}`)
     }
 
     const batchResponse = (await res.json()) as FhirBatchResponse
@@ -239,7 +240,7 @@ export async function lookupStatusBatch(
 
     if (!res.ok) {
       const text = await res.text()
-      throw new Error(`FHIR batch $lookup failed (HTTP ${res.status}): ${text}`)
+      throw new UpstreamError(res.status, `FHIR batch $lookup failed (HTTP ${res.status}): ${text}`)
     }
 
     const batchResponse = (await res.json()) as FhirBatchResponse
@@ -305,7 +306,7 @@ export async function checkCodesBatch(codes: string[]): Promise<Record<string, C
 
     if (!res.ok) {
       const text = await res.text()
-      throw new Error(`FHIR batch $lookup failed (HTTP ${res.status}): ${text}`)
+      throw new UpstreamError(res.status, `FHIR batch $lookup failed (HTTP ${res.status}): ${text}`)
     }
 
     const batchResponse = (await res.json()) as FhirBatchResponse

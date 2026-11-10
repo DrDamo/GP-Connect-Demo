@@ -1,5 +1,5 @@
 import { useState, Fragment } from 'react'
-import type { GpConnectMedication, GpConnectMedicationsRecord } from '../../fhir/types'
+import type { GpConnectMedication, GpConnectBundle } from '../../fhir/types'
 import { ReferencedResources } from './ReferencedResources'
 import { ReferencedBy } from './ReferencedBy'
 import { VisualiseButton } from './VisualiseButton'
@@ -25,7 +25,7 @@ function medicationSearchText(med: GpConnectMedication): string {
 }
 
 interface Props {
-  record: GpConnectMedicationsRecord
+  record: GpConnectBundle
   selectedId?: string
   selectedIssueId?: string
   onSelect?: (id: string) => void
@@ -66,7 +66,7 @@ function Detail({ label, value, mono = false }: { label: string; value?: string;
 
 function MedicationRow({ med, record, selected, selectedIssueId, onSelect, onSelectIssue, onJumpToSource, onJumpToRecord, showNotForPfsColumn }: {
   med: GpConnectMedication
-  record: GpConnectMedicationsRecord
+  record: GpConnectBundle
   selected?: boolean
   selectedIssueId?: string
   onSelect?: (id: string) => void
@@ -432,7 +432,7 @@ function MedicationRow({ med, record, selected, selectedIssueId, onSelect, onSel
 
 function MedicationsTable({ medications, record, selectedId, selectedIssueId, onSelect, onSelectIssue, onJumpToSource, onJumpToRecord }: {
   medications: GpConnectMedication[]
-  record: GpConnectMedicationsRecord
+  record: GpConnectBundle
   selectedId?: string
   selectedIssueId?: string
   onSelect?: (id: string) => void

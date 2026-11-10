@@ -2,7 +2,6 @@ import { useRef, useState, type ReactNode } from 'react'
 import { CodeImportDialog, type ImportSource } from './CodeImportDialog'
 import {
   checkCodes,
-  downloadTextFile,
   parsePastedCodes,
   readSpreadsheet,
   resultsToCsv,
@@ -10,6 +9,7 @@ import {
   type CheckResults,
   type CodeInput,
 } from './codeCheckerUtils'
+import { downloadTextFile } from '../../../lib/download'
 
 interface ImportedSource {
   filename: string

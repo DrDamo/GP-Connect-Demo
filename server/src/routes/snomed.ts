@@ -1,9 +1,9 @@
 import { Router } from 'express'
+import { sendUpstreamError, UpstreamError } from '../errors.js'
+import { parseCodeList, parseLimit, isSctid, MAX_QUERY_LENGTH, SNOMED_SYSTEM } from '../validation.js'
 import { expandValueSet } from '../fhir/expand.js'
 import { lookupCode, validateCodesBatch, lookupStatusBatch, checkCodesBatch, looksLikeDescriptionId, resolveDescriptionIdToConcept } from '../fhir/lookup.js'
 import { snomedValueSetUrl, toSnomedResult, toSnomedDetail } from '../fhir/mappers.js'
-
-const SNOMED_SYSTEM = 'http://snomed.info/sct'
 
 export const snomedRouter = Router()
 
@@ -11,11 +11,15 @@ export const snomedRouter = Router()
 // Response matches the SnomedPicker contract: { codes: SnomedResult[] }
 snomedRouter.get('/search', async (req, res) => {
   const q = typeof req.query.q === 'string' ? req.query.q.trim() : ''
-  const limit = Math.min(parseInt(String(req.query.limit ?? '10'), 10), 50)
+  const limit = parseLimit(req.query.limit, 10)
   const semanticTag = typeof req.query.semantic_tag === 'string' ? req.query.semantic_tag : undefined
 
   if (q.length < 2) {
     res.json({ codes: [] })
+    return
+  }
+  if (q.length > MAX_QUERY_LENGTH) {
+    res.status(400).json({ error: `q must be at most ${MAX_QUERY_LENGTH} characters` })
     return
   }
 
@@ -24,9 +28,7 @@ snomedRouter.get('/search', async (req, res) => {
     const items = await expandValueSet(vsUrl, q, limit)
     res.json({ codes: items.map(toSnomedResult) })
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    console.error('[snomed/search]', message)
-    res.status(502).json({ error: message })
+    sendUpstreamError(res, 'snomed/search', err)
   }
 })
 
@@ -40,10 +42,18 @@ snomedRouter.get('/lookup', async (req, res) => {
   const code = typeof req.query.code === 'string' ? req.query.code.trim() : ''
   const system = typeof req.query.system === 'string' && req.query.system
     ? req.query.system
-    : 'http://snomed.info/sct'
+    : SNOMED_SYSTEM
 
   if (!code) {
     res.status(400).json({ error: 'code is required' })
+    return
+  }
+  if (system !== SNOMED_SYSTEM) {
+    res.status(400).json({ error: `Only ${SNOMED_SYSTEM} codes can be looked up` })
+    return
+  }
+  if (!isSctid(code)) {
+    res.status(400).json({ error: `${code.slice(0, 40)} is not a SNOMED CT identifier` })
     return
   }
 
@@ -77,9 +87,13 @@ snomedRouter.get('/lookup', async (req, res) => {
         return
       } catch { /* resolution itself errored (network/server) — fall through to the original error below */ }
     }
-    const message = err instanceof Error ? err.message : String(err)
-    console.error('[snomed/lookup]', message)
-    res.status(502).json({ error: message })
+    // $lookup answers an unknown code with HTTP 404 — pass that through as a
+    // real 404 so the client can say "not found" without reading upstream text.
+    if (err instanceof UpstreamError && err.status === 404) {
+      res.status(404).json({ error: `No SNOMED CT concept found for code ${code}` })
+      return
+    }
+    sendUpstreamError(res, 'snomed/lookup', err)
   }
 })
 
@@ -88,20 +102,14 @@ snomedRouter.get('/lookup', async (req, res) => {
 // SNOMED CT concept ID. Used to check every SNOMED coding in a loaded GP
 // Connect bundle in one round trip rather than one $lookup per code.
 snomedRouter.post('/validate-batch', async (req, res) => {
-  const codes = req.body?.codes
-
-  if (!Array.isArray(codes) || !codes.every(c => typeof c === 'string')) {
-    res.status(400).json({ error: 'codes must be an array of strings' })
-    return
-  }
+  const codes = parseCodeList(req.body?.codes, 'codes')
+  if (!Array.isArray(codes)) { res.status(400).json(codes); return }
 
   try {
     const results = await validateCodesBatch(codes)
     res.json({ results })
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    console.error('[snomed/validate-batch]', message)
-    res.status(502).json({ error: message })
+    sendUpstreamError(res, 'snomed/validate-batch', err)
   }
 })
 
@@ -114,25 +122,17 @@ snomedRouter.post('/validate-batch', async (req, res) => {
 // their dm+d prescribing/non-availability status indicates the AMP's been
 // discontinued.
 snomedRouter.post('/status-batch', async (req, res) => {
-  const codes = req.body?.codes
-  const medicationCodes = req.body?.medicationCodes
-
-  if (!Array.isArray(codes) || !codes.every((c: unknown) => typeof c === 'string')) {
-    res.status(400).json({ error: 'codes must be an array of strings' })
-    return
-  }
-  if (medicationCodes !== undefined && (!Array.isArray(medicationCodes) || !medicationCodes.every((c: unknown) => typeof c === 'string'))) {
-    res.status(400).json({ error: 'medicationCodes must be an array of strings' })
-    return
-  }
+  const codes = parseCodeList(req.body?.codes, 'codes')
+  if (!Array.isArray(codes)) { res.status(400).json(codes); return }
+  const rawMedicationCodes = req.body?.medicationCodes
+  const medicationCodes = rawMedicationCodes === undefined ? [] : parseCodeList(rawMedicationCodes, 'medicationCodes')
+  if (!Array.isArray(medicationCodes)) { res.status(400).json(medicationCodes); return }
 
   try {
-    const results = await lookupStatusBatch(codes, new Set(medicationCodes ?? []))
+    const results = await lookupStatusBatch(codes, new Set(medicationCodes))
     res.json({ results })
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    console.error('[snomed/status-batch]', message)
-    res.status(502).json({ error: message })
+    sendUpstreamError(res, 'snomed/status-batch', err)
   }
 })
 
@@ -140,26 +140,14 @@ snomedRouter.post('/status-batch', async (req, res) => {
 // Response: { results: { [code]: { found, inactive?, display?, fsn? } } }
 // Powers the Tools → SNOMED CT Code Checker: existence, active/inactive
 // status and matched term for an arbitrary pasted/imported list of codes.
-const CHECK_BATCH_MAX_CODES = 5000
-
 snomedRouter.post('/check-batch', async (req, res) => {
-  const codes = req.body?.codes
-
-  if (!Array.isArray(codes) || !codes.every((c: unknown) => typeof c === 'string')) {
-    res.status(400).json({ error: 'codes must be an array of strings' })
-    return
-  }
-  if (codes.length > CHECK_BATCH_MAX_CODES) {
-    res.status(400).json({ error: `Too many codes — maximum ${CHECK_BATCH_MAX_CODES} per request` })
-    return
-  }
+  const codes = parseCodeList(req.body?.codes, 'codes')
+  if (!Array.isArray(codes)) { res.status(400).json(codes); return }
 
   try {
     const results = await checkCodesBatch(codes)
     res.json({ results })
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    console.error('[snomed/check-batch]', message)
-    res.status(502).json({ error: message })
+    sendUpstreamError(res, 'snomed/check-batch', err)
   }
 })

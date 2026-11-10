@@ -3,6 +3,7 @@
 // server call, and CSV export of the results.
 
 import { terminologyHeaders } from '../../../lib/terminologyAuth'
+import { DEFAULT_TERMINOLOGY_URL } from '../../../lib/terminologyConfig'
 
 export interface CodeInput {
   code: string
@@ -307,7 +308,7 @@ export async function checkCodes(
     else toLookup.push(input)
   }
 
-  const serverUrl = import.meta.env.DEV ? 'http://localhost:3001' : window.location.origin
+  const serverUrl = DEFAULT_TERMINOLOGY_URL
   const serverResults: Record<string, ServerCheckResult> = {}
   onProgress(0, toLookup.length)
   for (let i = 0; i < toLookup.length; i += REQUEST_CHUNK_SIZE) {
@@ -363,13 +364,4 @@ export function resultsToCsv(results: CheckResults, includeSuppliedTerm: boolean
   return lines.join('\r\n')
 }
 
-export function downloadTextFile(content: string, filename: string, mime: string) {
-  // BOM so Excel opens UTF-8 terms (e.g. "Sjögren's") correctly.
-  const blob = new Blob(['\uFEFF' + content], { type: mime })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  a.click()
-  URL.revokeObjectURL(url)
-}
+

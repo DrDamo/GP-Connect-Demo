@@ -4,6 +4,7 @@ import { FormField } from './FormField'
 import { useAnchoredDropdown, widenDropdown } from '../../../hooks/useAnchoredDropdown'
 import { InfoHint } from '../../../onboarding/InfoHint'
 import { terminologyHeaders } from '../../../lib/terminologyAuth'
+import { loadTerminologyConfig as loadConfig, subscribeTerminologyConfig, type TerminologyConfig } from '../../../lib/terminologyConfig'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -16,11 +17,6 @@ interface DmdResult {
   display: string
   type: DmdType
   system: string
-}
-
-interface TerminologyConfig {
-  serverUrl: string
-  token: string
 }
 
 interface ConceptRef {
@@ -57,27 +53,6 @@ interface DmdDetail {
   childCodes: string[]
   parentVmp?: ConceptRef
   fromParentVmp?: string[]
-}
-
-// ---------------------------------------------------------------------------
-// Shared localStorage config (same key as SnomedPicker — one server, both pickers)
-// ---------------------------------------------------------------------------
-
-const CONFIG_KEY = 'gpc-snomed-config'
-
-function loadConfig(): Partial<TerminologyConfig> {
-  try {
-    const raw = localStorage.getItem(CONFIG_KEY)
-    if (raw) {
-      const parsed: Partial<TerminologyConfig> = JSON.parse(raw)
-      if (parsed.serverUrl === 'http://localhost:3000') {
-        parsed.serverUrl = 'http://localhost:3001'
-        localStorage.setItem(CONFIG_KEY, JSON.stringify(parsed))
-      }
-      return parsed
-    }
-  } catch {}
-  return {}
 }
 
 // ---------------------------------------------------------------------------
@@ -130,12 +105,8 @@ export function DmdPicker({ value, onChange, code, dmdType = 'VMP', label = 'dm+
   const dropdownOpen = isOpen && results.length > 0
   const dropdownPos = useAnchoredDropdown(inputRef, dropdownOpen)
 
-  // Re-read config if SnomedPicker updates it in the same session
-  useEffect(() => {
-    const onStorage = () => setConfig(loadConfig())
-    window.addEventListener('storage', onStorage)
-    return () => window.removeEventListener('storage', onStorage)
-  }, [])
+  // Re-read config when SnomedPicker's modal saves it (this tab or another)
+  useEffect(() => subscribeTerminologyConfig(() => setConfig(loadConfig())), [])
 
   const isConnected = Boolean(config.serverUrl)
 

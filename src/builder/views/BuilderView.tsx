@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { downloadJson } from '../../lib/download'
 import { useDraftRecord } from '../hooks/useDraftRecord'
 import { createSampleDraft } from '../sampleData'
 import { buildBundle } from '../generate/index'
@@ -30,17 +31,6 @@ import { InfoHint } from '../../onboarding/InfoHint'
 // Helpers
 // ---------------------------------------------------------------------------
 
-function downloadJson(json: string, filename: string) {
-  const blob = new Blob([json], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
-}
 
 // ---------------------------------------------------------------------------
 // BuilderView — top-level Record Builder shell
@@ -90,14 +80,6 @@ export function BuilderView({
   const [showCopyright, setShowCopyright] = useState(() =>
     !import.meta.env.DEV && !sessionStorage.getItem('snomed-copyright-seen')
   )
-
-  useEffect(() => {
-    if (import.meta.env.DEV) return
-    const key = 'gpc-snomed-config'
-    if (!localStorage.getItem(key)) {
-      localStorage.setItem(key, JSON.stringify({ serverUrl: window.location.origin, token: '' }))
-    }
-  }, [])
 
   const dismissCopyright = () => {
     sessionStorage.setItem('snomed-copyright-seen', '1')

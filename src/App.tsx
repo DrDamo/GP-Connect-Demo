@@ -22,9 +22,10 @@ import { InfoHint } from './onboarding/InfoHint'
 import { AppGuideView, type GuidePageId } from './onboarding/AppGuideView'
 import type { DraftRecord } from './builder/types'
 import { parseBundle, normalizePastedJson, stripBom } from './fhir/parser'
+import { downloadJson } from './lib/download'
 import { extractOperationIssues } from './fhir/operationOutcomes'
 import { buildIncomingRefs } from './fhir/incomingRefs'
-import { validateMedicationsBundle, cleanDanglingRefs } from './fhir/validator'
+import { validateBundle, cleanDanglingRefs } from './fhir/validator'
 import { validateSnomedCodes, applyTransferDegrade, buildUnmutatedIssues, passedSnomedMessage, checkSnomedStatuses, uncheckedCodesIssues } from './fhir/snomedDegrade'
 import type { SnomedCodingRef } from './fhir/snomedDegrade'
 import { SnomedCheckingBanner } from './components/SnomedCheckingBanner'
@@ -42,7 +43,7 @@ import { extractDocuments } from './fhir/documents'
 import { extractPatientInfo, getOrganisationName } from './fhir/utils'
 import { extractPractitioners, extractPractitionerRoles, extractOrganisations, extractHealthcareServices, extractLocations, extractFhirMedications } from './fhir/supportingResources'
 import { extractLists } from './fhir/lists'
-import type { ValidationResult, GpConnectMedicationsRecord } from './fhir/types'
+import type { ValidationResult, GpConnectBundle } from './fhir/types'
 import type { DomainId } from './components/clinical/domains'
 import sampleBundle from './sample-data/medications-bundle.json'
 
@@ -56,7 +57,7 @@ interface LoadedBundle {
   label: string
   format: 'json' | 'xml'
   validation: ValidationResult
-  record: GpConnectMedicationsRecord
+  record: GpConnectBundle
   /** Set once the user has answered the transfer-degrade prompt (JSON bundles
    * with unrecognised codes only) — drives the status badge in the header. */
   degradeStatus?: 'degraded' | 'kept'
@@ -181,7 +182,7 @@ function AppContent() {
 
   const cycleTheme = () => setThemeMode(m => m === 'light' ? 'dark' : m === 'dark' ? 'system' : 'light')
 
-  const buildRecordFromBundle = useCallback((data: fhir3.Bundle): GpConnectMedicationsRecord => ({
+  const buildRecordFromBundle = useCallback((data: fhir3.Bundle): GpConnectBundle => ({
     patient: extractPatientInfo(data),
     practiceOrganisation: getOrganisationName(data),
     medications: extractMedications(data),
@@ -221,10 +222,10 @@ function AppContent() {
     // The validators and domain extractors assume well-formed FHIR; a bundle
     // shaped in a way they don't expect must surface as an error, not leave
     // the screen unchanged with the exception lost in the console.
-    let validation: ReturnType<typeof validateMedicationsBundle>
+    let validation: ReturnType<typeof validateBundle>
     let record: ReturnType<typeof buildRecordFromBundle>
     try {
-      validation = validateMedicationsBundle(parsed.data)
+      validation = validateBundle(parsed.data)
       record = buildRecordFromBundle(parsed.data)
     } catch (e) {
       console.error('[load] could not read bundle', e)
@@ -911,13 +912,7 @@ function AppContent() {
                     const { bundle: cleaned } = cleanDanglingRefs(parsed.data)
                     const cleanedJson = JSON.stringify(cleaned, null, 2)
                     // Download the cleaned file so it's permanently saved
-                    const blob = new Blob([cleanedJson], { type: 'application/json' })
-                    const url = URL.createObjectURL(blob)
-                    const a = document.createElement('a')
-                    a.href = url
-                    a.download = loaded.filename.replace(/\.(json|xml)$/i, '') + '-cleaned.json'
-                    a.click()
-                    URL.revokeObjectURL(url)
+                    downloadJson(cleanedJson, loaded.filename.replace(/\.(json|xml)$/i, '') + '-cleaned.json')
                     // Also reload the cleaned version into the viewer
                     handleLoad(cleanedJson, loaded.filename)
                     setTab('validation')

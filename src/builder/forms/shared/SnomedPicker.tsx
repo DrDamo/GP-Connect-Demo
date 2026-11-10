@@ -4,6 +4,13 @@ import { FormField } from './FormField'
 import { useAnchoredDropdown, widenDropdown } from '../../../hooks/useAnchoredDropdown'
 import { InfoHint } from '../../../onboarding/InfoHint'
 import { terminologyHeaders } from '../../../lib/terminologyAuth'
+import {
+  DEFAULT_TERMINOLOGY_URL as DEFAULT_SERVER_URL,
+  loadTerminologyConfig as loadConfig,
+  saveTerminologyConfig as saveConfig,
+  subscribeTerminologyConfig,
+  type TerminologyConfig as SnomedConfig,
+} from '../../../lib/terminologyConfig'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -14,11 +21,6 @@ interface SnomedResult {
   display_term: string
   fully_specified_name: string
   semantic_tag: string
-}
-
-interface SnomedConfig {
-  serverUrl: string
-  token: string
 }
 
 // Mirrors server/src/fhir/mappers.ts SnomedDetail — generic CodeSystem/$lookup
@@ -60,44 +62,6 @@ export interface SnomedPickerProps {
   semanticTag?: string
   required?: boolean
 }
-
-// ---------------------------------------------------------------------------
-// localStorage helpers
-// ---------------------------------------------------------------------------
-
-const CONFIG_KEY = 'gpc-snomed-config'
-
-function loadConfig(): Partial<SnomedConfig> {
-  try {
-    const raw = localStorage.getItem(CONFIG_KEY)
-    if (raw) {
-      const parsed: Partial<SnomedConfig> = JSON.parse(raw)
-      // Migrate stale localhost:3000 references to :3001
-      if (parsed.serverUrl === 'http://localhost:3000') {
-        parsed.serverUrl = 'http://localhost:3001'
-        localStorage.setItem(CONFIG_KEY, JSON.stringify(parsed))
-      }
-      return parsed
-    }
-  } catch {}
-  // In production the Vercel API proxy is on the same origin — auto-connect with no token
-  if (!import.meta.env.DEV) {
-    const cfg: SnomedConfig = { serverUrl: DEFAULT_SERVER_URL, token: '' }
-    saveConfig(cfg)
-    return cfg
-  }
-  return {}
-}
-
-function saveConfig(cfg: Partial<SnomedConfig>): void {
-  try {
-    localStorage.setItem(CONFIG_KEY, JSON.stringify({ ...loadConfig(), ...cfg }))
-  } catch {}
-}
-
-// In dev the Express proxy runs separately; in production the /api routes are
-// Vercel serverless functions on the same origin.
-const DEFAULT_SERVER_URL = import.meta.env.DEV ? 'http://localhost:3001' : window.location.origin
 
 // ---------------------------------------------------------------------------
 // Info modal (production) — copyright notice + connection status
@@ -332,6 +296,9 @@ export function SnomedPicker({ value, onChange, code, label = 'SNOMED CT', seman
 
   // Proxy mode stores an empty token; direct-server mode stores a JWT.
   // Both are considered connected as long as a serverUrl is present.
+  // Pick up a config saved by another picker's modal (this tab or another).
+  useEffect(() => subscribeTerminologyConfig(() => setConfig(loadConfig())), [])
+
   const isConnected = Boolean(config.serverUrl)
 
   // Search function
@@ -347,7 +314,7 @@ export function SnomedPicker({ value, onChange, code, label = 'SNOMED CT', seman
     setIsLoading(true)
     setError(null)
     try {
-      const params = new URLSearchParams({ q, limit: '10', sort: 'relevance' })
+      const params = new URLSearchParams({ q, limit: '10' })
       if (semanticTag) params.set('semantic_tag', semanticTag)
       const url = `${cfg.serverUrl}/api/snomed/search?${params}`
       const headers = await terminologyHeaders(cfg.token)

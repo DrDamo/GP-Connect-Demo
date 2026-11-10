@@ -151,16 +151,6 @@ export function extractOriginalTermText(cc: fhir3.CodeableConcept | undefined): 
   return extractSnomedDisplay(codings)
 }
 
-export function resolveResourceName(bundle: fhir3.Bundle, ref: string | undefined): string | undefined {
-  if (!ref) return undefined
-  const resource = resolveReference(bundle, ref)
-  if (!resource) return undefined
-  if (resource.resourceType === 'Practitioner') return resolvePractitionerName(bundle, ref)
-  if (resource.resourceType === 'Organization') return (resource as fhir3.Organization).name
-  if (resource.resourceType === 'HealthcareService') return (resource as unknown as { name?: string }).name
-  return undefined
-}
-
 export function getOrganisationName(bundle: fhir3.Bundle): string | undefined {
   const org = getEntries<fhir3.Organization>(bundle, 'Organization')[0]
   return org?.name

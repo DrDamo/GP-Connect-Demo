@@ -684,9 +684,6 @@ export interface GpConnectBundle {
   fhir?: fhir3.Bundle
 }
 
-// Backward-compat alias — components importing this type still work unchanged
-export type GpConnectMedicationsRecord = GpConnectBundle
-
 export type ValidationSeverity = 'error' | 'warning' | 'info'
 
 /** Present on a ValidationIssue only when it represents an actual SNOMED CT

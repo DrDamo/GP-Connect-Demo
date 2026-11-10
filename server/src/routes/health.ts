@@ -1,14 +1,8 @@
 import { Router } from 'express'
-import { tokenStatus } from '../auth.js'
-import { config } from '../config.js'
 
 export const healthRouter = Router()
 
+// Liveness only — token state and upstream configuration stay server-side.
 healthRouter.get('/', (_req, res) => {
-  const token = tokenStatus()
-  res.json({
-    status: 'ok',
-    fhirBase: config.fhirBase,
-    token,
-  })
+  res.json({ status: 'ok' })
 })

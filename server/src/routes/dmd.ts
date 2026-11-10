@@ -1,4 +1,6 @@
 import { Router } from 'express'
+import { sendUpstreamError } from '../errors.js'
+import { parseCodeList, parseLimit, isSctid, MAX_QUERY_LENGTH, SNOMED_SYSTEM } from '../validation.js'
 import { expandValueSet } from '../fhir/expand.js'
 import { lookupCode, validateDmdCodesBatch } from '../fhir/lookup.js'
 import { dmdValueSetUrl, toDmdResult, toDmdDetail, pickParentVmpCode, mergeParentVmpDetail } from '../fhir/mappers.js'
@@ -10,12 +12,16 @@ export const dmdRouter = Router()
 // Response: { codes: DmdResult[] }
 dmdRouter.get('/search', async (req, res) => {
   const q = typeof req.query.q === 'string' ? req.query.q.trim() : ''
-  const limit = Math.min(parseInt(String(req.query.limit ?? '25'), 10), 50)
+  const limit = parseLimit(req.query.limit, 25)
   const rawType = typeof req.query.type === 'string' ? req.query.type.toLowerCase() : 'vmp'
   const type = rawType === 'amp' ? 'amp' : 'vmp'
 
   if (q.length < 2) {
     res.json({ codes: [] })
+    return
+  }
+  if (q.length > MAX_QUERY_LENGTH) {
+    res.status(400).json({ error: `q must be at most ${MAX_QUERY_LENGTH} characters` })
     return
   }
 
@@ -24,9 +30,7 @@ dmdRouter.get('/search', async (req, res) => {
     const items = await expandValueSet(vsUrl, q, limit)
     res.json({ codes: items.map(item => toDmdResult(item, type === 'vmp' ? 'VMP' : 'AMP')) })
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    console.error('[dmd/search]', message)
-    res.status(502).json({ error: message })
+    sendUpstreamError(res, 'dmd/search', err)
   }
 })
 
@@ -45,12 +49,20 @@ dmdRouter.get('/lookup', async (req, res) => {
   const code = typeof req.query.code === 'string' ? req.query.code.trim() : ''
   const system = typeof req.query.system === 'string' && req.query.system
     ? req.query.system
-    : 'http://snomed.info/sct'
+    : SNOMED_SYSTEM
   const rawType = typeof req.query.type === 'string' ? req.query.type.toLowerCase() : 'vmp'
   const type = rawType === 'amp' ? 'AMP' : 'VMP'
 
   if (!code) {
     res.status(400).json({ error: 'code is required' })
+    return
+  }
+  if (system !== SNOMED_SYSTEM) {
+    res.status(400).json({ error: `Only ${SNOMED_SYSTEM} codes can be looked up` })
+    return
+  }
+  if (!isSctid(code)) {
+    res.status(400).json({ error: `${code.slice(0, 40)} is not a SNOMED CT identifier` })
     return
   }
 
@@ -69,9 +81,7 @@ dmdRouter.get('/lookup', async (req, res) => {
 
     res.json({ raw, detail, parentRaw })
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    console.error('[dmd/lookup]', message)
-    res.status(502).json({ error: message })
+    sendUpstreamError(res, 'dmd/lookup', err)
   }
 })
 
@@ -80,19 +90,13 @@ dmdRouter.get('/lookup', async (req, res) => {
 // member of the dm+d VMP/AMP ValueSet, false otherwise (including codes that
 // are valid SNOMED CT concepts but not dm+d products at all).
 dmdRouter.post('/validate-batch', async (req, res) => {
-  const codes = req.body?.codes
-
-  if (!Array.isArray(codes) || !codes.every((c: unknown) => typeof c === 'string')) {
-    res.status(400).json({ error: 'codes must be an array of strings' })
-    return
-  }
+  const codes = parseCodeList(req.body?.codes, 'codes')
+  if (!Array.isArray(codes)) { res.status(400).json(codes); return }
 
   try {
     const results = await validateDmdCodesBatch(codes)
     res.json({ results })
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    console.error('[dmd/validate-batch]', message)
-    res.status(502).json({ error: message })
+    sendUpstreamError(res, 'dmd/validate-batch', err)
   }
 })

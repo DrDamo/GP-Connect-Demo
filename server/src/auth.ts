@@ -1,18 +1,17 @@
 import { config } from './config.js'
+import { UpstreamError } from './errors.js'
 
 interface TokenCache {
   token: string
-  expiresAt: number
+  expiresAt: number // ms since epoch
 }
 
 let cached: TokenCache | null = null
+// Concurrent callers share one in-flight exchange instead of each requesting
+// a token when the cache is empty or expired.
+let pending: Promise<string> | null = null
 
-export async function getToken(): Promise<string> {
-  // Refresh 30 s before expiry to avoid clock-edge failures
-  if (cached && Date.now() < cached.expiresAt - 30_000) {
-    return cached.token
-  }
-
+async function exchangeToken(): Promise<string> {
   const res = await fetch(config.tokenUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -25,7 +24,7 @@ export async function getToken(): Promise<string> {
 
   if (!res.ok) {
     const text = await res.text()
-    throw new Error(`OAuth2 token exchange failed (HTTP ${res.status}): ${text}`)
+    throw new UpstreamError(res.status, `OAuth2 token exchange failed (HTTP ${res.status}): ${text}`)
   }
 
   const json = (await res.json()) as { access_token: string; expires_in: number }
@@ -36,9 +35,11 @@ export async function getToken(): Promise<string> {
   return cached.token
 }
 
-export function tokenStatus(): { hasToken: boolean; expiresInSeconds: number | null } {
-  if (!cached) return { hasToken: false, expiresInSeconds: null }
-  const expiresIn = Math.round((cached.expiresAt - Date.now()) / 1000)
-  if (expiresIn <= 0) return { hasToken: false, expiresInSeconds: null }
-  return { hasToken: true, expiresInSeconds: expiresIn }
+export async function getToken(): Promise<string> {
+  // Refresh 30 s before expiry to avoid clock-edge failures
+  if (cached && Date.now() < cached.expiresAt - 30_000) {
+    return cached.token
+  }
+  pending ??= exchangeToken().finally(() => { pending = null })
+  return pending
 }

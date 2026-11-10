@@ -1,6 +1,7 @@
 import type { ValidationIssue, SnomedStatusMap } from './types'
 import { extractOriginalTermText } from './utils'
 import { terminologyHeaders } from '../lib/terminologyAuth'
+import { terminologyServer } from '../lib/terminologyConfig'
 
 // ---------------------------------------------------------------------------
 // SNOMED CT concept ID validation + GP2GP transfer-degrade conversion.
@@ -121,23 +122,9 @@ export function degradeCoding(ref: SnomedCodingRef, allergyCategory?: string[]):
 // Terminology server call
 // ---------------------------------------------------------------------------
 
-const CONFIG_KEY = 'gpc-snomed-config'
-
-function getServerConfig(): { serverUrl: string; token?: string } {
-  const defaultServerUrl = import.meta.env.DEV ? 'http://localhost:3001' : window.location.origin
-  try {
-    const raw = localStorage.getItem(CONFIG_KEY)
-    if (raw) {
-      const parsed = JSON.parse(raw) as { serverUrl?: string; token?: string }
-      return { serverUrl: parsed.serverUrl || defaultServerUrl, token: parsed.token }
-    }
-  } catch {}
-  return { serverUrl: defaultServerUrl }
-}
-
 async function validateCodesBatch(codes: string[]): Promise<Record<string, boolean>> {
   if (codes.length === 0) return {}
-  const { serverUrl, token } = getServerConfig()
+  const { serverUrl, token } = terminologyServer()
   const headers = await terminologyHeaders(token, { 'Content-Type': 'application/json' })
 
   const res = await fetch(`${serverUrl}/api/snomed/validate-batch`, {
@@ -156,7 +143,7 @@ const MEDICATION_RESOURCE_TYPES = new Set(['MedicationStatement', 'MedicationReq
 
 async function validateDmdCodesBatch(codes: string[]): Promise<Record<string, boolean>> {
   if (codes.length === 0) return {}
-  const { serverUrl, token } = getServerConfig()
+  const { serverUrl, token } = terminologyServer()
   const headers = await terminologyHeaders(token, { 'Content-Type': 'application/json' })
 
   const res = await fetch(`${serverUrl}/api/dmd/validate-batch`, {
@@ -190,7 +177,7 @@ export async function checkSnomedStatuses(bundle: fhir3.Bundle): Promise<SnomedS
     refs.filter(r => MEDICATION_RESOURCE_TYPES.has(r.resourceType) && r.coding.code).map(r => r.coding.code!),
   )]
 
-  const { serverUrl, token } = getServerConfig()
+  const { serverUrl, token } = terminologyServer()
   const headers = await terminologyHeaders(token, { 'Content-Type': 'application/json' })
 
   const [statusResult, dmdResult] = await Promise.all([

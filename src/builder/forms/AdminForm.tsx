@@ -4,6 +4,7 @@ import type { DraftAction } from '../hooks/useDraftRecord'
 import { newTempId } from '../hooks/useDraftRecord'
 import { FormSection } from './shared/FormSection'
 import { Field } from './shared/FormField'
+import { isTestRangeNhsNumber, isValidNhsNumber } from '../../fhir/nhsNumber'
 import { DateField } from './shared/DateField'
 import { SelectField } from './shared/SelectField'
 import { BuilderModal } from '../components/BuilderModal'
@@ -537,12 +538,19 @@ export function AdminForm({ draft, dispatch, onAutoPopulate }: Props) {
       {/* Patient Demographics */}
       <FormSection title="Patient Demographics" defaultOpen>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          <Field
-            label="NHS Number"
-            value={p.nhsNumber ?? ''}
-            onChange={v => setPatient({ nhsNumber: v })}
-            required
-          />
+          <div>
+            <Field
+              label="NHS Number"
+              value={p.nhsNumber ?? ''}
+              onChange={v => setPatient({ nhsNumber: v })}
+              required
+            />
+            {isValidNhsNumber(p.nhsNumber) && !isTestRangeNhsNumber(p.nhsNumber) && (
+              <p role="status" className="mt-1 text-xs text-amber-700 dark:text-warn">
+                This could be a real patient's NHS number. Use test data only — 999 numbers or NHS England test patients.
+              </p>
+            )}
+          </div>
           <div className="flex items-end gap-2">
             <label className="flex items-center gap-1.5 text-xs text-nhs-grey-2 pb-1">
               <input
