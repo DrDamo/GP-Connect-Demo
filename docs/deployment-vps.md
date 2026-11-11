@@ -106,7 +106,9 @@ The migrations create the schema, so only **data** comes across. A full dump wou
 
 **The export files contain password hashes and personal details.** Keep them off shared drives, and delete them as soon as the import is checked.
 
-### 1. Export (on the PC, in WSL, with pg_dump 18)
+There are two ways to export. Use **A** if `pg_dump` works from your PC. Otherwise use **B**, which needs only the Supabase dashboard. Both import the accounts the same way.
+
+### 1A. Export with pg_dump (on the PC, in WSL, with pg_dump 18)
 
 Get the **session pooler** connection string from the Supabase dashboard (Connect → Session pooler):
 
@@ -124,14 +126,27 @@ psql "$SUPA" -c "\copy (select id, email, encrypted_password, email_confirmed_at
 
 Copy both files to the server from PowerShell: `scp gpc-public.dump gpc-auth-users.csv vps:~`.
 
+### 1B. Export from the Supabase dashboard (no pg_dump)
+
+1. **Accounts.** In **SQL Editor**, run the query below. Use **Export → Download CSV** on the result and save it as `gpc-auth-users.csv`:
+   ```sql
+   select id, email, encrypted_password, email_confirmed_at, raw_user_meta_data, created_at from auth.users;
+   ```
+2. **App tables.** In **Table Editor** (schema `public`), open each table and use **Export → Export table as CSV**. Save each one as `gpc-<table>.csv`, for example `gpc-organisations.csv`, for these tables: `organisations`, `profiles`, `patient_drafts`, `training_content`, `training_notes`, `user_tour_progress`, `user_hint_dismissals`, `platform_admins`. Leave out empty tables; the import skips missing files.
+
+Copy them to the server from PowerShell, in the download folder: `scp gpc-*.csv vps:~`.
+
 ### 2. Import (on the server, `cd /opt/vps`)
 
-The `gpc` container must have started once so the schema exists. Stop it for the import:
+The `gpc` container must have started once so the schema exists. Stop it for the import, then copy the exported files into the Postgres container:
 
 ```bash
 docker compose stop gpc
+# Route A:
 docker compose cp ~/gpc-public.dump postgres:/tmp/gpc-public.dump
 docker compose cp ~/gpc-auth-users.csv postgres:/tmp/gpc-auth-users.csv
+# Route B:
+for f in ~/gpc-*.csv; do docker compose cp "$f" postgres:/tmp/; done
 ```
 
 If this is a re-run, for example the final copy after a rehearsal, empty the tables first. **This deletes everything in the app's database.**
@@ -154,12 +169,36 @@ commit;
 SQL
 ```
 
-Then everything else, in one all-or-nothing transaction. `--disable-triggers` lets the rows load in any order and keeps the original `updated_at` values:
+Then load everything else in one all-or-nothing transaction. Triggers are switched off while the rows load, so the tables can load in any order and keep their original `updated_at` values.
+
+**Route A** (dump):
 
 ```bash
 docker compose exec postgres pg_restore -U postgres -d gpc --data-only --no-owner --no-privileges \
   --disable-triggers --single-transaction --exit-on-error /tmp/gpc-public.dump
 ```
+
+**Route B** (CSVs). Each file's header row gives the column list, so the column order in the export doesn't matter. `session_replication_role = replica` switches off the triggers and the foreign-key checks for the load:
+
+```bash
+docker compose exec -T postgres sh -s <<'SH'
+set -e
+cd /tmp
+{
+  printf '%s\n' 'begin;' 'set local session_replication_role = replica;'
+  for t in organisations profiles patient_drafts training_content training_notes \
+           user_tour_progress user_hint_dismissals platform_admins; do
+    f="gpc-$t.csv"
+    [ -f "$f" ] || continue
+    cols=$(head -1 "$f" | tr -d '\r')
+    printf '%s\n' "\\copy public.$t ($cols) from '/tmp/$f' csv header"
+  done
+  printf '%s\n' 'commit;'
+} | psql -U postgres -d gpc -v ON_ERROR_STOP=1
+SH
+```
+
+If a `\copy` fails on an unknown column, the export has a column the new schema doesn't. Remove that column from the CSV, or compare the header with `\d public.<table>`.
 
 ### 3. Check, clean up, start
 
@@ -172,8 +211,8 @@ docker compose exec postgres psql -U postgres -d gpc -c "
   select 'training_content', count(*) from public.training_content union all
   select 'training_notes', count(*) from public.training_notes union all
   select 'platform_admins', count(*) from public.platform_admins;"
-docker compose exec postgres rm /tmp/gpc-public.dump /tmp/gpc-auth-users.csv
-rm ~/gpc-public.dump ~/gpc-auth-users.csv      # and delete the copies on the PC
+docker compose exec postgres sh -c 'rm -f /tmp/gpc-public.dump /tmp/gpc-*.csv'
+rm -f ~/gpc-public.dump ~/gpc-*.csv      # and delete the copies on the PC (Downloads folder for route B)
 docker compose up -d gpc
 ```
 
