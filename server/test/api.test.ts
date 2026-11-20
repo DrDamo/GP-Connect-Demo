@@ -11,6 +11,8 @@ import { test, before, after } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawn, type ChildProcess } from 'node:child_process'
 import { once } from 'node:events'
+import { createServer, type Server } from 'node:http'
+import type { AddressInfo } from 'node:net'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import pg from 'pg'
@@ -28,6 +30,10 @@ const PASSWORD = 'correct horse battery'
 
 const db = new pg.Pool({ connectionString: DATABASE_URL })
 let server: ChildProcess
+// Stands in for the validator container (validator/): records what it was
+// sent and answers with a small OperationOutcome.
+let fakeValidator: Server
+const validatorCalls: { path?: string; contentType?: string; body: string }[] = []
 let serverLog = ''
 const ids: Record<string, string> = {}
 
@@ -90,6 +96,19 @@ async function signedIn(name: string) {
 before(async () => {
   await migrate(DATABASE_URL)
   await seed()
+  fakeValidator = createServer((req, res) => {
+    let body = ''
+    req.on('data', d => { body += d })
+    req.on('end', () => {
+      validatorCalls.push({ path: req.url, contentType: req.headers['content-type'], body })
+      res.setHeader('Content-Type', 'application/fhir+json')
+      res.end(JSON.stringify({ resourceType: 'OperationOutcome', issue: [
+        { severity: 'information', code: 'informational', details: { text: 'All OK' } },
+        { severity: 'error', code: 'structure', details: { text: 'Immunization.vaccineCode: minimum required = 1' }, expression: ['Bundle.entry[0].resource'] },
+      ] }))
+    })
+  }).listen(0, '127.0.0.1')
+  await once(fakeValidator, 'listening')
   server = spawn(process.execPath, ['--import', 'tsx', resolve(here, '../src/index.ts')], {
     env: {
       ...process.env,
@@ -102,6 +121,7 @@ before(async () => {
       NHS_CLIENT_SECRET: 'test',
       SMTP_HOST: '',
       LOGIN_RATE_MAX: '1000',
+      VALIDATOR_URL: `http://127.0.0.1:${(fakeValidator.address() as AddressInfo).port}`,
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   })
@@ -116,6 +136,7 @@ before(async () => {
 })
 
 after(async () => {
+  fakeValidator?.close()
   server?.kill()
   if (server) await once(server, 'exit')
   await db.end()
@@ -347,4 +368,42 @@ test('unknown API paths are a JSON 404 once signed in', async () => {
   const r = await c.call('GET', '/api/nope')
   assert.equal(r.status, 404)
   assert.deepEqual(r.json, { error: 'Not found' })
+})
+
+test('profile validation: signed-in only, forwards the record, returns a summary', async () => {
+  const record = JSON.stringify({ resourceType: 'Bundle', type: 'collection', entry: [{ resource: { resourceType: 'Immunization', id: 'imm1' } }] })
+  const post = (c: Client) => fetch(BASE + '/api/profile-validation', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/fhir+json', Origin: ORIGIN, ...(c.cookie ? { Cookie: c.cookie } : {}) },
+    body: record,
+  })
+
+  assert.equal((await post(new Client())).status, 401)
+
+  const bob = await signedIn('bob')
+  const status = await bob.call('GET', '/api/profile-validation')
+  assert.equal(status.json.enabled, true)
+
+  const res = await post(bob)
+  assert.equal(res.status, 200)
+  const summary = await res.json()
+  assert.deepEqual(summary.counts, { error: 1, warning: 0, information: 1 })
+  assert.equal(summary.issues[0].severity, 'error')
+  assert.equal(summary.issues[0].resource, 'Immunization/imm1')
+  assert.equal(summary.truncated, false)
+
+  const call = validatorCalls.at(-1)!
+  assert.equal(call.path, '/validateResource')
+  assert.equal(call.contentType, 'application/fhir+json')
+  assert.equal(call.body, record)
+})
+
+test('profile validation rejects a body that is not FHIR JSON', async () => {
+  const bob = await signedIn('bob')
+  const res = await fetch(BASE + '/api/profile-validation', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Origin: ORIGIN, Cookie: bob.cookie },
+    body: '{"no":"resourceType"}',
+  })
+  assert.equal(res.status, 400)
 })

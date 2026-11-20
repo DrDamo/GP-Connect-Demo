@@ -6,6 +6,7 @@ import { snomedRouter } from './routes/snomed.js'
 import { dmdRouter } from './routes/dmd.js'
 import { healthRouter } from './routes/health.js'
 import { dataRouter } from './routes/data.js'
+import { profileValidationRouter } from './routes/profileValidation.js'
 import { authRouter } from './users/authRoutes.js'
 import { requireUser } from './users/sessions.js'
 import { rateLimit } from './rateLimit.js'
@@ -37,6 +38,10 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
   }
   next()
 })
+
+// Profile validation takes a whole record as raw JSON/XML (its own body
+// parser and size limit), so it is mounted before the JSON parser.
+app.use('/api/profile-validation', requireUser, profileValidationRouter)
 
 // Shared-patient drafts carry a whole record; everything else is small.
 app.use('/api/drafts', express.json({ limit: '10mb' }))

@@ -1,10 +1,15 @@
 import { useState } from 'react'
 import type { ValidationIssue, ValidationResult, ValidationSeverity } from '../fhir/types'
 import { InfoHint } from '../onboarding/InfoHint'
+import { ProfileValidationSection } from './ProfileValidationSection'
 
 interface Props {
   result: ValidationResult
   onCleanRefs?: () => void
+  /** The record as loaded, for server-side GP Connect profile validation. */
+  source?: string
+  format?: 'json' | 'xml'
+  onJumpToSource?: (id: string) => void
 }
 
 const severityConfig: Record<ValidationSeverity, { bg: string; border: string; text: string; icon: string; badge: string; label: string }> = {
@@ -225,7 +230,7 @@ function SeveritySection({ severity, issues, open, onToggle, openGroups, onToggl
   )
 }
 
-export function ValidationPanel({ result, onCleanRefs }: Props) {
+export function ValidationPanel({ result, onCleanRefs, source, format, onJumpToSource }: Props) {
   const errors = result.issues.filter(i => i.severity === 'error')
   const warnings = result.issues.filter(i => i.severity === 'warning')
   const danglingCount = warnings.filter(i => i.message.includes('does not resolve')).length
@@ -322,8 +327,11 @@ export function ValidationPanel({ result, onCleanRefs }: Props) {
           instance listed individually rather than grouped. Checks that
           passed get their own section too, last, since they're the least
           urgent. */}
-      {(result.issues.length > 0 || result.passed.length > 0) && (
+      {(result.issues.length > 0 || result.passed.length > 0 || (source && format)) && (
         <div className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-1">
+          {source && format && (
+            <ProfileValidationSection source={source} format={format} onJumpToSource={onJumpToSource} />
+          )}
           {(bySeverity.error?.length ?? 0) > 0 && (
             <SeveritySection
               severity="error"

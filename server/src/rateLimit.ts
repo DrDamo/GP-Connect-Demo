@@ -9,8 +9,9 @@ interface Window { start: number; count: number }
 export function rateLimit({ windowMs, max, key: keyOf }: {
   windowMs: number
   max: number
-  /** Bucket key; defaults to the client IP. */
-  key?: (req: Request) => string
+  /** Bucket key; defaults to the client IP. Gets `res` so it can use
+   *  res.locals.userId set by requireUser. */
+  key?: (req: Request, res: Response) => string
 }) {
   const windows = new Map<string, Window>()
 
@@ -23,7 +24,7 @@ export function rateLimit({ windowMs, max, key: keyOf }: {
 
   return (req: Request, res: Response, next: NextFunction) => {
     // req.ip honours X-Forwarded-For only when `trust proxy` is configured.
-    const key = keyOf ? keyOf(req) : (req.ip ?? 'unknown')
+    const key = keyOf ? keyOf(req, res) : (req.ip ?? 'unknown')
     const now = Date.now()
     let w = windows.get(key)
     if (!w || now - w.start >= windowMs) {
