@@ -40,10 +40,11 @@ jobs:
             -c "GRANT gpc_app TO gpc"
           psql -h localhost -U postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE gpc OWNER gpc"
 
-      - name: Frontend lint and build
+      - name: Frontend lint, tests and build
         run: |
           npm ci --no-audit --no-fund
           npm run lint
+          npm test
           npm run build
 
       - name: Backend build and tests (migrations on an empty database)
