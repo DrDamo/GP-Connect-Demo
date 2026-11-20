@@ -143,6 +143,8 @@ export interface GpConnectAllergy {
   causativeAgent: string
   snomedCode?: string
   snomedDisplay?: string
+  /** Coded with a GP2GP "Transfer-degraded ..." concept (arrived already degraded). */
+  isTransferDegraded?: boolean
   category?: string
   criticality?: string
   reaction?: string

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { GpConnectBundle, GpConnectAllergy } from '../../fhir/types'
 import { DomainTable, StatusBadge, DegradedTermText } from './DomainTable'
+import { hasDegradeMarker } from './degradedText'
 import { SnomedCodeChip } from './SnomedDetailPopup'
 import type { DomainColumn } from './DomainTable'
 import { ReferencedResources } from './ReferencedResources'
@@ -25,10 +26,29 @@ interface Props {
   onJumpToRecord?: (domain: DomainId, id: string) => void
 }
 
+// Allergy arrived already transfer-degraded from GP2GP (same amber tag as
+// Coded Data / Investigations). Codes this app degraded itself get the
+// interactive tag from DegradedTermText instead — see hasDegradeMarker.
+function TransferDegradedTag() {
+  return (
+    <span
+      className="inline-block ml-1.5 text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200 font-medium leading-none align-middle"
+      title="Transfer-degraded allergy — the sending system's code could not be carried over, so the original term is held as text"
+    >
+      Degrade
+    </span>
+  )
+}
+
 const COLUMNS: DomainColumn<GpConnectAllergy>[] = [
   {
     label: 'Causative agent',
-    render: item => <div className="font-medium text-nhs-grey-1"><DegradedTermText text={item.causativeAgent} /></div>,
+    render: item => (
+      <div className="font-medium text-nhs-grey-1">
+        <DegradedTermText text={item.causativeAgent} />
+        {item.isTransferDegraded && !hasDegradeMarker(item.causativeAgent) && <TransferDegradedTag />}
+      </div>
+    ),
   },
   { label: 'Reaction', render: item => item.reaction ?? '—' },
   {
@@ -79,7 +99,10 @@ function AllergyDetail({ allergy, bundle, onJumpToSource, onJumpToRecord }: { al
   return (
     <div className="border border-nhs-blue/20 rounded-lg bg-blue-50/50 p-4 space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-nhs-grey-1">{allergy.causativeAgent}</h3>
+        <h3 className="text-sm font-semibold text-nhs-grey-1">
+          <DegradedTermText text={allergy.causativeAgent} />
+          {allergy.isTransferDegraded && !hasDegradeMarker(allergy.causativeAgent) && <TransferDegradedTag />}
+        </h3>
         <div className="flex gap-2">
           <StatusBadge value={allergy.status} />
           {allergy.verificationStatus && <StatusBadge value={allergy.verificationStatus} />}

@@ -5,6 +5,14 @@ const END_EXT = 'Extension-CareConnect-GPC-AllergyIntoleranceEnd-1'
 
 const ENDED_ALLERGIES_CODE = '1103671000000101'
 
+// GP2GP transfer-degraded concepts an allergy can arrive coded with: the
+// allergy-specific drug / non-drug children, or the generic parent.
+const TRANSFER_DEGRADED_ALLERGY_CODES = new Set([
+  '196461000000101', // Transfer-degraded drug allergy
+  '196471000000108', // Transfer-degraded non-drug allergy
+  '196411000000103', // Transfer-degraded record entry
+])
+
 export function extractAllergies(bundle: fhir3.Bundle): GpConnectAllergy[] {
   const topLevel = getEntries<fhir3.AllergyIntolerance>(bundle, 'AllergyIntolerance')
 
@@ -32,6 +40,7 @@ export function extractAllergies(bundle: fhir3.Bundle): GpConnectAllergy[] {
     const snomedCoding = coding?.find(c => c.system === 'http://snomed.info/sct') ?? coding?.[0]
     const snomedCode = extractSnomedCode(coding)
     const snomedDisplay = snomedCoding?.display
+    const isTransferDegraded = coding?.some(c => !!c.code && TRANSFER_DEGRADED_ALLERGY_CODES.has(c.code))
 
     const reactionManifestation = extractOriginalTermText(resource.reaction?.[0]?.manifestation?.[0])
     const reactionDescription = (resource.reaction?.[0] as unknown as { description?: string })?.description
@@ -70,6 +79,7 @@ export function extractAllergies(bundle: fhir3.Bundle): GpConnectAllergy[] {
       causativeAgent: extractOriginalTermText(resource.code) ?? 'Unknown',
       snomedCode,
       snomedDisplay,
+      isTransferDegraded: isTransferDegraded || undefined,
       category: resource.category?.[0] as string | undefined,
       criticality: resource.criticality,
       reaction: reactionManifestation ?? reactionDescription,
