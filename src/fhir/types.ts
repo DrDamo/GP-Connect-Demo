@@ -248,6 +248,11 @@ export interface GpConnectConsultation {
   notForPfs?: boolean
 }
 
+export interface GpConnectTargetDisease {
+  term: string
+  snomedCode?: string
+}
+
 export interface GpConnectImmunisation {
   id: string
   /** 'observation' for immunisation-related Observations (declined/consent/contraindication/DNA)
@@ -260,6 +265,12 @@ export interface GpConnectImmunisation {
   vaccinationProcedureDisplay?: string
   vaccinationProcedureText?: string
   vaccineCodeDisplay?: string
+  /** SNOMED code from vaccineCode itself (undefined when absent or a NullFlavor placeholder). */
+  vaccineCodeSnomed?: string
+  /** True when vaccineCode is missing or only a NullFlavor (e.g. UNK) — it is mandatory (1..1). */
+  vaccineCodeMissing?: boolean
+  /** vaccinationProtocol[].targetDisease, de-duplicated across protocols. Mandatory in GP Connect but often omitted by EMIS/TPP. */
+  targetDiseases?: GpConnectTargetDisease[]
   dateGiven?: string
   dateRecorded?: string
   status: string

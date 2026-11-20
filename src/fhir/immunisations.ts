@@ -1,4 +1,4 @@
-import type { GpConnectImmunisation } from './types'
+import type { GpConnectImmunisation, GpConnectTargetDisease } from './types'
 import { getEntries, resolveReference, formatDate, resolvePractitionerRef, getExtensionValue, extractSnomedCode, extractOriginalTermText, extractId, fhirDateKey, hasNopatSecurity } from './utils'
 
 const IMMUNISATIONS_LIST_CODE = '1102181000000102'
@@ -30,6 +30,17 @@ export function extractImmunisations(bundle: fhir3.Bundle): GpConnectImmunisatio
     const vaccineSnomedCode = extractSnomedCode(vaccineCodings)
     // Fall back to vaccination procedure code when vaccineCode is UNK
     const snomedCode = vaccineSnomedCode ?? vaccinationProcedureCode
+
+    // STU3: targetDisease sits inside vaccinationProtocol (0..*), each carrying 1..*.
+    const protocols = (cast.vaccinationProtocol ?? []) as Array<{ targetDisease?: fhir3.CodeableConcept[] }>
+    const targetDiseases: GpConnectTargetDisease[] = []
+    for (const cc of protocols.flatMap(p => p.targetDisease ?? [])) {
+      const snomed = extractSnomedCode(cc.coding)
+      const term = extractOriginalTermText(cc) ?? cc.coding?.find(c => c.display)?.display ?? snomed
+      if (!term) continue
+      if (targetDiseases.some(t => (snomed && t.snomedCode === snomed) || t.term === term)) continue
+      targetDiseases.push({ term, snomedCode: snomed })
+    }
 
     const site = resource.site
     const routeCC = cast.route as fhir3.CodeableConcept | undefined
@@ -79,6 +90,9 @@ export function extractImmunisations(bundle: fhir3.Bundle): GpConnectImmunisatio
       // procedure name) when vaccineCode is a NullFlavor placeholder, so the
       // "Vaccine" column faithfully reflects only what vaccineCode itself says.
       vaccineCodeDisplay: vaccineCodeIsNullFlavor ? resource.vaccineCode?.text : extractOriginalTermText(resource.vaccineCode),
+      vaccineCodeSnomed: vaccineSnomedCode,
+      vaccineCodeMissing: !vaccineCodings?.length || !!vaccineCodeIsNullFlavor,
+      targetDiseases,
       dateGiven: formatDate(resource.date),
       dateRecorded,
       status: resource.status ?? 'unknown',
