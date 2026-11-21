@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { config } from '../config.js'
 import { owner } from '../db.js'
 import { rateLimit } from '../rateLimit.js'
+import { clearCachedForUser } from '../profileCache.js'
 import { startSession, endSession, endOtherSessions, requireUser, hashToken, newToken } from './sessions.js'
 import { hashPassword, verifyPassword, passwordProblem } from './passwords.js'
 import { canSendMail, sendConfirmationEmail } from './mail.js'
@@ -61,7 +62,8 @@ authRouter.post('/login', loginByIp, loginByAccount, async (req, res, next) => {
 // POST /api/auth/logout
 authRouter.post('/logout', async (req, res, next) => {
   try {
-    await endSession(req, res)
+    const userId = await endSession(req, res)
+    if (userId) clearCachedForUser(userId)
     res.status(204).end()
   } catch (err) {
     next(err)

@@ -18,12 +18,23 @@ interface ProfileIssue {
   expression?: string
   line?: number
   resource?: string
+  /** The validator could not check this code (no terminology server, or an
+   *  unknown code system), so it says nothing about the record itself. */
+  unchecked?: true
 }
 
 interface ProfileResult {
   packages: string[]
   durationMs: number
+  /** Findings by severity, not counting unchecked issues. */
   counts: Record<Severity, number>
+  /** Absent from servers older than this field. */
+  unchecked?: number
+  /** 'nhs' when codes were checked against the NHS England Terminology Server. */
+  terminology?: 'nhs' | 'off'
+  /** Served from the server's per-user cache (kept for an hour). */
+  cached?: boolean
+  validatedAt?: string
   issues: ProfileIssue[]
   truncated: boolean
 }
@@ -60,6 +71,17 @@ function group(issues: ProfileIssue[]) {
 }
 
 const MAX_LOCATIONS = 200
+
+/** SHA-256 of the record text, matching the server's cache key. */
+async function sha256Hex(text: string): Promise<string | null> {
+  if (!globalThis.crypto?.subtle) return null // non-secure context
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text))
+  return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('')
+}
+
+const timeOf = (iso?: string) => iso ? new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : ''
+
+type Status = { enabled: boolean; packages: string[]; terminology?: 'nhs' | 'off' }
 
 function IssueGroup({ list, row, onJumpToSource }: { list: ProfileIssue[]; row: string; onJumpToSource?: (id: string) => void }) {
   const [open, setOpen] = useState(false)
@@ -98,18 +120,18 @@ function IssueGroup({ list, row, onJumpToSource }: { list: ProfileIssue[]; row: 
 
 export function ProfileValidationSection({ source, format, onJumpToSource }: Props) {
   const { user } = useAuth()
-  const [status, setStatus] = useState<{ enabled: boolean; packages: string[] } | null>(null)
+  const [status, setStatus] = useState<Status | null>(null)
   const [running, setRunning] = useState(false)
   const [result, setResult] = useState<ProfileResult | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [openSeverity, setOpenSeverity] = useState<Severity | null>('error')
+  const [openSeverity, setOpenSeverity] = useState<Severity | 'unchecked' | null>('error')
 
   const signedIn = isAuthEnabled && !!user
 
   useEffect(() => {
     if (!signedIn) return
     let cancelled = false
-    api.get<{ enabled: boolean; packages: string[] }>('/profile-validation')
+    api.get<Status>('/profile-validation')
       .then(s => { if (!cancelled) setStatus(s) })
       .catch(() => { if (!cancelled) setStatus({ enabled: false, packages: [] }) })
     return () => { cancelled = true }
@@ -119,19 +141,42 @@ export function ProfileValidationSection({ source, format, onJumpToSource }: Pro
   const [resultFor, setResultFor] = useState<string | null>(null)
   const current = resultFor === source ? result : null
 
+  // Coming back to this tab (or reloading the same record) shows this user's
+  // result from the last hour, if the server still has it.
+  const enabled = signedIn && !!status?.enabled
+  useEffect(() => {
+    if (!enabled) return
+    let cancelled = false
+    sha256Hex(source)
+      .then(hash => hash ? api.get<ProfileResult>(`/profile-validation/result/${hash}`) : null)
+      .then(r => {
+        if (cancelled || !r) return
+        setResult(r)
+        setResultFor(source)
+        setOpenSeverity(r.counts.error ? 'error' : r.counts.warning ? 'warning' : null)
+      })
+      .catch(() => { /* 404: nothing cached */ })
+    return () => { cancelled = true }
+  }, [enabled, source])
+
   const grouped = useMemo(() => {
     const out: Partial<Record<Severity, ReturnType<typeof group>>> = {}
-    for (const s of SEVERITIES) out[s.key] = group((current?.issues ?? []).filter(i => i.severity === s.key))
+    const findings = (current?.issues ?? []).filter(i => !i.unchecked)
+    for (const s of SEVERITIES) out[s.key] = group(findings.filter(i => i.severity === s.key))
     return out
   }, [current])
+  const uncheckedGroups = useMemo(() => group((current?.issues ?? []).filter(i => i.unchecked)), [current])
+  const uncheckedCount = current?.unchecked ?? 0
 
   if (!signedIn || !status?.enabled) return null
 
+  // With a result on screen the button re-validates; otherwise the server may
+  // still answer from its cache.
   const run = async () => {
     setRunning(true)
     setError(null)
     try {
-      const r = await api.postRaw<ProfileResult>('/profile-validation', source, format === 'xml' ? 'application/fhir+xml' : 'application/fhir+json')
+      const r = await api.postRaw<ProfileResult>(`/profile-validation${current ? '?refresh=1' : ''}`, source, format === 'xml' ? 'application/fhir+xml' : 'application/fhir+json')
       setResult(r)
       setResultFor(source)
       setOpenSeverity(r.counts.error ? 'error' : r.counts.warning ? 'warning' : null)
@@ -148,7 +193,7 @@ export function ProfileValidationSection({ source, format, onJumpToSource }: Pro
         <div className="min-w-0">
           <div className="text-sm font-semibold text-nhs-grey-1 dark:text-ink">GP Connect profile validation</div>
           <div className="text-[11px] text-nhs-grey-3 dark:text-muted">
-            HL7 FHIR validator · {status.packages.join(', ')} · terminology not checked
+            HL7 FHIR validator · {status.packages.join(', ')} · {(current?.terminology ?? status.terminology) === 'nhs' ? 'codes checked with the NHS England Terminology Server' : 'terminology not checked'}
           </div>
         </div>
         <button
@@ -175,7 +220,11 @@ export function ProfileValidationSection({ source, format, onJumpToSource }: Pro
                 {current.counts[s.key]} {s.label.toLowerCase()}
               </span>
             ))}
-            <span className="text-nhs-grey-3 dark:text-muted">in {(current.durationMs / 1000).toFixed(0)}s</span>
+            <span className="text-nhs-grey-3 dark:text-muted">
+              {current.cached
+                ? `validated at ${timeOf(current.validatedAt)} · saved result, kept for an hour`
+                : `validated at ${timeOf(current.validatedAt)} in ${(current.durationMs / 1000).toFixed(0)}s`}
+            </span>
             {current.truncated && (
               <span className="text-nhs-grey-3 dark:text-muted">· showing the first {current.issues.length.toLocaleString()} issues</span>
             )}
@@ -198,6 +247,27 @@ export function ProfileValidationSection({ source, format, onJumpToSource }: Pro
           ))}
           {current.counts.error === 0 && current.counts.warning === 0 && (
             <p className="px-1 text-xs text-nhs-green dark:text-ok font-semibold">✓ No profile errors or warnings</p>
+          )}
+          {uncheckedCount > 0 && (
+            <div className="rounded border border-nhs-grey-4 dark:border-line overflow-hidden">
+              <button
+                onClick={() => setOpenSeverity(o => o === 'unchecked' ? null : 'unchecked')}
+                className="w-full flex items-center justify-between px-2.5 py-1.5 bg-nhs-grey-5 dark:bg-raised text-xs font-semibold text-nhs-grey-2 dark:text-ink-2"
+              >
+                <span>Codes not checked · {uncheckedCount.toLocaleString()}</span>
+                <span className="text-[10px]">{openSeverity === 'unchecked' ? '▲' : '▼'}</span>
+              </button>
+              {openSeverity === 'unchecked' && (
+                <div className="p-1.5 space-y-1">
+                  <p className="px-1 pb-1 text-[11px] text-nhs-grey-3 dark:text-muted">
+                    The validator could not check these codes against their value sets or code systems, so they are not counted above. They are not problems found in the record.
+                  </p>
+                  {uncheckedGroups.map(g => (
+                    <IssueGroup key={g.key} list={g.list} row="border-nhs-grey-4 bg-nhs-grey-5 text-nhs-grey-2 dark:border-line dark:bg-raised dark:text-ink-2" onJumpToSource={onJumpToSource} />
+                  ))}
+                </div>
+              )}
+            </div>
           )}
         </div>
       )}

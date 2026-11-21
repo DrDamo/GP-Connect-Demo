@@ -6,12 +6,14 @@ import type { Request, Response, NextFunction } from 'express'
 
 interface Window { start: number; count: number }
 
-export function rateLimit({ windowMs, max, key: keyOf }: {
+export function rateLimit({ windowMs, max, key: keyOf, skip }: {
   windowMs: number
   max: number
   /** Bucket key; defaults to the client IP. Gets `res` so it can use
    *  res.locals.userId set by requireUser. */
   key?: (req: Request, res: Response) => string
+  /** Requests for which this returns true are not counted. */
+  skip?: (req: Request, res: Response) => boolean
 }) {
   const windows = new Map<string, Window>()
 
@@ -23,6 +25,7 @@ export function rateLimit({ windowMs, max, key: keyOf }: {
   sweep.unref()
 
   return (req: Request, res: Response, next: NextFunction) => {
+    if (skip?.(req, res)) return next()
     // req.ip honours X-Forwarded-For only when `trust proxy` is configured.
     const key = keyOf ? keyOf(req, res) : (req.ip ?? 'unknown')
     const now = Date.now()
