@@ -20,7 +20,6 @@ Everything is FHIR **STU3** with GP Connect / CareConnect profiles, not R4 or UK
 | `server/` | Express backend: sign-in and sessions, the data API, and the proxy for the NHS England Terminology Server (which holds the system-to-system credentials) |
 | `server/migrations/` | Postgres schema, including the row-level security policies |
 | `Dockerfile`, `.github/workflows/` | The container image and the CI that tests, builds and publishes it |
-| `api/`, `supabase/` | The old Vercel + Supabase deployment, kept until the move to the VPS is complete |
 
 ## Running locally
 

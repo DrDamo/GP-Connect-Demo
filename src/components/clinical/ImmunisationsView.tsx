@@ -16,6 +16,7 @@ function immunisationSearchText(imm: GpConnectImmunisation): string {
     imm.vaccinationProcedureCode, imm.vaccineCodeDisplay, imm.administeringPractitioner, imm.enteringPractitioner,
     imm.route, imm.siteDisplay, imm.siteCode, imm.locationName, imm.explanationCode, imm.explanationDisplay,
     imm.explanationText, imm.batchNumber, imm.expirationDate, imm.status, ...imm.notes,
+    imm.vaccineCodeSnomed, ...(imm.targetDiseases ?? []).flatMap(t => [t.term, t.snomedCode]),
   ].filter(Boolean).join(' ').toLowerCase()
 }
 
@@ -25,6 +26,24 @@ interface Props {
   onSelect?: (id: string) => void
   onJumpToSource?: (id: string) => void
   onJumpToRecord?: (domain: DomainId, id: string) => void
+}
+
+// Amber marker for a mandatory GP Connect element the supplier didn't send
+// (EMIS/TPP commonly omit vaccinationProtocol.targetDisease, and sometimes
+// send vaccineCode only as a NullFlavor placeholder).
+function NotSuppliedTag({ field }: { field: string }) {
+  return (
+    <span
+      className="inline-block text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200 font-medium leading-none align-middle"
+      title={`${field} is mandatory in GP Connect but was not supplied in this record`}
+    >
+      Not supplied
+    </span>
+  )
+}
+
+function targetDiseaseLabel(item: GpConnectImmunisation): string | undefined {
+  return item.targetDiseases?.length ? item.targetDiseases.map(t => t.term).join(', ') : undefined
 }
 
 const COLUMNS: DomainColumn<GpConnectImmunisation>[] = [
@@ -53,7 +72,17 @@ const COLUMNS: DomainColumn<GpConnectImmunisation>[] = [
     // The base vaccineCode field — left blank (not "Unknown") when it's a
     // NullFlavor placeholder, and Observations have no vaccineCode at all.
     render: item => item.entryType === 'observation' ? '' : (
-      <span className="font-medium text-nhs-grey-1"><DegradedTermText text={item.vaccineCodeDisplay} /></span>
+      <span className="font-medium text-nhs-grey-1">
+        <DegradedTermText text={item.vaccineCodeDisplay} />
+        {item.vaccineCodeMissing && <span className={item.vaccineCodeDisplay ? 'ml-1.5' : ''}><NotSuppliedTag field="vaccineCode" /></span>}
+      </span>
+    ),
+  },
+  {
+    label: 'Target disease',
+    // vaccinationProtocol[].targetDisease — Observations have no protocol.
+    render: item => item.entryType === 'observation' ? '' : (
+      targetDiseaseLabel(item) ?? <NotSuppliedTag field="Target disease" />
     ),
   },
   { label: 'Administered by',                   render: item => item.administeringPractitioner ?? '—' },
@@ -81,7 +110,10 @@ function ImmunisationDetail({ immunisation, bundle, onJumpToSource, onJumpToReco
   ].filter((r): r is NonNullable<typeof r> => r !== null)
 
   const hasExplanation = !!(immunisation.explanationCode || immunisation.explanationDisplay || immunisation.explanationText)
-  const hasVaccineDetail = !!(immunisation.vaccineCodeDisplay || immunisation.batchNumber || immunisation.expirationDate)
+  // Always shown for real Immunizations: vaccineCode and targetDisease are
+  // mandatory, so their absence is itself worth displaying.
+  const isImmunization = immunisation.entryType !== 'observation'
+  const hasVaccineDetail = isImmunization || !!(immunisation.vaccineCodeDisplay || immunisation.batchNumber || immunisation.expirationDate)
 
   return (
     <div className="border border-nhs-blue/20 rounded-lg bg-blue-50/50 p-4 space-y-3">
@@ -157,7 +189,31 @@ function ImmunisationDetail({ immunisation, bundle, onJumpToSource, onJumpToReco
         <div className="space-y-1 pt-1 border-t border-nhs-blue/20">
           <span className="text-xs text-nhs-grey-3 uppercase tracking-wide">Vaccine</span>
           <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,max(20rem,calc(50%_-_1rem))),1fr))] gap-x-8 gap-y-1.5">
-            {immunisation.vaccineCodeDisplay && <DetailRow label="Vaccine" value={immunisation.vaccineCodeDisplay} />}
+            {isImmunization ? (
+              <DetailRow label="Vaccine code" value={
+                <span className="inline-flex flex-wrap items-center gap-1.5">
+                  {immunisation.vaccineCodeDisplay && <DegradedTermText text={immunisation.vaccineCodeDisplay} />}
+                  {immunisation.vaccineCodeSnomed && (
+                    <SnomedCodeChip code={immunisation.vaccineCodeSnomed} status={bundle.snomedStatus?.[immunisation.vaccineCodeSnomed]} />
+                  )}
+                  {immunisation.vaccineCodeMissing && <NotSuppliedTag field="vaccineCode" />}
+                </span>
+              } />
+            ) : immunisation.vaccineCodeDisplay && <DetailRow label="Vaccine" value={immunisation.vaccineCodeDisplay} />}
+            {isImmunization && (
+              <DetailRow label="Target disease" value={
+                immunisation.targetDiseases?.length ? (
+                  <span className="flex flex-col gap-1">
+                    {immunisation.targetDiseases.map((t, i) => (
+                      <span key={i} className="inline-flex flex-wrap items-center gap-1.5">
+                        {t.term}
+                        {t.snomedCode && <SnomedCodeChip code={t.snomedCode} status={bundle.snomedStatus?.[t.snomedCode]} />}
+                      </span>
+                    ))}
+                  </span>
+                ) : <NotSuppliedTag field="Target disease" />
+              } />
+            )}
             {immunisation.batchNumber && (
               <DetailRow label="Batch number" value={<span className="font-mono">{immunisation.batchNumber}</span>} />
             )}
