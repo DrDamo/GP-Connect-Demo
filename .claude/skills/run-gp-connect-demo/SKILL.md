@@ -1,193 +1,135 @@
 ---
 name: run-gp-connect-demo
-description: run, start, build, screenshot, test, launch, drive the GP Connect Demonstrator web app. Use when asked to run the app, take a screenshot, check a domain view, or validate UI changes.
+description: run, start, build, screenshot, test, launch, drive the GP Connect Demonstrator web app. Use when asked to run the app, take a screenshot, check a domain view, check profile validation, or validate UI changes.
 ---
 
-GP Connect Demonstrator is a React + Vite + TypeScript web app that renders FHIR STU3 clinical bundles. It runs a local dev server on port 5173. The agent path is: start the server, drive it with a Node.js CDP script (Chrome DevTools Protocol via `chromium --remote-debugging-port`), take screenshots, and stop.
+GP Connect Demonstrator is a React + Vite + TypeScript frontend (`src/`) with an Express + Postgres backend (`server/`) for sign-in and shared data. **Everything except the landing page needs a signed-in user**, so a UI check needs four parts running: Postgres, the backend, Vite, and headless Chromium driven over the Chrome DevTools Protocol (CDP) by `drive.cjs` in this folder.
 
-No `chromium-cli` package is available. Use the inline CDP approach documented below.
+Use the session scratchpad for anything temporary (logs, `ws`, screenshots). Below, `$S` stands for it.
 
 ## Prerequisites
 
-```bash
-# Node.js ≥ 18 (project uses v24), npm
-# Chromium (available as snap)
-which chromium   # → /snap/bin/chromium
-chromium --version  # → Chromium 148.x
+- Node 24, npm, Docker (for Postgres, and the optional profile validator), Chromium (`/snap/bin/chromium`).
+- Dependencies: `npm install` in the repo root and in `server/`.
+- The CDP driver needs `ws` from a scratch folder, not the project: `mkdir -p $S/cdp && cd $S/cdp && npm init -y >/dev/null && npm i ws@8.18.0`.
 
-# ws package needed for CDP driver — install in /tmp to avoid polluting project
-cd /tmp && npm init -y && npm install ws
-```
-
-## Build
+## Tests and build (no browser needed)
 
 ```bash
 cd /home/drdamo/GP-Connect-Demo
-npm install
-npm run build   # Vite build to dist/; TypeScript must pass cleanly
+npm test                 # Vitest: src/**/*.test.ts (FHIR parsing layer)
+npm run lint             # 0 errors expected; ~14 existing set-state-in-effect warnings
+npm run build            # tsc -b + Vite build
+cd server && npm run build && DATABASE_URL=postgres://gpc:gpc@127.0.0.1:15499/gpc npm test   # needs the Postgres below
 ```
 
-## Run (agent path)
+`server/test/api.test.ts` wipes and seeds the database it is given. Only point it at the throwaway container below.
 
-### 1. Start the dev server in the background
+## Run the app (agent path)
+
+### 1. Postgres 18 (throwaway container)
+
+```bash
+docker rm -f gpc-pg-dev 2>/dev/null
+docker run -d --name gpc-pg-dev -e POSTGRES_PASSWORD=postgres -p 127.0.0.1:15499:5432 postgres:18-alpine
+until docker exec gpc-pg-dev pg_isready -U postgres >/dev/null 2>&1; do sleep 1; done; sleep 2
+docker exec gpc-pg-dev psql -U postgres -q -c "CREATE ROLE gpc LOGIN PASSWORD 'gpc'" -c "CREATE ROLE gpc_app NOLOGIN" -c "GRANT gpc_app TO gpc"
+docker exec gpc-pg-dev psql -U postgres -q -c "CREATE DATABASE gpc OWNER gpc"
+```
+
+### 2. Backend on port 3001 (Vite proxies `/api` there)
+
+```bash
+cd /home/drdamo/GP-Connect-Demo/server
+export DATABASE_URL=postgres://gpc:gpc@127.0.0.1:15499/gpc
+node --import tsx src/migrate.ts          # "Applied migrations: 001_schema.sql" (the dev server doesn't migrate)
+NEW_USER_PASSWORD='correct horse battery' node --import tsx src/createUser.ts --username dev --org "Dev Practice"
+(PORT=3001 HOST=127.0.0.1 PUBLIC_URL=http://localhost:5173 NHS_CLIENT_ID=x NHS_CLIENT_SECRET=x \
+  nohup node --import tsx src/index.ts > $S/server.log 2>&1 &)
+sleep 4; curl -s http://127.0.0.1:3001/api/health    # {"status":"ok",...}
+```
+
+- Only the container runs migrations on start (`node dist/migrate.js && node dist/index.js`). In dev, run `src/migrate.ts` yourself, before `createUser` and again after pulling a new migration. `createUser` resets the password if the user already exists.
+- To use the real SNOMED/dm+d proxy, put real `NHS_CLIENT_ID`/`NHS_CLIENT_SECRET` in `server/.env` instead of the dummies. With dummies, the Validation tab shows an expected info line: "Could not verify SNOMED CT codes — terminology server unavailable (… HTTP 502)".
+- For profile validation, also set `VALIDATOR_URL=http://127.0.0.1:18090` (see step 6).
+
+### 3. Vite on port 5173
 
 ```bash
 cd /home/drdamo/GP-Connect-Demo
-npm run dev &
-sleep 3
-curl -s http://localhost:5173/GP-Connect-Demo/ | grep -c '<html' || echo "server up"
+(nohup npx vite --port 5173 --strictPort > $S/vite.log 2>&1 &)
+sleep 4; curl -s -o /dev/null -w '%{http_code}\n' http://localhost:5173/    # 200
 ```
 
-The app is at **http://localhost:5173/GP-Connect-Demo/** (note the `/GP-Connect-Demo/` base path — Vite's `base` config matches the GitHub Pages repo name).
+The base path is `/` (`VITE_BASE_URL` only changes it for GitHub Pages builds).
 
-### 2. Drive with CDP (Node.js script)
+### 4. Sign in: get a session cookie
 
-Save this as `/tmp/drive-gpc.cjs` and run with `node /tmp/drive-gpc.cjs`:
-
-```javascript
-const http = require('http')
-const WebSocket = require('/tmp/node_modules/ws')
-const { spawn } = require('child_process')
-const { writeFileSync, mkdirSync } = require('fs')
-
-const PORT = 9334            // change if another process has 9334
-const BASE = 'http://localhost:5173/GP-Connect-Demo/'
-const SS_DIR = '/tmp/gpc-ss'
-
-function cdp(ws, method, params = {}) {
-  return new Promise((resolve, reject) => {
-    const id = Math.floor(Math.random() * 1e9)
-    const handler = (data) => {
-      const msg = JSON.parse(data)
-      if (msg.id === id) {
-        ws.off('message', handler)
-        if (msg.error) reject(new Error(JSON.stringify(msg.error)))
-        else resolve(msg.result)
-      }
-    }
-    ws.on('message', handler)
-    ws.send(JSON.stringify({ id, method, params }))
-  })
-}
-
-function get(url) {
-  return new Promise((resolve, reject) => {
-    http.get(url, res => {
-      let body = ''
-      res.on('data', d => body += d)
-      res.on('end', () => resolve(JSON.parse(body)))
-    }).on('error', reject)
-  })
-}
-
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
-
-async function screenshot(ws, path) {
-  const { data } = await cdp(ws, 'Page.captureScreenshot', { format: 'png' })
-  writeFileSync(path, Buffer.from(data, 'base64'))
-  console.log('Screenshot:', path)
-}
-
-async function clickButton(ws, textMatch) {
-  const result = await cdp(ws, 'Runtime.evaluate', {
-    expression: `Array.from(document.querySelectorAll('button')).find(b => b.textContent.includes('${textMatch}'))?.click()`,
-    awaitPromise: false
-  })
-  return result
-}
-
-async function main() {
-  mkdirSync(SS_DIR, { recursive: true })
-
-  const proc = spawn('chromium', [
-    `--remote-debugging-port=${PORT}`,
-    '--headless=new',
-    '--no-sandbox',
-    '--window-size=1400,900',
-    '--disable-gpu',
-    '--disable-dev-shm-usage',
-    '--disable-extensions',
-    BASE
-  ], { stdio: 'ignore' })
-
-  await sleep(3000)
-
-  const targets = await get(`http://localhost:${PORT}/json`)
-  const pageTarget = targets.find(t => t.type === 'page') || targets[0]
-  console.log('Connected to:', pageTarget.url)
-
-  const ws = new WebSocket(pageTarget.webSocketDebuggerUrl)
-  await new Promise(r => ws.on('open', r))
-  await cdp(ws, 'Runtime.enable')
-  await cdp(ws, 'Page.enable')
-  await sleep(2000)
-
-  // 1. Upload screen
-  await screenshot(ws, `${SS_DIR}/01-upload.png`)
-
-  // 2. Load sample bundle
-  await clickButton(ws, 'Load sample')
-  await sleep(2500)
-  await screenshot(ws, `${SS_DIR}/02-medications.png`)
-
-  // 3. Navigate domains (adapt as needed)
-  for (const domain of ['Allergies', 'Problems', 'Consultations', 'Referrals']) {
-    await cdp(ws, 'Runtime.evaluate', {
-      expression: `Array.from(document.querySelectorAll('button')).find(b => b.textContent.trim().startsWith('${domain}'))?.click()`
-    })
-    await sleep(800)
-    await screenshot(ws, `${SS_DIR}/${domain.toLowerCase()}.png`)
-  }
-
-  ws.close()
-  proc.kill()
-  console.log('Done. Screenshots in', SS_DIR)
-}
-
-main().catch(e => { console.error(e); process.exit(1) })
-```
-
-### 3. Inspect screenshots
+The browser is signed in by planting the session cookie, which avoids scripting the login form:
 
 ```bash
-ls /tmp/gpc-ss/
-# Read any .png with the Read tool to visually verify the UI
+curl -s -c $S/jar.txt -X POST http://127.0.0.1:3001/api/auth/login \
+  -H 'Content-Type: application/json' -H 'Origin: http://localhost:5173' \
+  -d '{"identifier":"dev","password":"correct horse battery"}' >/dev/null
+export GPC_COOKIE=$(awk '$6=="gpc_session"{print $7}' $S/jar.txt)
+```
+
+The `Origin` header is required: the server refuses writes from other origins.
+
+### 5. Drive and screenshot
+
+```bash
+cd $S/cdp
+GPC_OUT=$S/ss GPC_TAB="Clinical View" GPC_DOMAINS="Allergies,Immunisations" \
+  node /home/drdamo/GP-Connect-Demo/.claude/skills/run-gp-connect-demo/drive.cjs
+```
+
+The driver opens the app, checks it is signed in, loads `public/gpc-sample-bundle.json` through the file picker (or `GPC_BUNDLE`), opens `GPC_TAB`, clicks each `GPC_DOMAINS` area, and saves PNGs to `GPC_OUT`. Look at them with the Read tool. All its options are listed at the top of `drive.cjs`.
+
+- Top tabs: `Inspector`, `Clinical View`, `Raw Source`, `Validation`, `Training`, `App Guide`.
+- Clinical areas (left nav, with counts): Problems, Consultations, Medications, Allergies, Immunisations, Coded Data, Investigations, Documents, Diary Entries, Referrals, Supporting Resources, Lists.
+- For a different flow, copy `drive.cjs` to the scratchpad and edit it. Keep its `click()` (matches button/link text with `startsWith`), `waitFor()` and `shot()` helpers.
+
+### 6. Optional: GP Connect profile validation
+
+```bash
+cd /home/drdamo/GP-Connect-Demo
+docker build -t gpc-validator validator            # first build ~3 min; bakes in the STU3 packages
+docker run -d --name gpc-val-dev -p 127.0.0.1:18090:8080 -m 3g gpc-validator
+until docker logs gpc-val-dev 2>&1 | grep -q "HTTP Service started"; do sleep 2; done   # ~30 s
+```
+
+Restart the backend with `VALIDATOR_URL=http://127.0.0.1:18090`, then run the driver with `GPC_PROFILE=1`. One validation of the sample record takes about 30 s and peaks near 2 GB in the container. The driver waits for the **Validate again** button. The section is hidden when `VALIDATOR_URL` is unset.
+
+### 7. Stop everything
+
+```bash
+for p in 3001 5173; do pid=$(ss -ltnp | awk -v p=":$p " '$0 ~ p {match($0,/pid=[0-9]+/); print substr($0,RSTART+4,RLENGTH-4)}'); [ -n "$pid" ] && kill $pid; done
+docker rm -f gpc-pg-dev gpc-val-dev 2>/dev/null
 ```
 
 ## Run (human path)
 
-```bash
-cd /home/drdamo/GP-Connect-Demo
-npm run dev
-# Opens http://localhost:5173/GP-Connect-Demo/ in a browser
-# Ctrl-C to stop
-```
-
-## Test
-
-```bash
-cd /home/drdamo/GP-Connect-Demo
-npm run build   # TypeScript compile + Vite bundle (no separate test suite)
-```
-
-TypeScript errors surface here. The project has no Jest/Vitest unit tests — visual verification via the CDP script is the primary correctness check.
+Run `npm run dev` in the repo root and `npm run dev` in `server/`, with `server/.env` copied from `server/.env.example`. Then open http://localhost:5173/ and sign in with a user made by `createUser` (step 2).
 
 ## Gotchas
 
-- **Base path is `/GP-Connect-Demo/`** — not `/`. Going to `http://localhost:5173/` returns a blank page. Always use the full path.
-- **CDP connects to wrong target** — snap chromium loads its extensions first, so `targets[0]` may be a `chrome-extension://` background page. Always filter with `targets.find(t => t.type === 'page')`.
-- **Port 9333 already in use** — if a previous chromium process wasn't killed cleanly, port 9333 may still be bound. Use 9334 or `pkill chromium` first.
-- **`ws` package must be in `/tmp/node_modules/`** — the project doesn't depend on it; install it in `/tmp` to avoid touching `package.json`.
-- **`--disable-extensions` is required** — without it, the snap extension registers as the first CDP target, confusing target selection.
-- **Screenshot of upload screen shows blank** if Vite hasn't finished serving by the time chromium connects. The 3-second sleep is sufficient on this machine; increase to 5 if needed.
-- **Domain nav buttons contain count badges** — `b.textContent.trim().startsWith('Allergies')` is more reliable than `.includes()` because the button text renders as `"Allergies 3"` in some states.
+- **Never `pkill -f "src/index.ts"`** (or any pattern that appears in your own command line): it matches and kills the shell running it. Kill by port, as in step 7.
+- **Signed out, there is only the landing page.** No file picker and no tabs. If the driver saves `00-not-signed-in.png`, the cookie is missing or expired, the host differs (cookie set for `localhost` but app opened on `127.0.0.1`), or the backend is down.
+- **New users get onboarding tours** ("Step 1 of 5") that cover the page: one on first load and one per tab or area. Skipping a tour can also switch tabs. `shot()` in the driver skips any open tour first, and the driver re-selects the tab after skipping. Do the same in custom flows. Skips are saved per user on the server, so a reused user sees fewer tours.
+- **There is no "Load sample" button.** Bundles load only through the file picker, which the driver fills with `DOM.setFileInputFiles`.
+- **Wait for state, not for text that already exists.** For example "Could not…" is already on the Validation tab from the SNOMED info line. Wait for a specific button or label instead.
+- **A closed browser tab doesn't leave profile validation busy.** The server cancels the run when the client disconnects. A second request during a run gets "Another record is being validated".
+- **Old Chromium on the debugging port.** If `/json` hangs, pick another `GPC_CDP_PORT`. The driver uses a fresh profile directory each run, so stale snap profiles don't interfere.
+- **WSL can't reach the VPS tailnet.** VPS commands (`ssh vps …`) must run from PowerShell.
 
 ## Troubleshooting
 
 | Symptom | Fix |
 |---|---|
-| `Error: ECONNREFUSED` connecting to CDP port | Chromium didn't start in time — increase `sleep(3000)` to 5000 |
-| All screenshots are blank/white | Vite server not running; confirm `curl http://localhost:5173/GP-Connect-Demo/` returns HTML |
-| `Cannot find package 'ws'` | Run `cd /tmp && npm init -y && npm install ws` first |
-| Build fails with `Cannot find namespace 'JSX'` | Return types on React components must be inferred — remove explicit `: JSX.Element` annotations |
-| `npm run dev` port 5173 already in use | `pkill -f vite` or use `--port 5174` |
+| `Cannot find module 'ws'` | Run the driver from `$S/cdp` after `npm i ws@8.18.0` there (it resolves `ws` from the current folder) |
+| `relation "auth.users" does not exist` | Migrations haven't run: `node --import tsx src/migrate.ts` in `server/` |
+| `/api/health` refused | Backend not running or crashed: check `$S/server.log` (a missing `DATABASE_URL`/`NHS_CLIENT_ID` stops it at startup) |
+| Login returns "Invalid email/username or password." | Re-run `createUser` with `NEW_USER_PASSWORD` (its random password is printed only once otherwise) |
+| Port 5173 in use | Kill it by port (step 7) or use `--port 5174` and set `GPC_BASE` and `PUBLIC_URL` to match |
+| Profile validation says "not set up" / no button | Backend started without `VALIDATOR_URL`, or the validator container isn't up yet |
