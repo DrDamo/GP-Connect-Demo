@@ -4,8 +4,11 @@ import { getEntries, resolveReference, formatDate, resolvePractitionerRef, getEx
 const IMMUNISATIONS_LIST_CODE = '1102181000000102'
 
 export function extractImmunisations(bundle: fhir3.Bundle): GpConnectImmunisation[] {
+  // Sort keys are the raw FHIR dates: dateGiven is already formatted for
+  // display ("04 Mar 2021"), which doesn't sort chronologically.
+  const sortKey = new Map<string, string>()
   const immunizationEntries = getEntries<fhir3.Immunization>(bundle, 'Immunization')
-    .map(resource => {
+    .map((resource): GpConnectImmunisation => {
     const cast = resource as unknown as Record<string, unknown>
 
     // VaccinationProcedure extension carries the real SNOMED code when vaccineCode = UNK
@@ -27,7 +30,9 @@ export function extractImmunisations(bundle: fhir3.Bundle): GpConnectImmunisatio
 
     const vaccineCodings = resource.vaccineCode?.coding
     const vaccineCodeIsNullFlavor = vaccineCodings?.every(c => c.system === 'http://hl7.org/fhir/v3/NullFlavor')
-    const vaccineSnomedCode = extractSnomedCode(vaccineCodings)
+    // extractSnomedCode falls back to the first coding, which for a NullFlavor
+    // placeholder is "UNK" — not a code, so don't let it mask the procedure code.
+    const vaccineSnomedCode = vaccineCodeIsNullFlavor ? undefined : extractSnomedCode(vaccineCodings)
     // Fall back to vaccination procedure code when vaccineCode is UNK
     const snomedCode = vaccineSnomedCode ?? vaccinationProcedureCode
 
@@ -76,8 +81,10 @@ export function extractImmunisations(bundle: fhir3.Bundle): GpConnectImmunisatio
     const explanationText = chosenExplanation?.text
     const explanationIsReasonNotGiven = !!explanationReasonNotGiven
 
+    const id = resource.id ?? crypto.randomUUID()
+    sortKey.set(id, fhirDateKey(resource.date))
     return {
-      id: resource.id ?? crypto.randomUUID(),
+      id,
       vaccine: (vaccineCodeIsNullFlavor ? resource.vaccineCode?.text : extractOriginalTermText(resource.vaccineCode))
         ?? vaccinationProcedureDisplay
         ?? vaccinationProcedureText
@@ -140,12 +147,14 @@ export function extractImmunisations(bundle: fhir3.Bundle): GpConnectImmunisatio
       // belongs in the Procedure column, matching how real Immunizations use
       // vaccinationProcedureDisplay for their coded entry.
       const comment = (obs as unknown as { comment?: string }).comment
+      const effective = (obs as unknown as { effectiveDateTime?: string }).effectiveDateTime
+      sortKey.set(obs.id!, fhirDateKey(effective))
       return {
         id: obs.id!,
         entryType: 'observation' as const,
         vaccine: description,
         vaccinationProcedureDisplay: description,
-        dateGiven: formatDate((obs as unknown as { effectiveDateTime?: string }).effectiveDateTime),
+        dateGiven: formatDate(effective),
         status: obs.status ?? 'unknown',
         notes: comment ? comment.split('\n').map(line => line.trim()).filter(Boolean) : [],
         codedDataId: obs.id,
@@ -154,5 +163,5 @@ export function extractImmunisations(bundle: fhir3.Bundle): GpConnectImmunisatio
     })
 
   return [...immunizationEntries, ...observationEntries]
-    .sort((a, b) => fhirDateKey(b.dateGiven).localeCompare(fhirDateKey(a.dateGiven)))
+    .sort((a, b) => (sortKey.get(b.id) ?? '').localeCompare(sortKey.get(a.id) ?? ''))
 }
