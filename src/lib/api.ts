@@ -19,14 +19,15 @@ export class ApiError extends Error {
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, '')
 
-async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+async function request<T>(method: string, path: string, body?: unknown, raw?: { text: string; contentType: string }): Promise<T> {
   let res: Response
   try {
     res = await fetch(`${base}/api${path}`, {
       method,
       credentials: 'same-origin',
-      headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      headers: raw ? { 'Content-Type': raw.contentType }
+        : body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
+      body: raw ? raw.text : body !== undefined ? JSON.stringify(body) : undefined,
     })
   } catch {
     throw new ApiError(0, 'Could not reach the server. Check your connection and try again.')
@@ -49,6 +50,8 @@ export const api = {
   put: <T>(path: string, body?: unknown) => request<T>('PUT', path, body ?? {}),
   patch: <T>(path: string, body?: unknown) => request<T>('PATCH', path, body ?? {}),
   delete: <T = void>(path: string) => request<T>('DELETE', path),
+  /** POST a body as-is (e.g. a FHIR record exactly as loaded). */
+  postRaw: <T>(path: string, text: string, contentType: string) => request<T>('POST', path, undefined, { text, contentType }),
 }
 
 /** A user-facing message for a failed call. */

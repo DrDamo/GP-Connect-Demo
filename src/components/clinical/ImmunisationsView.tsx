@@ -28,14 +28,20 @@ interface Props {
   onJumpToRecord?: (domain: DomainId, id: string) => void
 }
 
-// Amber marker for a mandatory GP Connect element the supplier didn't send
-// (EMIS/TPP commonly omit vaccinationProtocol.targetDisease, and sometimes
-// send vaccineCode only as a NullFlavor placeholder).
+// Amber marker for an element the supplier didn't send. In
+// CareConnect-GPC-Immunization-1 vaccineCode is 1..1; vaccinationProtocol is
+// 0..* but each protocol must carry a targetDisease (1..*). EMIS/TPP commonly
+// omit the protocol, and sometimes send vaccineCode only as a NullFlavor.
+const NOT_SUPPLIED_TITLES: Record<string, string> = {
+  vaccineCode: 'vaccineCode is mandatory (1..1) in GP Connect but no real code was supplied in this record',
+  'Target disease': 'No vaccinationProtocol.targetDisease was supplied. The protocol is optional in GP Connect, but targetDisease is required whenever one is sent',
+}
+
 function NotSuppliedTag({ field }: { field: string }) {
   return (
     <span
       className="inline-block text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200 font-medium leading-none align-middle"
-      title={`${field} is mandatory in GP Connect but was not supplied in this record`}
+      title={NOT_SUPPLIED_TITLES[field] ?? `${field} was not supplied in this record`}
     >
       Not supplied
     </span>

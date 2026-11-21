@@ -269,7 +269,7 @@ export interface GpConnectImmunisation {
   vaccineCodeSnomed?: string
   /** True when vaccineCode is missing or only a NullFlavor (e.g. UNK) — it is mandatory (1..1). */
   vaccineCodeMissing?: boolean
-  /** vaccinationProtocol[].targetDisease, de-duplicated across protocols. Mandatory in GP Connect but often omitted by EMIS/TPP. */
+  /** vaccinationProtocol[].targetDisease, de-duplicated across protocols. The protocol is 0..* in GP Connect (targetDisease 1..* within it) and EMIS/TPP often omit it. */
   targetDiseases?: GpConnectTargetDisease[]
   dateGiven?: string
   dateRecorded?: string

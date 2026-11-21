@@ -67,6 +67,16 @@ export const config = {
   trustProxy: positiveInt('TRUST_PROXY', 0),
   rateLimitWindowMs: positiveInt('RATE_LIMIT_WINDOW_MS', 60_000),
   rateLimitMax: positiveInt('RATE_LIMIT_MAX', 120),
+  /** Internal URL of the GP Connect profile validator (validator/), e.g.
+   *  http://gpc-validator:8080. Unset turns profile validation off. */
+  validatorUrl: (process.env.VALIDATOR_URL ?? '').replace(/\/$/, ''),
+  validatorTimeoutMs: positiveInt('VALIDATOR_TIMEOUT_MS', 180_000),
+  /** Largest record accepted for profile validation, in bytes. */
+  validatorMaxBytes: positiveInt('VALIDATOR_MAX_BYTES', 25 * 1024 * 1024),
+  /** Most issues returned to the browser; the counts always cover them all. */
+  validatorMaxIssues: positiveInt('VALIDATOR_MAX_ISSUES', 5000),
+  /** Profile validations per user per hour. */
+  validatorRateMax: positiveInt('VALIDATOR_RATE_MAX', 20),
   /** Sign-in attempts per account per 15 minutes (per IP: twice this). */
   loginRateMax: positiveInt('LOGIN_RATE_MAX', 10),
 }

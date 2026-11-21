@@ -100,6 +100,38 @@ docker compose pull gpc && docker compose up -d gpc
 
 To roll back, set `image: ghcr.io/drdamo/gp-connect-demo:<short-sha>` and run `docker compose up -d gpc`. Migrations only go forward, so rolling back past a schema change needs a matching restore.
 
+## GP Connect profile validator
+
+Optional. It powers the **GP Connect profile validation** section on the Validation tab, which checks a whole record against the GP Connect and CareConnect STU3 profiles. Without it, that section is simply hidden.
+
+It is the HL7 FHIR validator (`validator_cli` 7.0.3) running in its HTTP server mode, built from `validator/Dockerfile` into `ghcr.io/drdamo/gp-connect-validator`. The image already holds the `uk.gpc.struct#1.5.0` and `careconnect.stu3.03.00.00#3.1.0` packages, so it needs no internet access. Terminology checks are off (`-tx n/a`), so no record content leaves the server. SNOMED codes are still checked separately through the NHS terminology proxy.
+
+A full GP Connect record takes about 30 seconds and up to about 2 GB of memory. The app runs one validation at a time and allows 20 per user per hour (`VALIDATOR_RATE_MAX`).
+
+1. **Compose service** (under `services:`). It goes on `internal` only, because just the `gpc` container talks to it:
+   ```yaml
+     gpc-validator:
+       image: ghcr.io/drdamo/gp-connect-validator:latest
+       restart: unless-stopped
+       mem_limit: 3g
+       networks: [internal]
+   ```
+2. **Point the app at it.** Add this to the `gpc` service's `environment:`:
+   ```yaml
+         VALIDATOR_URL: http://gpc-validator:8080
+   ```
+3. **Start**:
+   ```bash
+   docker compose pull gpc-validator && docker compose up -d gpc-validator
+   docker compose logs -f gpc-validator   # expect "FHIR Validator HTTP Service started" (about 30 s)
+   docker compose up -d gpc
+   ```
+   The "Error fetching https://packages…" lines at startup are harmless. The validator is checking for newer package versions, and the `internal` network blocks it.
+
+To remove it, delete `VALIDATOR_URL` from `gpc`, then run `docker compose up -d gpc` and `docker compose rm -sf gpc-validator`. No volumes are involved.
+
+Local development: `docker build -t gpc-validator validator && docker run --rm -p 127.0.0.1:18090:8080 gpc-validator`, then set `VALIDATOR_URL=http://127.0.0.1:18090` in `server/.env`.
+
 ## History
 
 Until November 2026 the app ran on Vercel (frontend and `api/` functions) with Supabase for sign-in and the database. On 2026-11-10 its data moved to the VPS as data-only: the public tables plus the `auth.users` accounts, whose bcrypt hashes import unchanged, so everyone kept their password. The export and import steps, and the old Vercel and Supabase code, are in the git history before the commit that removed them.

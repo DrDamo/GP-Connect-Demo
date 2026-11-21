@@ -906,6 +906,9 @@ function AppContent() {
               <div className="bg-white rounded-lg border border-nhs-grey-4 h-full overflow-hidden p-4">
                 <ValidationPanel
                   result={loaded.validation}
+                  source={loaded.source}
+                  format={loaded.format}
+                  onJumpToSource={handleJumpToSource}
                   onCleanRefs={() => {
                     const parsed = parseBundle(loaded.source)
                     if (!parsed.ok) return
