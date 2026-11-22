@@ -10,6 +10,7 @@ import { profileValidationRouter } from './routes/profileValidation.js'
 import { authRouter } from './users/authRoutes.js'
 import { requireUser } from './users/sessions.js'
 import { rateLimit } from './rateLimit.js'
+import { createTxProxy } from './txProxy.js'
 
 // The GP Connect Demonstrator backend: sign-in, the app's data and the NHS
 // England Terminology Server proxy, plus (in the container) the built
@@ -98,3 +99,12 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
 app.listen(config.port, config.host, () => {
   console.log(`GP Connect Demonstrator API listening on http://${config.host}:${config.port}`)
 })
+
+// Internal terminology passthrough for the profile validator. Its own port,
+// never routed by Caddy; see src/txProxy.ts.
+if (config.txProxyPort && config.txProxyToken) {
+  if (config.txProxyToken.length < 32) throw new Error('TX_PROXY_TOKEN must be at least 32 characters')
+  createTxProxy().listen(config.txProxyPort, config.host, () => {
+    console.log(`Terminology passthrough for the validator on port ${config.txProxyPort}`)
+  })
+}

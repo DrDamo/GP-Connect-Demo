@@ -75,6 +75,14 @@ export const config = {
   validatorMaxBytes: positiveInt('VALIDATOR_MAX_BYTES', 25 * 1024 * 1024),
   /** Most issues returned to the browser; the counts always cover them all. */
   validatorMaxIssues: positiveInt('VALIDATOR_MAX_ISSUES', 5000),
+  /** Terminology passthrough for the validator (src/txProxy.ts): its port,
+   *  and the shared secret the validator must present. Off unless both set. */
+  txProxyPort: positiveInt('TX_PROXY_PORT', 0),
+  txProxyToken: process.env.TX_PROXY_TOKEN ?? '',
+  /** How long a user's profile validation result is reused, and how many
+   *  results are kept in memory across all users. */
+  validatorCacheMs: positiveInt('VALIDATOR_CACHE_MS', 60 * 60_000),
+  validatorCacheMax: positiveInt('VALIDATOR_CACHE_MAX', 30),
   /** Profile validations per user per hour. */
   validatorRateMax: positiveInt('VALIDATOR_RATE_MAX', 20),
   /** Sign-in attempts per account per 15 minutes (per IP: twice this). */

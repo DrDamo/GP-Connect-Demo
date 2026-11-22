@@ -12,10 +12,16 @@ export interface ProfileIssue {
   line?: number
   /** `Type/id` of the bundle entry the issue sits in, when it can be resolved. */
   resource?: string
+  /** The validator says it could not check this code (no terminology server,
+   *  or a code system it doesn't have). Not a finding about the record. */
+  unchecked?: true
 }
 
 export interface ProfileSummary {
+  /** Findings by severity, not counting `unchecked` issues. */
   counts: Record<ProfileSeverity, number>
+  /** Issues where a code could not be checked (see ProfileIssue.unchecked). */
+  unchecked: number
   issues: ProfileIssue[]
   /** True when more issues were found than are returned. */
   truncated: boolean
@@ -29,6 +35,24 @@ interface OOIssue {
   expression?: string[]
   location?: string[]
   extension?: { url?: string; valueInteger?: number }[]
+}
+
+// The HL7 validator's wording when it skips a terminology check (validator
+// 7.0.x messages; see ../../test/profileOutcome.test.ts for examples).
+const UNCHECKED_PATTERNS = [
+  /because there is no terminology service/,
+  /in the absence of a terminology server/,
+  /running without terminology services/,
+  /^Unable to validate code without using server/,
+  /^A definition for CodeSystem .* could not be found, so the code cannot be validated/,
+  // The terminology server rejected the value set itself (e.g. its ECL), or
+  // failed: neither says anything about the record.
+  /^Could not confirm that the codings provided are in the value set/,
+  /^Error from server: /,
+]
+
+export function isUnchecked(text: string): boolean {
+  return UNCHECKED_PATTERNS.some(p => p.test(text))
 }
 
 const SEVERITY_RANK: Record<ProfileSeverity, number> = { error: 0, warning: 1, information: 2 }
@@ -53,20 +77,28 @@ function entryResource(expression: string | undefined, bundle: unknown): string 
 export function summariseOutcome(outcome: unknown, bundle: unknown, maxIssues: number): ProfileSummary {
   const raw = ((outcome as { issue?: OOIssue[] } | undefined)?.issue ?? [])
   const counts: Record<ProfileSeverity, number> = { error: 0, warning: 0, information: 0 }
+  let unchecked = 0
   const issues: ProfileIssue[] = raw.map(i => {
     const severity = toSeverity(i.severity)
-    counts[severity]++
+    const text = i.details?.text ?? i.diagnostics ?? 'No description'
+    const isSkip = isUnchecked(text)
+    if (isSkip) unchecked++
+    else counts[severity]++
     const expression = i.expression?.[0] ?? i.location?.[0]
     return {
       severity,
       code: i.code,
-      text: i.details?.text ?? i.diagnostics ?? 'No description',
+      text,
       expression,
       line: i.extension?.find(e => e.url === LINE_EXT)?.valueInteger,
       resource: entryResource(expression, bundle),
+      ...(isSkip ? { unchecked: true as const } : {}),
     }
   })
-  // The validator reports in document order; keep that within each severity.
-  issues.sort((a, b) => SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity])
-  return { counts, issues: issues.slice(0, maxIssues), truncated: issues.length > maxIssues }
+  // Real findings first (by severity), skipped checks last, so the cap never
+  // drops a finding in favour of a skipped check. The validator reports in
+  // document order; sort is stable, so that order holds within each group.
+  const rank = (i: ProfileIssue) => (i.unchecked ? 3 : SEVERITY_RANK[i.severity])
+  issues.sort((a, b) => rank(a) - rank(b))
+  return { counts, unchecked, issues: issues.slice(0, maxIssues), truncated: issues.length > maxIssues }
 }

@@ -51,10 +51,17 @@ export async function startSession(res: Response, userId: string): Promise<void>
   }
 }
 
-export async function endSession(req: Request, res: Response): Promise<void> {
+/** Ends the current session; returns whose it was, if there was one. */
+export async function endSession(req: Request, res: Response): Promise<string | null> {
   const token = readCookie(req)
-  if (token) await owner.query('delete from auth.sessions where token_hash = $1', [hashToken(token)])
+  let userId: string | null = null
+  if (token) {
+    const { rows } = await owner.query<{ user_id: string }>(
+      'delete from auth.sessions where token_hash = $1 returning user_id', [hashToken(token)])
+    userId = rows[0]?.user_id ?? null
+  }
   setCookie(res, '', 0)
+  return userId
 }
 
 /** Ends every session of a user except, optionally, the current one. */

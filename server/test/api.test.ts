@@ -12,6 +12,7 @@ import assert from 'node:assert/strict'
 import { spawn, type ChildProcess } from 'node:child_process'
 import { once } from 'node:events'
 import { createServer, type Server } from 'node:http'
+import { createHash } from 'node:crypto'
 import type { AddressInfo } from 'node:net'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -34,6 +35,10 @@ let server: ChildProcess
 // sent and answers with a small OperationOutcome.
 let fakeValidator: Server
 const validatorCalls: { path?: string; contentType?: string; body: string }[] = []
+// The same fake also plays the NHS token endpoint and terminology server.
+const terminologyCalls: { path?: string; auth?: string; body: string }[] = []
+const TX_PORT = PORT + 100
+const TX_TOKEN = 'x'.repeat(40)
 let serverLog = ''
 const ids: Record<string, string> = {}
 
@@ -100,6 +105,19 @@ before(async () => {
     let body = ''
     req.on('data', d => { body += d })
     req.on('end', () => {
+      if (req.url === '/token') {
+        res.setHeader('Content-Type', 'application/json')
+        res.end(JSON.stringify({ access_token: 'nhs-token', expires_in: 3600 }))
+        return
+      }
+      if (req.url?.startsWith('/fhir/')) {
+        terminologyCalls.push({ path: req.url, auth: req.headers.authorization, body })
+        res.setHeader('Content-Type', 'application/fhir+json')
+        res.end(req.url.startsWith('/fhir/metadata')
+          ? JSON.stringify({ resourceType: 'CapabilityStatement', fhirVersion: '4.0.1', rest: [{ resource: [{ type: 'ValueSet', profile: 'http://x/vs' }] }] })
+          : JSON.stringify({ resourceType: 'Parameters', parameter: [{ name: 'result', valueBoolean: true }] }))
+        return
+      }
       validatorCalls.push({ path: req.url, contentType: req.headers['content-type'], body })
       res.setHeader('Content-Type', 'application/fhir+json')
       res.end(JSON.stringify({ resourceType: 'OperationOutcome', issue: [
@@ -122,6 +140,10 @@ before(async () => {
       SMTP_HOST: '',
       LOGIN_RATE_MAX: '1000',
       VALIDATOR_URL: `http://127.0.0.1:${(fakeValidator.address() as AddressInfo).port}`,
+      NHS_TOKEN_URL: `http://127.0.0.1:${(fakeValidator.address() as AddressInfo).port}/token`,
+      NHS_FHIR_BASE: `http://127.0.0.1:${(fakeValidator.address() as AddressInfo).port}/fhir`,
+      TX_PROXY_PORT: String(TX_PORT),
+      TX_PROXY_TOKEN: TX_TOKEN,
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   })
@@ -406,4 +428,71 @@ test('profile validation rejects a body that is not FHIR JSON', async () => {
     body: '{"no":"resourceType"}',
   })
   assert.equal(res.status, 400)
+})
+
+test('terminology passthrough: shared secret, allow-list, STU3 metadata, NHS token', async () => {
+  const tx = (path: string, init: RequestInit = {}) => fetch(`http://127.0.0.1:${TX_PORT}${path}`, init)
+  const auth = { Authorization: `Bearer ${TX_TOKEN}` }
+
+  assert.equal((await tx('/metadata')).status, 401)
+  assert.equal((await tx('/metadata', { headers: { Authorization: 'Bearer wrong' } })).status, 401)
+  assert.equal((await tx('/Patient/1', { headers: auth })).status, 403)
+  assert.equal((await tx('/ValueSet/$validate-code', { method: 'DELETE', headers: auth })).status, 403)
+
+  const meta = await (await tx('/metadata', { headers: auth })).json()
+  assert.equal(meta.fhirVersion, '3.0.1')
+  assert.deepEqual(meta.rest[0].resource[0].profile, { reference: 'http://x/vs' })
+
+  const r = await tx('/ValueSet/$validate-code', {
+    method: 'POST',
+    headers: { ...auth, 'Content-Type': 'application/fhir+json' },
+    body: JSON.stringify({ resourceType: 'Parameters', parameter: [{ name: 'code', valueCode: '1' }] }),
+  })
+  assert.equal(r.status, 200)
+  const call = terminologyCalls.at(-1)!
+  assert.equal(call.path, '/fhir/ValueSet/$validate-code')
+  assert.equal(call.auth, 'Bearer nhs-token')
+  assert.ok(JSON.parse(call.body).parameter.some((p: { name: string }) => p.name === 'force-system-version'))
+
+  const bob = await signedIn('bob')
+  assert.equal((await bob.call('GET', '/api/profile-validation')).json.terminology, 'nhs')
+})
+
+test('profile validation results are cached per user for an hour, refreshable, and cleared on logout', async () => {
+  const record = JSON.stringify({ resourceType: 'Bundle', type: 'collection', id: 'cache-test' })
+  const hash = createHash('sha256').update(record, 'utf8').digest('hex')
+  const post = (c: Client, query = '') => fetch(BASE + '/api/profile-validation' + query, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/fhir+json', Origin: ORIGIN, Cookie: c.cookie },
+    body: record,
+  }).then(r => r.json())
+
+  const alice = await signedIn('alice')
+  const before = validatorCalls.length
+  const first = await post(alice)
+  assert.equal(first.cached, false)
+  assert.ok(first.validatedAt)
+  assert.equal(validatorCalls.length, before + 1)
+
+  const second = await post(alice)
+  assert.equal(second.cached, true)
+  assert.equal(second.validatedAt, first.validatedAt)
+  assert.equal(validatorCalls.length, before + 1, 'answered from the cache')
+
+  const byHash = await alice.call('GET', `/api/profile-validation/result/${hash}`)
+  assert.equal(byHash.status, 200)
+  assert.equal(byHash.json.cached, true)
+  assert.deepEqual(byHash.json.counts, first.counts)
+
+  // Another user doesn't see it.
+  const bob = await signedIn('bob')
+  assert.equal((await bob.call('GET', `/api/profile-validation/result/${hash}`)).status, 404)
+
+  const refreshed = await post(alice, '?refresh=1')
+  assert.equal(refreshed.cached, false)
+  assert.equal(validatorCalls.length, before + 2)
+
+  assert.equal((await alice.call('POST', '/api/auth/logout')).status, 204)
+  const again = await signedIn('alice')
+  assert.equal((await again.call('GET', `/api/profile-validation/result/${hash}`)).status, 404, 'cleared by logout')
 })

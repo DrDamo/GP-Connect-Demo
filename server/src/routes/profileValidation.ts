@@ -1,7 +1,8 @@
-import { Router, text } from 'express'
+import { Router, text, type Request, type Response } from 'express'
 import { config } from '../config.js'
 import { rateLimit } from '../rateLimit.js'
 import { summariseOutcome } from '../fhir/profileOutcome.js'
+import { configureProfileCache, getCached, putCached, recordHash } from '../profileCache.js'
 
 // GP Connect STU3 profile validation. The browser posts the record exactly as
 // loaded (JSON or XML); it is forwarded to the internal validator container
@@ -13,21 +14,61 @@ export const profileValidationRouter = Router()
 /** Packages the validator image loads (validator/Dockerfile IGS). */
 const PACKAGES = ['uk.gpc.struct#1.5.0', 'careconnect.stu3.03.00.00#3.1.0']
 
+/** The validator checks codes against the NHS server when this app runs the
+ *  terminology passthrough (the validator's TX_URL must point at it). */
+const terminology = () => (config.txProxyPort && config.txProxyToken ? 'nhs' : 'off')
+
 // One validation uses ~1.5 GB in the validator, so run them one at a time.
 let busy = false
 
 profileValidationRouter.get('/', (_req, res) => {
-  res.json({ enabled: !!config.validatorUrl, packages: PACKAGES })
+  res.json({ enabled: !!config.validatorUrl, packages: PACKAGES, terminology: terminology() })
 })
 
-// Per signed-in user (requireUser runs first and sets res.locals.userId).
-const perUser = rateLimit({ windowMs: 60 * 60_000, max: config.validatorRateMax, key: (_req, res) => String(res.locals.userId) })
+configureProfileCache({ ttlMs: config.validatorCacheMs, maxEntries: config.validatorCacheMax })
 
+const wantsRefresh = (req: Request) => req.query.refresh === '1'
+
+/** A cached result for this user and record, unless a refresh was asked for. */
+function cachedFor(req: Request, res: Response) {
+  if (wantsRefresh(req) || typeof req.body !== 'string') return undefined
+  return getCached(String(res.locals.userId), recordHash(req.body))
+}
+
+// Per signed-in user (requireUser runs first and sets res.locals.userId).
+// Answers from the cache are not counted.
+const perUser = rateLimit({
+  windowMs: 60 * 60_000,
+  max: config.validatorRateMax,
+  key: (_req, res) => String(res.locals.userId),
+  skip: (req, res) => !!cachedFor(req, res),
+})
+
+// GET /api/profile-validation/result/<sha256 of the record> — this user's
+// cached result for that record, so the page can show it again without
+// re-sending the record. 404 when there is none (or it has expired).
+profileValidationRouter.get('/result/:hash', (req, res) => {
+  const hash = String(req.params.hash)
+  const hit = /^[0-9a-f]{64}$/.test(hash) ? getCached(String(res.locals.userId), hash) : undefined
+  if (!hit) {
+    res.status(404).json({ error: 'No cached result' })
+    return
+  }
+  res.json({ ...(hit.result as object), cached: true, validatedAt: new Date(hit.at).toISOString() })
+})
+
+// POST /api/profile-validation[?refresh=1] — validates the record, or returns
+// this user's result for it from the last hour unless refresh=1.
 profileValidationRouter.post(
   '/',
-  perUser,
   text({ type: ['application/json', 'application/fhir+json', 'application/xml', 'application/fhir+xml'], limit: config.validatorMaxBytes }),
+  perUser,
   async (req, res) => {
+    const hit = cachedFor(req, res)
+    if (hit) {
+      res.json({ ...(hit.result as object), cached: true, validatedAt: new Date(hit.at).toISOString() })
+      return
+    }
     if (!config.validatorUrl) {
       res.status(503).json({ error: 'Profile validation is not set up on this server' })
       return
@@ -80,11 +121,14 @@ profileValidationRouter.post(
         res.status(502).json({ error: `The validator failed (HTTP ${upstream.status})` })
         return
       }
-      res.json({
+      const result = {
         packages: PACKAGES,
+        terminology: terminology(),
         durationMs: Date.now() - started,
         ...summariseOutcome(outcome, parsed, config.validatorMaxIssues),
-      })
+      }
+      const at = putCached(String(res.locals.userId), recordHash(body), result)
+      res.json({ ...result, cached: false, validatedAt: new Date(at).toISOString() })
     } catch (err) {
       if (abort.signal.aborted) return
       const timedOut = err instanceof Error && err.name === 'TimeoutError'
