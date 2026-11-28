@@ -233,7 +233,7 @@ function ImmunisationDetail({ immunisation, bundle, onJumpToSource, onJumpToReco
         <div className="space-y-1 pt-1 border-t border-nhs-blue/20">
           <span className="text-xs text-nhs-grey-3 uppercase tracking-wide">Notes</span>
           {immunisation.notes.map((note, i) => (
-            <p key={i} className="text-xs text-nhs-grey-1">{note}</p>
+            <p key={i} className="text-xs text-nhs-grey-1 whitespace-pre-wrap break-words">{note}</p>
           ))}
         </div>
       )}
