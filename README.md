@@ -23,7 +23,7 @@ Everything is FHIR **STU3** with GP Connect / CareConnect profiles, not R4 or UK
 
 ## Running locally
 
-Requirements: Node 22 or later, Postgres 18, and NHS England Terminology Server system-to-system credentials for the terminology features.
+Requirements: Node 22 or later, Docker (for the local Postgres 18), and NHS England Terminology Server system-to-system credentials for the terminology features.
 
 Full steps, including creating the database roles and a first account, are in [docs/deployment-vps.md](docs/deployment-vps.md#local-development). In short:
 
@@ -31,6 +31,7 @@ Full steps, including creating the database roles and a first account, are in [d
 npm install
 npm run server:install
 cp server/.env.example server/.env    # DATABASE_URL, NHS_CLIENT_ID / NHS_CLIENT_SECRET
+docker compose -f docker-compose.dev.yml up -d --wait    # Postgres on port 15432
 
 npm run server    # backend on http://127.0.0.1:3001
 npm run dev       # app on http://localhost:5173 (proxies /api to :3001)
