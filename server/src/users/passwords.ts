@@ -1,7 +1,6 @@
 import bcrypt from 'bcryptjs'
 
-// bcrypt, as Supabase used: accounts imported from Supabase keep their
-// existing $2a$ hashes and passwords.
+// bcrypt. Accounts imported with existing $2a$ hashes keep their passwords.
 
 const COST = 12
 export const MIN_PASSWORD_LENGTH = 8

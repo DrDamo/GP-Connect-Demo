@@ -86,9 +86,8 @@ authRouter.get('/me', requireUser, async (_req, res, next) => {
 
 // POST /api/auth/signup  { email, password, displayName, orgName }
 //
-// Creates the account, a new organisation and an admin-less 'staff' profile
-// (as Supabase's handle_new_user trigger did), then emails a confirmation
-// link. An address that is already registered gets the same response, so the
+// Creates the account, a new organisation and an admin-less 'staff' profile,
+// then emails a confirmation link. An address that is already registered gets the same response, so the
 // form can't be used to discover accounts.
 authRouter.post('/signup', signupByIp, async (req, res, next) => {
   try {
