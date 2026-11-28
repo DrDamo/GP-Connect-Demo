@@ -38,7 +38,9 @@ type ObsLike = fhir3.Observation & {
 // SNOMED codes with special handling in DiagnosticReport.result[]
 const GROUP_HEADER_CODE = '364712009'   // Laboratory test observable (TPP explicit group marker)
 const COMMENT_NOTE_CODE = '37331000000100'  // Comment note / filing comment
-const SKIP_CODE = '24641000000107'  // Investigation result placeholder — skip
+// "Investigation result": not an analyte. TPP puts report-level free text (e.g.
+// the reason for the request) in its valueString.
+const PLACEHOLDER_CODE = '24641000000107'
 const TRANSFER_DEGRADED_CODE = '196411000000103'  // Transfer-degraded record entry
 
 const INTERP_CODE_DISPLAY: Record<string, string> = {
@@ -73,6 +75,13 @@ function normalizeInterpretation(interp: fhir3.CodeableConcept | undefined, rawC
   return undefined
 }
 
+// note is 0..* in STU3, but some records send a single object instead of a list.
+type Annotations = { text?: string } | Array<{ text?: string }>
+
+function noteTexts(note: Annotations | undefined): string[] {
+  return [note ?? []].flat().map(n => n.text).filter((t): t is string => !!t)
+}
+
 function resolveSpecimen(bundle: fhir3.Bundle, ref: string | undefined): GpConnectSpecimen | undefined {
   if (!ref) return undefined
   const spec = resolveReference(bundle, ref) as (fhir3.Resource & {
@@ -80,7 +89,7 @@ function resolveSpecimen(bundle: fhir3.Bundle, ref: string | undefined): GpConne
     status?: string
     collection?: { collectedDateTime?: string }
     receivedTime?: string
-    note?: Array<{ text?: string }>
+    note?: Annotations
   }) | undefined
   if (!spec) return undefined
   return {
@@ -90,7 +99,7 @@ function resolveSpecimen(bundle: fhir3.Bundle, ref: string | undefined): GpConne
     collectedDateTime: formatDate(spec.collection?.collectedDateTime),
     receivedTime: formatDate(spec.receivedTime),
     status: spec.status,
-    note: spec.note?.map(n => n.text).filter((t): t is string => !!t).join('\n\n') || undefined,
+    note: noteTexts(spec.note).join('\n\n') || undefined,
   }
 }
 
@@ -130,6 +139,10 @@ function parseCommentValue(comment: string): {
     out.interpretation = interpMatch[1].trim()
   }
   return out
+}
+
+function normaliseText(text: string | undefined): string {
+  return (text ?? '').replace(/\r\n?/g, '\n').trim()
 }
 
 // Strip parsed/redundant lines from a result comment; return narrative-only text
@@ -320,7 +333,7 @@ export function extractInvestigations(bundle: fhir3.Bundle): GpConnectInvestigat
           intent?: string
           requester?: { agent?: { reference?: string; display?: string } }
           performer?: { reference?: string; display?: string }
-          note?: Array<{ text?: string }>
+          note?: Annotations
         }) | undefined
         if (pr) {
           const prCoding = pr.code?.coding
@@ -359,7 +372,7 @@ export function extractInvestigations(bundle: fhir3.Bundle): GpConnectInvestigat
             requesterId,
             performer: prPerformer,
             performerId: prPerformerId,
-            notes: pr.note?.map(n => n.text ?? '').filter(Boolean) as string[] | undefined,
+            notes: pr.note ? noteTexts(pr.note) : undefined,
           }
         }
       }
@@ -382,12 +395,29 @@ export function extractInvestigations(bundle: fhir3.Bundle): GpConnectInvestigat
       let filingCommentDate: string | undefined
       let filingCommentPerformer: string | undefined
       const labObs: ObsLike[] = []
+      // Report-level free text: EMIS sends it as DiagnosticReport.conclusion,
+      // TPP on a placeholder observation (collected below).
+      const resultComments: Array<{ sourceRef: string; text: string }> = []
+      // A leading "Title: …" line in the conclusion names the report; only what
+      // follows it is comment.
+      let conclusion = normaliseText((report as unknown as { conclusion?: string }).conclusion)
+      const titled = conclusion.match(/^Title:[ \t]*([^\n]*)(?:\n|$)/)
+      const conclusionTitle = titled?.[1].trim() || undefined
+      if (conclusionTitle) conclusion = conclusion.slice(titled![0].length).trim()
+      if (conclusion) resultComments.push({ sourceRef: `DiagnosticReport/${reportId}`, text: conclusion })
       // Maps parent obs ID → { text, id } from a linked COMM note (derived-from relationship)
       const resultCommentMap = new Map<string, { text: string; id: string }>()
 
       type RelatedEntry = { type?: string; target?: { reference?: string } }
       for (const obs of resultObs) {
-        if (obs.code?.coding?.[0]?.code === COMMENT_NOTE_CODE) {
+        // A placeholder linking to other observations is left to the grouping below.
+        if (obs.code?.coding?.[0]?.code === PLACEHOLDER_CODE && !(obs as unknown as { related?: RelatedEntry[] }).related?.length) {
+          const text = [(obs as unknown as { valueString?: string }).valueString, obs.comment]
+            .map(normaliseText)
+            .filter(Boolean)
+            .join('\n')
+          if (text) resultComments.push({ sourceRef: `Observation/${obs.id}`, text })
+        } else if (obs.code?.coding?.[0]?.code === COMMENT_NOTE_CODE) {
           const derivedFromRef = ((obs as unknown as { related?: RelatedEntry[] }).related ?? [])
             .find(r => r.type === 'derived-from')?.target?.reference
           if (derivedFromRef) {
@@ -547,7 +577,7 @@ export function extractInvestigations(bundle: fhir3.Bundle): GpConnectInvestigat
 
         for (const obs of labObs) {
           const code = obs.code?.coding?.[0]?.code ?? ''
-          if (code === SKIP_CODE) continue
+          if (code === PLACEHOLDER_CODE) continue
 
           const hasValue = obsHasValue(obs)
           const valuelessResult = isValuelessResult(obs)
@@ -621,30 +651,36 @@ export function extractInvestigations(bundle: fhir3.Bundle): GpConnectInvestigat
         }
       }
 
-      // Report-level specimen: shown once when every group shares a single specimen, matching
-      // the previous single-specimen display. When groups reference different specimens (e.g.
-      // serum for renal/lipids vs EDTA for FBC) each TestGroupSection shows its own instead, so
-      // results are never shown against the wrong sample.
-      const distinctSpecimens = new Map<string, GpConnectSpecimen>()
-      for (const g of testGroups) if (g.specimen) distinctSpecimens.set(g.specimen.id, g.specimen)
-      const specimen = distinctSpecimens.size === 1 ? [...distinctSpecimens.values()][0] : undefined
-      if (specimen) {
-        for (const g of testGroups) g.specimen = undefined
-      }
+      // Report-level specimens: the one every group shares (shown once), plus any
+      // the report lists that no group shows — e.g. a report with no results, or
+      // several specimens that no result points to. When groups reference
+      // different specimens (e.g. serum for renal/lipids vs EDTA for FBC) each
+      // TestGroupSection shows its own, so results are never shown against the
+      // wrong sample.
+      const groupSpecimens = new Map<string, GpConnectSpecimen>()
+      for (const g of testGroups) if (g.specimen) groupSpecimens.set(g.specimen.id, g.specimen)
+      const unshown = drSpecimenRefs
+        .map(r => resolveSpecimen(bundle, r.reference))
+        .filter((s): s is GpConnectSpecimen => !!s && !groupSpecimens.has(s.id))
+      const shared = groupSpecimens.size === 1 ? [...groupSpecimens.values()] : []
+      if (shared.length) for (const g of testGroups) g.specimen = undefined
+      const specimens = [...shared, ...unshown]
 
       // Flat results list (for summary shortcuts + backward compat)
       const results = testGroups.flatMap(g => g.results).filter(r => !r.isSubHeader)
 
       // Report name derivation — priority order:
-      // 1. Filing comment title  2. DR code when specific (not the generic category code)
-      // 3. First group name  4. Single result name (last resort)
+      // 1. Filing comment title, then conclusion title  2. DR code when specific (not the generic category code)
+      // 3. First group name  4. Single result name  5. The report's own code,
+      // however generic, so no title is invented while the record has one.
+      const drName = extractOriginalTermText(report.code)
       let reportName: string | undefined
       if (filingComment) {
         const m = filingComment.match(/^Title:\s+([^\n\r]+)/m)
         if (m) reportName = m[1].trim()
       }
+      reportName ??= conclusionTitle
       if (!reportName) {
-        const drName = extractOriginalTermText(report.code)
         // 721981007 "Diagnostic studies report" is the generic category code used for ALL
         // TPP/EMIS lab DiagnosticReports — skip it and derive the name from the test group.
         if (drName && drName.toLowerCase() !== 'diagnostic studies report') {
@@ -657,7 +693,7 @@ export function extractInvestigations(bundle: fhir3.Bundle): GpConnectInvestigat
       if (!reportName && results.length > 0 && testGroups.length === 1 && !testGroups[0].name) {
         reportName = results[0].name
       }
-      reportName = reportName ?? 'Investigation'
+      reportName = reportName ?? drName ?? 'Investigation'
 
       const category = extractOriginalTermText(report.category as fhir3.CodeableConcept | undefined)
 
@@ -675,11 +711,12 @@ export function extractInvestigations(bundle: fhir3.Bundle): GpConnectInvestigat
         performerId,
         performers,
         encounterId,
-        specimen,
+        specimens: specimens.length ? specimens : undefined,
         procedureRequest,
         filingComment,
         filingCommentDate,
         filingCommentPerformer,
+        resultComments: resultComments.length ? resultComments : undefined,
         testGroups,
         results,
         result: first?.value,
