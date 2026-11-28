@@ -385,8 +385,12 @@ export interface GpConnectInvestigation {
   // just performers[0], kept for the table's Requestor column.
   performers?: Array<{ type: 'Practitioner' | 'Organisation' | 'HealthcareService'; id: string }>
   encounterId?: string
-  specimen?: GpConnectSpecimen
+  /** Specimens shown for the report as a whole; others sit on their test group. */
+  specimens?: GpConnectSpecimen[]
   procedureRequest?: GpConnectProcedureRequest
+  /** Report-level free text: DiagnosticReport.conclusion (EMIS) or the text of
+   *  an "Investigation result" observation (TPP). */
+  resultComments?: Array<{ sourceRef: string; text: string }>
   testGroups: GpConnectTestGroup[]
   results: GpConnectInvestigationResult[]
   notForPfs?: boolean

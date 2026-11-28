@@ -30,7 +30,7 @@ export const TOURS: Record<TourId, TourDefinition> = {
       {
         target: 'home-paste-json',
         title: 'Or paste JSON directly',
-        body: "Got FHIR JSON on your clipboard instead of a file? Toggle this to paste it straight in.",
+        body: "Got FHIR JSON on your clipboard instead of a file? Paste it straight into this box.",
         placement: 'right',
       },
       {

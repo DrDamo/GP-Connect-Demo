@@ -1,7 +1,6 @@
 -- GP Connect Demo schema (Postgres 18).
 --
--- Recreates the schema that ran on Supabase, so it applies to an empty
--- database. Two roles are involved (both created by the server admin, see
+-- The full schema, applied to an empty database. Two roles are involved (both created by the server admin, see
 -- docs/deployment-vps.md):
 --
 --   gpc      owns the database and these objects and runs the migrations.
@@ -12,8 +11,7 @@
 --            so the policies apply. gpc is a member of gpc_app.
 --
 -- The signed-in user for a request is carried in the transaction-local
--- setting app.user_id, which auth.uid() reads; the policies are unchanged
--- from Supabase apart from targeting gpc_app instead of "authenticated".
+-- setting app.user_id, which auth.uid() reads; the policies target gpc_app.
 
 do $$
 begin
@@ -201,7 +199,7 @@ create trigger training_notes_pin_ownership before update on public.training_not
   for each row execute function public.pin_ownership_columns();
 
 -- ---------------------------------------------------------------------------
--- Row-level security (as on Supabase)
+-- Row-level security
 -- ---------------------------------------------------------------------------
 alter table public.organisations        enable row level security;
 alter table public.profiles             enable row level security;

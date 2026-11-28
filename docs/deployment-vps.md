@@ -157,33 +157,40 @@ To turn terminology off, remove `TX_URL`/`TX_TOKEN` from `gpc-validator` and `TX
 
 The `[tx-proxy] 422 … ECL expression is invalid` warnings in the `gpc` log are expected. A few CareConnect value sets contain malformed ECL, so the NHS server rejects them, and those codes show under "Codes not checked".
 
-**Local development:** run `docker build -t gpc-validator validator && docker run --rm -p 127.0.0.1:18090:8080 gpc-validator` (no terminology), then set `VALIDATOR_URL=http://127.0.0.1:18090` in `server/.env`. Terminology needs the validator to reach `gpc` by name, so test it with both in containers on one Docker network.
-
-## History
-
-Until November 2026 the app ran on Vercel (frontend and `api/` functions) with Supabase for sign-in and the database. On 2026-11-10 its data moved to the VPS as data-only: the public tables plus the `auth.users` accounts, whose bcrypt hashes import unchanged, so everyone kept their password. The export and import steps, and the old Vercel and Supabase code, are in the git history before the commit that removed them.
+**Local development:** see [Local development](#local-development).
 
 ## Local development
 
-```bash
-# Postgres 18 locally (Docker shown; any Postgres 18 works). Run each psql -c
-# separately: CREATE DATABASE cannot run inside a transaction.
-docker run -d --name gpc-pg -e POSTGRES_PASSWORD=postgres -p 127.0.0.1:5432:5432 postgres:18-alpine
-psql -h localhost -U postgres -c "CREATE ROLE gpc LOGIN PASSWORD 'gpc'"
-psql -h localhost -U postgres -c "CREATE ROLE gpc_app NOLOGIN"
-psql -h localhost -U postgres -c "GRANT gpc_app TO gpc"
-psql -h localhost -U postgres -c "CREATE DATABASE gpc OWNER gpc"
+Postgres 18 runs in Docker (`docker-compose.dev.yml`, on port 15432); the app runs on the host so changes reload straight away.
 
-cp server/.env.example server/.env    # set DATABASE_URL and the NHS credentials
-npm run server:install
-(cd server && npx tsx src/migrate.ts && NEW_USER_PASSWORD='choose one' npx tsx src/createUser.ts --username dev --org Dev --role admin --platform-admin)
-npm run server   # :3001
-npm run dev      # :5173, proxies /api to :3001
+First time:
+
+```bash
+docker compose -f docker-compose.dev.yml up -d --wait
+cp server/.env.example server/.env    # set the NHS credentials, and DATABASE_URL=postgres://gpc:gpc@127.0.0.1:15432/gpc
+npm install && npm run server:install
+(cd server && npx tsx src/migrate.ts && npx tsx src/createUser.ts --username dev --org Dev --role admin --platform-admin)
 ```
 
-Without SMTP settings, development builds print signup confirmation links to the server log. The backend tests need a scratch database; they wipe its data:
+`createUser` prints a generated password once (or set `NEW_USER_PASSWORD`). Running it again resets the password.
+
+Each time:
 
 ```bash
-psql -h localhost -U postgres -c "CREATE DATABASE gpc_test OWNER gpc"
-cd server && DATABASE_URL=postgres://gpc:gpc@localhost:5432/gpc_test npm test
+docker compose -f docker-compose.dev.yml up -d --wait
+npm run server   # :3001
+npm run dev      # second terminal; :5173, proxies /api to :3001
+```
+
+After pulling a new migration, run `(cd server && npx tsx src/migrate.ts)`; only the production container migrates on start-up.
+
+- **Stop:** `docker compose -f docker-compose.dev.yml down` keeps the data. Add `-v` to delete it.
+- **Profile validator:** add `--profile validator` to the `up` command and set `VALIDATOR_URL=http://127.0.0.1:18090` in `server/.env` (no terminology). Include `--profile validator` with `down` too. Terminology needs the validator to reach `gpc` by name, so test it with both in containers on one Docker network.
+- **Production image:** `docker build -t gpc-local .` checks that what will be deployed still builds.
+- **Email:** without SMTP settings, development builds print signup confirmation links to the server log.
+
+Backend tests wipe their database, so use the scratch one:
+
+```bash
+cd server && DATABASE_URL=postgres://gpc:gpc@127.0.0.1:15432/gpc_test npm test
 ```

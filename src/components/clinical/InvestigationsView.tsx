@@ -12,9 +12,7 @@ import { InfoHint } from '../../onboarding/InfoHint'
 import { SearchFilterBox } from './SearchFilterBox'
 
 function investigationSearchText(inv: GpConnectInvestigation): string {
-  const specimenText = inv.specimen
-    ? [inv.specimen.type, inv.specimen.collectedDateTime, inv.specimen.receivedTime, inv.specimen.status, inv.specimen.note]
-    : []
+  const specimenText = (inv.specimens ?? []).flatMap(s => [s.type, s.collectedDateTime, s.receivedTime, s.status, s.note])
   const prText = inv.procedureRequest
     ? [inv.procedureRequest.name, inv.procedureRequest.requester, inv.procedureRequest.performer, inv.procedureRequest.status, ...(inv.procedureRequest.notes ?? [])]
     : []
@@ -26,7 +24,7 @@ function investigationSearchText(inv: GpConnectInvestigation): string {
     ]),
   ])
   return [
-    inv.name, inv.category, inv.date, inv.performer, inv.status, inv.filingComment, inv.filingCommentPerformer,
+    inv.name, inv.category, inv.date, inv.performer, inv.status, inv.filingComment, inv.filingCommentPerformer, ...(inv.resultComments ?? []).map(c => c.text),
     ...specimenText, ...prText, ...groupText,
   ].filter(Boolean).join(' ').toLowerCase()
 }
@@ -397,15 +395,30 @@ function InvestigationDetail({ investigation, bundle, onJumpToSource, onJumpToRe
         } />
       </div>
 
-      {/* Specimen */}
-      {investigation.specimen && (
-        <SpecimenSection specimen={investigation.specimen} onJumpToSource={onJumpToSource} />
-      )}
+      {/* Specimens */}
+      {investigation.specimens?.map(s => (
+        <SpecimenSection key={s.id} specimen={s} onJumpToSource={onJumpToSource} />
+      ))}
 
       {/* Test request (ProcedureRequest) */}
       {investigation.procedureRequest && (
         <ProcedureRequestSection pr={investigation.procedureRequest} onJumpToSource={onJumpToSource} />
       )}
+
+      {/* Report-level result comments */}
+      {investigation.resultComments?.map(c => (
+        <div key={c.sourceRef} className="space-y-1">
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] font-semibold text-nhs-grey-3 uppercase tracking-wide">Result comment</p>
+            {onJumpToSource && (
+              <button onClick={() => onJumpToSource(c.sourceRef)} className="text-[11px] text-nhs-grey-3 hover:text-nhs-grey-1 hover:underline">
+                View FHIR ↗
+              </button>
+            )}
+          </div>
+          <CommentText text={c.text} className="p-2 rounded bg-white/60 border border-nhs-blue/10" />
+        </div>
+      ))}
 
       {/* Test groups */}
       {hasGroups && (

@@ -3,6 +3,11 @@ import { getEntries, resolveReference, formatDate, resolvePractitionerRef, getEx
 
 const IMMUNISATIONS_LIST_CODE = '1102181000000102'
 
+// Suppliers send \r\n, bare \r or \n; CSS pre-wrap does not break on a bare \r.
+function normaliseNote(text?: string): string {
+  return (text ?? '').replace(/\r\n?/g, '\n').trim()
+}
+
 export function extractImmunisations(bundle: fhir3.Bundle): GpConnectImmunisation[] {
   // Sort keys are the raw FHIR dates: dateGiven is already formatted for
   // display ("04 Mar 2021"), which doesn't sort chronologically.
@@ -122,7 +127,7 @@ export function extractImmunisations(bundle: fhir3.Bundle): GpConnectImmunisatio
       explanationText,
       explanationIsReasonNotGiven,
       parentPresent,
-      notes: (resource.note ?? []).map(n => n.text ?? '').filter(Boolean),
+      notes: (resource.note ?? []).map(n => normaliseNote(n.text)).filter(Boolean),
       notForPfs: hasNopatSecurity(resource),
     }
   })
@@ -156,7 +161,7 @@ export function extractImmunisations(bundle: fhir3.Bundle): GpConnectImmunisatio
         vaccinationProcedureDisplay: description,
         dateGiven: formatDate(effective),
         status: obs.status ?? 'unknown',
-        notes: comment ? comment.split('\n').map(line => line.trim()).filter(Boolean) : [],
+        notes: [normaliseNote(comment)].filter(Boolean),
         codedDataId: obs.id,
         notForPfs: hasNopatSecurity(obs),
       }

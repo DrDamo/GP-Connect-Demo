@@ -1,0 +1,36 @@
+# Local development services only. The app itself runs on the host
+# (`npm run server` and `npm run dev`). See docs/deployment-vps.md.
+name: gpc-dev
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: postgres
+    ports:
+      # Not 5432, which a Postgres installed on the host may already use.
+      - "127.0.0.1:15432:5432"
+    volumes:
+      # Postgres 18 images keep data under /var/lib/postgresql, not .../data.
+      - pgdata:/var/lib/postgresql
+      # Roles and databases; runs only when the volume is first created.
+      - ./docker/dev-db-init.sql:/docker-entrypoint-initdb.d/dev-db-init.sql:ro
+    healthcheck:
+      # Over TCP: the temporary server used during initialisation is socket-only.
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "postgres", "-d", "gpc"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  # Optional: docker compose -f docker-compose.dev.yml --profile validator up -d
+  validator:
+    profiles: [validator]
+    build: ./validator
+    image: gpc-validator
+    mem_limit: 3g
+    ports:
+      - "127.0.0.1:18090:8080"
+
+volumes:
+  pgdata:

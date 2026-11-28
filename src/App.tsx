@@ -83,7 +83,6 @@ function AppContent() {
   const [parseError, setParseError] = useState<string | null>(null)
   const [jumpToId, setJumpToId] = useState<string | null>(null)
   const [pasteText, setPasteText] = useState('')
-  const [showPaste, setShowPaste] = useState(false)
   const [pendingSharedDraft, setPendingSharedDraft] = useState<DraftRecord | null>(null)
   const [pendingSharedDraftId, setPendingSharedDraftId] = useState<string | null>(null)
   const [pendingSharedDraftVersion, setPendingSharedDraftVersion] = useState<number | null>(null)
@@ -387,7 +386,6 @@ function AppContent() {
     const label = patientName ? `${patientName} — Pasted JSON — ${pastedAt}` : `Pasted JSON — ${pastedAt}`
     void addFileHistoryEntry({ filename: 'pasted-bundle.json', label, source: 'paste', content: text })
     setPasteText('')
-    setShowPaste(false)
   }, [pasteText, handleLoad])
 
   // Load a `fhir_examples/*.json` file referenced from a training guide the same
@@ -671,44 +669,37 @@ function AppContent() {
                   <FileUpload onLoad={handleFileUploadLoad} />
                 </div>
 
-                <div data-tour="home-paste-json">
-                  {!showPaste ? (
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setShowPaste(true)}
-                        className="flex-1 py-2 px-4 border border-nhs-grey-4 dark:border-line-strong text-nhs-grey-2 dark:text-ink-2 rounded-lg text-sm hover:border-nhs-blue hover:text-nhs-blue transition-colors"
-                      >
-                        Paste FHIR JSON
-                      </button>
-                      <InfoHint topic="home.paste-json" />
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <textarea
-                        value={pasteText}
-                        onChange={e => setPasteText(e.target.value)}
-                        placeholder="Paste a FHIR Bundle, partial bundle, or individual resource (JSON)…"
-                        rows={6}
-                        className="w-full rounded-lg border border-nhs-grey-4 dark:border-line-strong bg-white dark:bg-surface p-3 font-mono text-xs text-nhs-grey-1 dark:text-ink placeholder-nhs-grey-3 focus:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue resize-y"
-                        autoFocus
-                      />
-                      <div className="flex gap-2">
-                        <button
-                          onClick={handleLoadPasted}
-                          disabled={!pasteText.trim()}
-                          className="flex-1 py-2 px-4 bg-nhs-blue text-white rounded-lg text-sm font-medium hover:bg-nhs-dark-blue transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                          Load pasted content
-                        </button>
-                        <button
-                          onClick={() => { setShowPaste(false); setPasteText('') }}
-                          className="py-2 px-4 border border-nhs-grey-4 dark:border-line-strong text-nhs-grey-2 dark:text-ink-2 rounded-lg text-sm hover:border-nhs-grey-2 transition-colors"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                <div data-tour="home-paste-json" className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <label htmlFor="paste-json" className="text-xs font-medium text-nhs-grey-2 dark:text-muted uppercase tracking-wide">
+                      Paste FHIR JSON
+                    </label>
+                    <InfoHint topic="home.paste-json" />
+                  </div>
+                  <textarea
+                    id="paste-json"
+                    value={pasteText}
+                    onChange={e => setPasteText(e.target.value)}
+                    placeholder="Paste a FHIR Bundle, partial bundle, or individual resource (JSON)…"
+                    rows={6}
+                    className="w-full rounded-lg border border-nhs-grey-4 dark:border-line-strong bg-white dark:bg-surface p-3 font-mono text-xs text-nhs-grey-1 dark:text-ink placeholder-nhs-grey-3 focus:border-nhs-blue focus:outline-none focus:ring-1 focus:ring-nhs-blue resize-y"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleLoadPasted}
+                      disabled={!pasteText.trim()}
+                      className="flex-1 py-2 px-4 bg-nhs-blue text-white rounded-lg text-sm font-medium hover:bg-nhs-dark-blue transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      Load pasted content
+                    </button>
+                    <button
+                      onClick={() => setPasteText('')}
+                      disabled={!pasteText}
+                      className="py-2 px-4 border border-nhs-grey-4 dark:border-line-strong text-nhs-grey-2 dark:text-ink-2 rounded-lg text-sm hover:border-nhs-grey-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      Clear
+                    </button>
+                  </div>
                 </div>
 
                 {parseError && (
